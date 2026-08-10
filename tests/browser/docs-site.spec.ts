@@ -336,4 +336,31 @@ test.describe("Form, Please documentation", () => {
 
 		expect(errors).toEqual([])
 	})
+
+	test("runs the product workflow tutorial", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./workflows")
+
+		const workflow = page.getByRole("region", {
+			name: "Product workflow recipe preview",
+		})
+		await workflow.getByLabel("Name").fill("Ada Lovelace")
+		await workflow.getByLabel("Email").fill("ada@example.com")
+		await workflow.getByLabel("I represent an organization").uncheck()
+		await workflow.getByRole("button", { name: "Continue" }).click()
+		await expect(workflow.getByText(/Details\. Step 2 of 3\./)).toBeVisible()
+
+		await workflow.getByRole("button", { name: "Clear identity name" }).click()
+		await workflow.getByRole("button", { name: "Review" }).click()
+		await expect(workflow.getByLabel("Name")).toBeFocused()
+		await workflow.getByLabel("Name").fill("Ada Lovelace")
+		await workflow.getByRole("button", { name: "Continue" }).click()
+		await workflow.getByLabel("Department").fill("Research")
+		await workflow.getByRole("button", { name: "Review" }).click()
+		await expect(workflow.getByText(/Review\. Step 3 of 3\./)).toBeVisible()
+		await workflow.getByRole("button", { name: "Publish" }).click()
+		await expect(workflow.getByText("Published Ada Lovelace.")).toBeVisible()
+
+		expect(errors).toEqual([])
+	})
 })

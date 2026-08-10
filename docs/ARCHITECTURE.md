@@ -279,12 +279,14 @@ defaults to submit mode and change revalidation after the first submit.
 
 On a successful submit:
 
-1. `kit.Form` captures a deep editable-input snapshot while preserving browser
-   values such as `File` and `Blob`.
+1. `kit.Form` captures a deep editable-input snapshot and the native submit
+   control's `name` and `value`. The input preserves browser values such as
+   `File` and `Blob`.
 2. RHF invokes the internal Standard Schema resolver once.
 3. The resolver returns transformed `FormOutput<Schema>`.
-4. Form, Please calls `onSubmit({ value, input, form })` with the matching
-   snapshot and output.
+4. Form, Please calls `onSubmit({ value, input, form, submitter })` with the
+   matching snapshots and output. `submitter` is `null` when the native event
+   has no submit control.
 
 Direct `form.api.handleSubmit(onValid, onInvalid)` remains raw RHF behavior and
 does not invoke the configured Form Please wrapper. Resolver ownership,

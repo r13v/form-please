@@ -65,11 +65,12 @@ type SaveResult =
 
 async function saveBooking(
 	value: FormOutput<typeof bookingSchema>,
+	intent: string,
 ): Promise<SaveResult> {
 	const response = await fetch("/api/bookings", {
 		method: "POST",
 		headers: { "content-type": "application/json" },
-		body: JSON.stringify(value),
+		body: JSON.stringify({ booking: value, intent }),
 	})
 
 	if (!response.ok) {
@@ -88,9 +89,9 @@ export function BookingForm() {
 	const [submitError, setSubmitError] = useState<string>()
 	const form = kit.useForm(bookingDefinition, {
 		defaultValues: bookingDefaults,
-		onSubmit: async ({ value, input, form: binding }) => {
+		onSubmit: async ({ value, input, form: binding, submitter }) => {
 			setSubmitError(undefined)
-			const result = await saveBooking(value)
+			const result = await saveBooking(value, submitter?.value ?? "save")
 			if (!result.ok) {
 				setSubmitError(result.message)
 				return
@@ -103,7 +104,9 @@ export function BookingForm() {
 	return (
 		<kit.AutoForm form={form}>
 			{submitError !== undefined && <p role="alert">{submitError}</p>}
-			<kit.Submit>Save booking</kit.Submit>
+			<kit.Submit name="intent" value="save">
+				Save booking
+			</kit.Submit>
 		</kit.AutoForm>
 	)
 }

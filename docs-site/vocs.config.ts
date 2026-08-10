@@ -45,6 +45,7 @@ export default defineConfig({
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
 				{ text: "Recipes", link: "/recipes" },
+				{ text: "Product workflows", link: "/workflows" },
 				{ text: "Resources", link: "/resources" },
 				{ text: "Middleware", link: "/middleware" },
 				{ text: "Persistence", link: "/persistence" },

@@ -107,11 +107,12 @@ validation cache is required.
 
 ## Submit input and output
 
-`onSubmit` receives three values:
+`onSubmit` receives four values:
 
 - `value` is the transformed `FormOutput<Schema>`.
 - `input` is the editable `FormInput<Schema>`.
 - `form` is the current form binding.
+- `submitter` is the captured submit control `name` and `value`, or `null`.
 
 This example sends the transformed `value` to the server. It resets the editable
 baseline with `input` after a successful request.
@@ -120,12 +121,16 @@ baseline with `input` after a successful request.
 // [!include ~/snippets/validation-guide.tsx:submission]
 ```
 
-`onSubmit` does not receive submit metadata. It can return a promise.
+`submitter` is captured before validation. It is not a live DOM element and it
+does not contain request metadata. `onSubmit` can return a promise.
 `form.api.formState.isSubmitting` remains true until the promise settles.
 `kit.Submit` is disabled while the form validates or submits.
 
 Use `FormSubmitDetails<Schema, Context>` from `form-please` to type an extracted
-submit handler without repeating the `{ value, input, form }` object shape.
+submit handler without repeating the `{ value, input, form, submitter }` object
+shape.
+Read [Product workflows](/workflows#understand-submitter) for multiple submit
+actions and the complete snapshot contract.
 
 Server validation is still required. A request failure is not a Standard Schema
 issue and does not appear in the form summary. Store and render request failures

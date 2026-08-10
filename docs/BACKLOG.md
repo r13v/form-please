@@ -5,24 +5,6 @@ not a release commitment or an implementation plan. Any change to public entry
 points, form state, submission, serialization, or module boundaries must first
 be reconciled with [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Product workflow recipes
-
-**Status:** Planned as application-owned recipes first.
-
-Provide complete, typechecked patterns for workflows that repeatedly surround
-product forms:
-
-- [ ] Multi-step forms with conditional steps, current-step validation,
-      progress, and navigation to the first invalid step.
-- [ ] Review and confirmation screens that reuse the same definition and
-      design-system vocabulary.
-- [ ] Unsaved-change navigation guards that compose with draft persistence.
-- [ ] Server issue mapping and multiple submit intents such as save draft,
-      publish, and save-and-close.
-
-Keep the first versions as copyable application code. Promote a pattern into a
-public helper or optional entry only after several real forms demonstrate a
-stable shared contract.
 
 ## Form Please Devtools
 

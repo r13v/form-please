@@ -1,0 +1,221 @@
+---
+title: Product workflows
+description: Build typed multi-step forms, review screens, navigation guards, server issue mapping, and submit actions as application code.
+showAskAi: false
+---
+
+import { ProductWorkflowDemo } from "../components/product-workflow-demo"
+
+# Product workflows
+
+Use this tutorial when one form spans multiple product screens. You will keep
+one Form Please binding and add application-owned workflow state around it.
+
+At the end, the workflow will provide:
+
+- typed screen paths and conditional screens;
+- current-screen validation and progress;
+- navigation to the first invalid screen;
+- review and confirmation screens;
+- draft-safe navigation guards;
+- validated server issue mapping;
+- draft, publish, and save-and-close actions.
+
+## Keep each state with its owner
+
+Use the Standard Schema for submitted domain input. Use React state for the
+current workflow screen. Pass the screen through form context when a definition
+must change field visibility.
+
+| State | Owner |
+| --- | --- |
+| Editable domain input | React Hook Form and the Standard Schema |
+| Current screen and navigation history | Application state or the router |
+| Screen visibility | Form context and definition resolvers |
+| Draft storage | `form-please/persistence` and the application adapter |
+| Requests and confirmation receipts | Application request state |
+
+Put a workflow value in the schema only when the server must store that value
+as domain data. For example, an approval `status` can be domain data. A current
+wizard `screen` is normally not domain data.
+
+The [makerspace example](/examples/makerspace-launch) follows this boundary. It
+stores `screen` in React state and supplies it through form context.
+
+## 1. Add a typed workflow controller
+
+Copy this complete controller and example into application code:
+
+```tsx twoslash
+// [!include ~/snippets/product-workflow.tsx]
+```
+
+`useFormWorkflow` accepts four inputs:
+
+| Input | Purpose |
+| --- | --- |
+| `form` | Uses the existing Form Please binding and RHF API. |
+| `screen` | Reads the current application-owned screen. |
+| `setScreen` | Changes the external screen state. |
+| `steps` | Defines labels, typed paths, and optional conditions. |
+
+Each `paths` value must be a `FieldPath<FormInput<Schema>>`. TypeScript rejects
+a misspelled path before the application runs. The `when` function reads the
+current input and includes or removes a conditional screen.
+
+`when` changes navigation only. Express the same conditional requirement in
+the Standard Schema so a hidden screen cannot block final submission. If a
+condition can hide the active screen, let the application choose the next
+external `screen`; that fallback is a product-navigation decision.
+
+The hook returns these operations and values:
+
+| Result | Behavior |
+| --- | --- |
+| `next()` | Touches and validates the current screen before navigation. |
+| `back()` | Opens the previous visible screen without validation. |
+| `validateCurrent()` | Validates the current screen without navigation on success. |
+| `validateAllAndFocusFirstInvalid()` | Validates all visible paths, opens the first invalid screen, and focuses its first invalid field. |
+| `visibleSteps` | Contains the steps that satisfy their current conditions. |
+| `progress` | Contains `current`, `total`, and integer `percent` values. |
+
+The controller uses `form.api.trigger`. It does not create another validator.
+Keep conditional rules in the Standard Schema, and give navigable issues a
+field path. A form-level issue without a path cannot identify a screen.
+
+### Try the workflow
+
+Clear the organization checkbox to remove its conditional screen and
+recalculate progress. On the details screen, select **Clear identity name** and
+then **Review**. The controller opens the identity screen and focuses **Name**.
+
+<ProductWorkflowDemo />
+
+## 2. Reuse the binding for review
+
+Review shows the current editable input. It is not a saved confirmation. Keep
+the same binding and definition, set `readOnly`, and provide an **Edit** action.
+
+After a successful request, replace review with a confirmation that uses the
+server receipt. The receipt can contain canonical values, generated IDs, and
+other authoritative data.
+
+```tsx twoslash
+// [!include ~/snippets/workflow-review.tsx]
+```
+
+Do not create a second binding for review. Two bindings can create two editable
+copies of the same document.
+
+## 3. Flush a draft before router navigation
+
+Install React Router when the application does not already use it:
+
+```bash
+npm install react-router
+```
+
+Use `useBlocker` in a React Router data or framework router. When the user
+chooses **Save draft and leave**, wait for `persistence.flush()` before you call
+`proceed()`. Pass `useFormState({ control: form.api.control }).isDirty` as the
+guard's `dirty` value.
+
+```tsx twoslash
+// [!include ~/snippets/workflow-router-guard.tsx]
+```
+
+Use the application's accessible modal component for this dialog. It must trap
+focus while open, support Escape, and restore focus after **Stay**.
+
+If `flush()` fails, keep navigation blocked and show the storage error. The
+**Leave without saving** action deliberately skips `flush()`.
+
+`useBlocker` handles SPA navigation. `beforeunload` covers reloads, tab closes,
+and cross-origin navigation with a browser warning. A `beforeunload` callback
+cannot wait for an asynchronous flush. Autosave before this event; do not claim
+an unload save guarantee.
+
+## 4. Map server issues at the request boundary
+
+Do not cast an arbitrary server string to `FieldPath`. Validate the response,
+then map each remote path to one known schema input path.
+
+```tsx twoslash
+// [!include ~/snippets/workflow-server-issues.tsx]
+```
+
+The `satisfies` checks make both maps exhaustive. If the server adds a path or
+the form renames a field, TypeScript requires a mapping update.
+
+Apply all errors before focus navigation. Then open the screen for the first
+mapped path and focus after that screen renders. Keep network, authorization,
+and form-level failures in application request state.
+
+## 5. Separate draft and validated actions
+
+A draft can contain incomplete or invalid input. Use `type="button"` for **Save
+draft** and call `persistence.flush()` directly. This action does not submit the
+form and does not run complete schema validation.
+
+Use `kit.Submit` for **Publish** and **Save and close**. Both actions validate the
+complete Standard Schema before `onSubmit` runs.
+
+```tsx twoslash
+// [!include ~/snippets/workflow-submit-actions.tsx]
+```
+
+The helper constrains application intent values even though native button
+`value` is a string. The handler treats only a `null` implicit submit as
+**Publish** and rejects unexpected submitter names or values. Choose a different
+explicit default if the product requires it.
+
+## Understand `submitter`
+
+`FormSubmitDetails<Schema, Context>` includes this property:
+
+```ts twoslash
+import type { FormSubmitDetails, StandardSchema } from "form-please"
+
+type Input = { title: string }
+declare const schema: StandardSchema<Input>
+
+type Submitter = FormSubmitDetails<typeof schema>["submitter"]
+//   ^?
+```
+
+The value is `Readonly<{ name: string; value: string }> | null`.
+
+The submit sequence is:
+
+1. `kit.Form` prevents the native submit.
+2. It captures the editable input and native submit control.
+3. The Standard Schema validates the captured input.
+4. A successful `onSubmit` receives `value`, `input`, `form`, and `submitter`.
+
+The snapshot has these guarantees:
+
+- It is captured before validation starts, including asynchronous validation.
+- It contains only the submit control `name` and `value` strings.
+- It is frozen and does not retain a live DOM element.
+- It is `null` when the native event has no submit control, such as some Enter
+  submissions or a manually dispatched submit event.
+- It is separate from `value`, `input`, native `FormData`, and request data.
+
+Changing or removing the button while validation is pending does not change the
+snapshot. Direct `form.api.handleSubmit` calls remain raw React Hook Form calls
+and do not invoke the Form Please `onSubmit` wrapper.
+
+Use `submitter` only to select a validated application action. Validate the
+action again at the server boundary. Do not use a button value as authorization.
+
+## Production checklist
+
+Before release, verify these behaviors:
+
+1. Change every condition and confirm that progress uses visible screens only.
+2. Put an error on each screen and confirm first-invalid navigation and focus.
+3. Confirm that review uses current input and confirmation uses a server receipt.
+4. Make draft storage fail and confirm that guarded navigation remains blocked.
+5. Return every supported server issue path and confirm its mapping.
+6. Submit each named action and an implicit submit.
+7. Test keyboard navigation, focus order, and the guard dialog.

@@ -1,3 +1,4 @@
+// @jsx: react-jsx
 "use client"
 
 import {
@@ -14,13 +15,12 @@ import {
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useWatch } from "react-hook-form"
 import { z } from "zod"
 
 const launchSchema = z
 	.object({
-		stage: z.enum(["identity", "location", "capacity", "publishing"]),
 		identity: z.object({
 			name: z.string().min(4, "Use a distinctive public name"),
 			campusId: z.string().min(1, "Choose a campus"),
@@ -126,8 +126,11 @@ const launchSchema = z
 
 type LaunchInput = FormInput<typeof launchSchema>
 type LaunchOutput = FormOutput<typeof launchSchema>
+const stages = ["identity", "location", "capacity", "publishing"] as const
+type LaunchScreen = (typeof stages)[number]
 
 type LaunchContext = {
+	readonly screen: LaunchScreen
 	readonly campuses: readonly {
 		readonly value: string
 		readonly label: string
@@ -139,7 +142,6 @@ type LaunchContext = {
 }
 
 const defaultValues = {
-	stage: "identity",
 	identity: {
 		name: "Copperline Commons",
 		campusId: "river-yard",
@@ -187,7 +189,6 @@ const kit = createFormKit({
 	slots: createDefaultSlots(),
 })
 const contextualKit = kit.forContext<LaunchContext>()
-const stages = ["identity", "location", "capacity", "publishing"] as const
 const stageLabels = {
 	identity: "Identity",
 	location: "Location",
@@ -202,10 +203,15 @@ const stageNames = {
 } satisfies Record<(typeof stages)[number], string>
 type LaunchForm = FormBinding<typeof launchSchema, LaunchContext>
 
-function WizardNavigation({ form }: { readonly form: LaunchForm }) {
-	const stage = useWatch({ control: form.api.control, name: "stage" })
-	const index = stages.indexOf(stage)
-	const nextStage = stages[index + 1] ?? stage
+function WizardNavigation({
+	screen,
+	setScreen,
+}: {
+	readonly screen: LaunchScreen
+	readonly setScreen: (screen: LaunchScreen) => void
+}) {
+	const index = stages.indexOf(screen)
+	const nextStage = stages[index + 1] ?? screen
 	let primaryAction = (
 		<contextualKit.Submit className="form-please-complex__primary">
 			Publish makerspace
@@ -215,7 +221,7 @@ function WizardNavigation({ form }: { readonly form: LaunchForm }) {
 		primaryAction = (
 			<button
 				className="form-please-complex__primary"
-				onClick={() => form.api.setValue("stage", nextStage)}
+				onClick={() => setScreen(nextStage)}
 				type="button"
 			>
 				Continue to {stageNames[nextStage]}
@@ -228,7 +234,7 @@ function WizardNavigation({ form }: { readonly form: LaunchForm }) {
 				{stages.map((item) => {
 					let ariaCurrent: "step" | undefined
 					let color: string | undefined
-					if (item === stage) {
+					if (item === screen) {
 						ariaCurrent = "step"
 						color = "var(--fp-docs-rust)"
 					}
@@ -236,7 +242,7 @@ function WizardNavigation({ form }: { readonly form: LaunchForm }) {
 						<li aria-current={ariaCurrent} key={item}>
 							<button
 								style={{ color }}
-								onClick={() => form.api.setValue("stage", item)}
+								onClick={() => setScreen(item)}
 								type="button"
 							>
 								{stageLabels[item]}
@@ -248,7 +254,7 @@ function WizardNavigation({ form }: { readonly form: LaunchForm }) {
 			<div className="form-please-complex__actions">
 				<button
 					disabled={index === 0}
-					onClick={() => form.api.setValue("stage", stages[index - 1] ?? stage)}
+					onClick={() => setScreen(stages[index - 1] ?? screen)}
 					type="button"
 				>
 					Back
@@ -259,10 +265,18 @@ function WizardNavigation({ form }: { readonly form: LaunchForm }) {
 	)
 }
 
-function LaunchLiveDetails({ form }: { readonly form: LaunchForm }) {
+function LaunchLiveDetails({
+	form,
+	screen,
+	setScreen,
+}: {
+	readonly form: LaunchForm
+	readonly screen: LaunchScreen
+	readonly setScreen: (screen: LaunchScreen) => void
+}) {
 	const values = useWatch({ control: form.api.control }) as LaunchInput
 	let locationDetails = null
-	if (values.stage === "location") {
+	if (screen === "location") {
 		locationDetails = (
 			<>
 				<AddressLookup form={form} postalCode={values.location.postalCode} />
@@ -282,7 +296,7 @@ function LaunchLiveDetails({ form }: { readonly form: LaunchForm }) {
 	}
 	return (
 		<>
-			<WizardNavigation form={form} />
+			<WizardNavigation screen={screen} setScreen={setScreen} />
 			{locationDetails}
 		</>
 	)
@@ -341,7 +355,7 @@ const launchDefinition = contextualKit.defineForm(launchSchema, {
 			kind: "section",
 			id: "identity",
 			title: "Makerspace identity",
-			visible: ({ stage }) => stage === "identity",
+			visible: (_values, { context }) => context.screen === "identity",
 			columns: 2,
 			children: [
 				{
@@ -373,7 +387,7 @@ const launchDefinition = contextualKit.defineForm(launchSchema, {
 			kind: "section",
 			id: "location",
 			title: "Location",
-			visible: ({ stage }) => stage === "location",
+			visible: (_values, { context }) => context.screen === "location",
 			columns: 2,
 			children: [
 				{
@@ -416,7 +430,7 @@ const launchDefinition = contextualKit.defineForm(launchSchema, {
 			kind: "section",
 			id: "capacity",
 			title: "Capacity, media, and amenities",
-			visible: ({ stage }) => stage === "capacity",
+			visible: (_values, { context }) => context.screen === "capacity",
 			children: [
 				{
 					kind: "array",
@@ -512,7 +526,7 @@ const launchDefinition = contextualKit.defineForm(launchSchema, {
 			kind: "section",
 			id: "publishing",
 			title: "Publishing rules",
-			visible: ({ stage }) => stage === "publishing",
+			visible: (_values, { context }) => context.screen === "publishing",
 			children: [
 				{
 					kind: "field",
@@ -572,6 +586,7 @@ export function MakerspaceLaunchExample() {
 }
 
 function MakerspaceLaunchForm() {
+	const [screen, setScreen] = useState<LaunchScreen>("identity")
 	const campuses = useQuery({
 		queryKey: ["maker-campuses"],
 		queryFn: () =>
@@ -607,12 +622,17 @@ function MakerspaceLaunchForm() {
 			fakeRequest({ offers: value.activePromotionCount }, 420),
 	})
 	const [notice, setNotice] = useState("Complete the four stages to publish.")
-	const form = contextualKit.useForm(launchDefinition, {
-		defaultValues,
-		context: {
+	const context = useMemo(
+		() => ({
+			screen,
 			campuses: campuses.data ?? [],
 			regions: regions.data ?? [],
-		},
+		}),
+		[screen, campuses.data, regions.data],
+	)
+	const form = contextualKit.useForm(launchDefinition, {
+		defaultValues,
+		context,
 		async onSubmit({ value }) {
 			try {
 				const place = await savePlace.mutateAsync(value)
@@ -653,12 +673,12 @@ function MakerspaceLaunchForm() {
 		>
 			<p className="form-please-complex__kicker">Four-stage launch wizard</p>
 			<p className="form-please-complex__summary">
-				A form-owned stage controls conditional sections while address lookup,
-				media rows, pricing bands, four offers, and three writes retain one
-				state.
+				An external screen controls conditional sections through form context.
+				Domain input still keeps address lookup, media rows, pricing bands, four
+				offers, and three writes in one form.
 			</p>
 			<contextualKit.Form className="form-please-complex__form" form={form}>
-				<LaunchLiveDetails form={form} />
+				<LaunchLiveDetails form={form} screen={screen} setScreen={setScreen} />
 
 				<contextualKit.Fields />
 			</contextualKit.Form>

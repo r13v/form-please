@@ -117,6 +117,13 @@ export type FormSubmitDetails<
 	readonly input: FormInput<Schema>
 	/** The binding that submitted the form. */
 	readonly form: FormBinding<Schema, Context>
+	/** The native submit control captured before validation, or null for an implicit submit. */
+	readonly submitter: Readonly<{
+		/** The submit control name. */
+		readonly name: string
+		/** The submit control value. */
+		readonly value: string
+	}> | null
 }
 
 /** Configuration used to bind a definition to React Hook Form. */
@@ -683,6 +690,7 @@ function assembleKit(
 								event.preventDefault()
 								if (runtimeForm.disabled) return
 								const formElement = event.currentTarget
+								const submitter = snapshotSubmitter(event.nativeEvent)
 								const input = cloneFormValue(
 									form.api.getValues(),
 								) as FormValues<Schema>
@@ -691,6 +699,7 @@ function assembleKit(
 										await runtimeForm.onSubmit?.({
 											form: form as unknown as FormBinding,
 											input,
+											submitter,
 											value,
 										})
 									},
@@ -1524,6 +1533,24 @@ function useFormId(): string {
 /** Creates a DOM-safe ID for an input path within a form. */
 function createDomId(prefix: string, value: string): string {
 	return `${prefix}-${encodeURIComponent(value).replaceAll(".", "%2E")}`
+}
+
+function snapshotSubmitter(
+	event: Event,
+): FormSubmitDetails<AnyFormSchema>["submitter"] {
+	if (!("submitter" in event)) return null
+	const { submitter } = event
+	if (
+		typeof submitter !== "object" ||
+		submitter === null ||
+		!("name" in submitter) ||
+		typeof submitter.name !== "string" ||
+		!("value" in submitter) ||
+		typeof submitter.value !== "string"
+	) {
+		return null
+	}
+	return Object.freeze({ name: submitter.name, value: submitter.value })
 }
 
 /** Converts resolved node state to structural DOM props and data attributes. */

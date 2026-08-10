@@ -21,6 +21,7 @@ const pages = [
 	["src/pages/styling.mdx", "Styling"],
 	["src/pages/api.mdx", "API"],
 	["src/pages/recipes.mdx", "Production recipes"],
+	["src/pages/workflows.mdx", "Product workflows"],
 	["src/pages/types.mdx", "TypeScript"],
 	["src/pages/faqs.mdx", "FAQs"],
 	["src/pages/examples/index.mdx", "Examples"],
@@ -61,6 +62,11 @@ const referenceSnippets = [
 	"src/snippets/form-kits-control.tsx",
 	"src/snippets/form-kits.tsx",
 	"src/snippets/production-recipes.tsx",
+	"src/snippets/product-workflow.tsx",
+	"src/snippets/workflow-review.tsx",
+	"src/snippets/workflow-router-guard.tsx",
+	"src/snippets/workflow-server-issues.tsx",
+	"src/snippets/workflow-submit-actions.tsx",
 	"src/snippets/middleware-guide.tsx",
 	"src/snippets/validation-guide.tsx",
 ]
@@ -90,6 +96,7 @@ test("documents only the supported navigation surface", async () => {
 		"/styling",
 		"/api",
 		"/recipes",
+		"/workflows",
 		"/types",
 		"/faqs",
 		"/examples",
@@ -128,6 +135,7 @@ test("documents only the supported navigation surface", async () => {
 		["Conditional fields", "/conditional-fields"],
 		["Arrays", "/arrays"],
 		["Recipes", "/recipes"],
+		["Product workflows", "/workflows"],
 		["Resources", "/resources"],
 		["Middleware", "/middleware"],
 		["Persistence", "/persistence"],
@@ -396,6 +404,42 @@ test("keeps form kits, API, and production guidance executable", async () => {
 	assert.match(definitions, /api-reference\.tsx:render-node/)
 	assert.match(arrays, /lab-profile-form\.tsx:array-node/)
 	assert.match(conditional, /lab-profile-form\.tsx:conditional-field/)
+})
+
+test("keeps the product workflow tutorial copyable and explicit", async () => {
+	const workflows = await readFile(
+		new URL("src/pages/workflows.mdx", siteRoot),
+		"utf8",
+	)
+	const makerspace = await readFile(
+		new URL("src/pages/examples/makerspace-launch.mdx", siteRoot),
+		"utf8",
+	)
+
+	for (const snippet of [
+		"product-workflow.tsx",
+		"workflow-review.tsx",
+		"workflow-router-guard.tsx",
+		"workflow-server-issues.tsx",
+		"workflow-submit-actions.tsx",
+	]) {
+		assert.match(workflows, new RegExp(`${escapeRegExp(snippet)}\\]`))
+	}
+	for (const phrase of [
+		"validateAllAndFocusFirstInvalid",
+		"persistence.flush()",
+		"Readonly<{ name: string; value: string }> | null",
+		"captured before validation",
+		"does not retain a live DOM element",
+		"confirmation uses a server receipt",
+		"changes navigation only",
+		"rejects unexpected submitter names or values",
+	]) {
+		assert.match(workflows, new RegExp(escapeRegExp(phrase), "i"))
+	}
+	assert.match(workflows, /```tsx twoslash/g)
+	assert.match(makerspace, /external React state/i)
+	assert.match(makerspace, /only when the server stores it as a domain field/i)
 })
 
 test("documents every managed value type on the TypeScript page", async () => {

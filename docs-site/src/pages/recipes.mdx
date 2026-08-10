@@ -26,6 +26,7 @@ matches the problem in your application.
 | Apply a raw RHF update to multiple fields | `form.api.setValues(values)` |
 | Observe values without a form render subscription | `form.api.subscribe` |
 | Validate one wizard step | `form.api.trigger` and `form.api.setFocus` |
+| Build a complete product workflow | [`useFormWorkflow`](/workflows) as application code |
 | Save parsed data | The `value` argument in `onSubmit` |
 | Show a request failure | Application state with `role="alert"` |
 | Show a server field issue | `form.api.setError` |
@@ -215,6 +216,9 @@ makes their validation messages visible without a form submission.
 Keep the complete form rules in the Standard Schema. The path list controls
 step navigation. It does not create a second validation contract.
 
+For typed paths, conditional screens, progress, review, and first-invalid
+navigation, follow the complete [Product workflows tutorial](/workflows).
+
 ## Keep async submission in the application
 
 Return the request promise from `onSubmit`. React Hook Form keeps
@@ -276,6 +280,7 @@ output are different contracts.
 - `input` is the current `FormInput<Schema>`.
 - `value` is the parsed `FormOutput<Schema>`.
 - `form` is the current form binding.
+- `submitter` is the native submit control snapshot or `null`.
 
 Send `value` when the server expects parsed output. Pass schema input to
 `form.api.reset`. If the server returns only output, convert it to editable

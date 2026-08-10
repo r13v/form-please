@@ -8,8 +8,8 @@ import { MakerspaceLaunchDemo } from "../../components/makerspace-launch-demo"
 
 # Makerspace launch wizard
 
-The active stage is a normal form value. Conditional sections and the stage
-navigation read the same React Hook Form state.
+The active screen is external React state. The form definition reads it through
+context, while React Hook Form stores only editable makerspace input.
 
 ## Try the complete flow
 
@@ -22,7 +22,7 @@ writes.
 
 ## What this form demonstrates
 
-- Form-owned navigation through `form.api.setValue`.
+- Application-owned navigation passed through form context.
 - Context-provided campus and region options.
 - Address lookup driven by `useWatch`.
 - Typed coordinate updates from an application-owned control.
@@ -30,11 +30,16 @@ writes.
 - One transformed output used by three sequential mutations.
 
 "Form, Please" does not include a wizard engine. This example composes the
-workflow from normal values and conditional sections.
+workflow from external screen state and conditional sections. Put a stage in
+the schema only when the server stores it as a domain field, such as an approval
+stage. Do not put the current wizard screen in the schema only to drive UI.
+
+Use the [Product workflows tutorial](/workflows) as the canonical navigation,
+validation, progress, review, and first-invalid pattern.
 
 ## Copy the source
 
-```tsx
+```tsx twoslash
 // [!include ~/snippets/complex-makerspace-launch.tsx]
 ```
 

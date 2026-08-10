@@ -1793,13 +1793,20 @@ describe("form kit", () => {
 			})
 			return (
 				<kit.AutoForm form={form}>
-					<kit.Submit>Submit async form</kit.Submit>
+					<kit.Submit name="intent" value="publish">
+						Submit async form
+					</kit.Submit>
 				</kit.AutoForm>
 			)
 		}
 
 		render(<View />)
-		fireEvent.click(screen.getByRole("button", { name: "Submit async form" }))
+		const submitButton = screen.getByRole("button", {
+			name: "Submit async form",
+		}) as HTMLButtonElement
+		fireEvent.click(submitButton)
+		submitButton.name = "changed-intent"
+		submitButton.value = "save-and-close"
 		fireEvent.change(screen.getByLabelText("Name"), {
 			target: { value: "Changed while validating" },
 		})
@@ -1809,8 +1816,30 @@ describe("form kit", () => {
 		expect(onSubmit).toHaveBeenCalledWith(
 			expect.objectContaining({
 				input: { name: "Before validation" },
+				submitter: { name: "intent", value: "publish" },
 				value: { name: "Before validation" },
 			}),
+		)
+		expect(Object.isFrozen(onSubmit.mock.calls[0]?.[0].submitter)).toBe(true)
+	})
+
+	it("uses null submitter metadata for an implicit native submit", async () => {
+		const onSubmit = vi.fn()
+
+		function View() {
+			const form = kit.useForm(definition, {
+				defaultValues: { name: "Ada" },
+				onSubmit,
+			})
+			return <kit.Form form={form} aria-label="Implicit submit form" />
+		}
+
+		render(<View />)
+		fireEvent.submit(screen.getByRole("form", { name: "Implicit submit form" }))
+
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({ submitter: null }),
 		)
 	})
 

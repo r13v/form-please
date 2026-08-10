@@ -17,13 +17,15 @@ React Hook Form, Standard Schema, and "Form, Please."
 resolver validates the editable input and returns transformed output in the
 same parse.
 
-`kit.Form` captures the editable input before raw RHF submission. The resolver
-then supplies transformed `FormOutput<Schema>` to the same submit attempt.
+`kit.Form` captures the editable input and native submit control before raw RHF
+submission. The resolver then supplies transformed `FormOutput<Schema>` to the
+same submit attempt.
 
-This sequence has three important effects:
+This sequence has four important effects:
 
 - Invalid input does not reach `onSubmit`.
 - `onSubmit` receives both the captured input and transformed output.
+- `onSubmit` receives a frozen submitter snapshot for named submit actions.
 - Direct `form.api.handleSubmit` remains ordinary RHF behavior.
 
 Keep schema validation deterministic and free of side effects. See [Validation
@@ -31,11 +33,12 @@ and submission](/validation) for the complete validation sequence.
 
 ### What does `onSubmit` receive?
 
-The callback receives three values:
+The callback receives four values:
 
 - `value` is the transformed `FormOutput<Schema>`.
 - `input` is the editable `FormInput<Schema>` from React Hook Form.
 - `form` is the current "Form, Please" binding.
+- `submitter` is `{ name, value }` for the native submit control, or `null`.
 
 Use `value` for an API request. Use `input` when an operation needs the original
 editable shape. For example, a string input can produce a number output.
@@ -44,6 +47,10 @@ The callback can return a promise. React Hook Form keeps `isSubmitting` true
 until that promise settles. See [Send schema output and reset with schema
 input](/recipes#send-schema-output-and-reset-with-schema-input) for a complete
 submission example.
+
+The submitter snapshot is captured before validation. It does not retain a DOM
+element. Read [Product workflows](/workflows#understand-submitter) for implicit
+submits and multiple validated actions.
 
 ### Does submission use native `FormData`?
 

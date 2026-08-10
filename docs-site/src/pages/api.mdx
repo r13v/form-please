@@ -325,10 +325,18 @@ the current kit context.
 | `beforeUpdate` | Adjust or cancel one managed value proposal before middleware. |
 | `afterUpdate` | Observe the final committed transaction after middleware unwinds. |
 | `middleware` | Ordered Redux-shaped value middleware, fixed for the hook lifetime. |
-| `onSubmit` | Receives parsed output, editable input, and the current binding. |
+| `onSubmit` | Receives parsed output, editable input, the current binding, and a submitter snapshot. |
 
 Use `FormSubmitDetails<Schema, Context>` from `form-please` when a reusable
-submit handler needs the exact `{ value, input, form }` parameter type.
+submit handler needs the exact `{ value, input, form, submitter }` parameter
+type.
+
+| Property | Type | Source |
+| --- | --- | --- |
+| `value` | `FormOutput<Schema>` | The successful Standard Schema parse. |
+| `input` | `FormInput<Schema>` | A deep snapshot captured before validation. |
+| `form` | `FormBinding<Schema, Context>` | The binding that received the native submit. |
+| `submitter` | `Readonly<{ name: string; value: string }> \| null` | A frozen native submit-control snapshot captured before validation. |
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:use-form]
@@ -336,14 +344,19 @@ submit handler needs the exact `{ value, input, form }` parameter type.
 
 Submission has this sequence:
 
-1. `kit.Form` captures the editable input snapshot.
+1. `kit.Form` captures the editable input and native submitter snapshots.
 2. The internal RHF resolver parses that input once with the Standard Schema.
-3. `onSubmit` receives `{ value, input, form }` after parsing succeeds.
+3. `onSubmit` receives `{ value, input, form, submitter }` after parsing succeeds.
 4. A returned promise keeps `form.api.formState.isSubmitting` true until it
    settles.
 
 The definition schema is the only form-level resolver. "Form, Please" fixes
 `criteriaMode: "all"`, `shouldUnregister: false`, and RHF error focus.
+
+`submitter` is a frozen `{ name, value }` snapshot or `null` for an implicit
+submit. It is captured before validation and does not expose the live DOM
+element. Read the [product workflow tutorial](/workflows#understand-submitter)
+for named actions, async validation, and implicit-submit behavior.
 
 Use form-wide state for review or locked workflows:
 

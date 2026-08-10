@@ -69,10 +69,15 @@ const handleSubmit = ({
 	value,
 	input,
 	form,
+	submitter,
 }: FormSubmitDetails<typeof schema, Context>) => {
 	value.accepted satisfies true
 	input.name satisfies string
 	form.context.locale satisfies string
+	submitter?.name satisfies string | undefined
+	submitter?.value satisfies string | undefined
+	// @ts-expect-error Submitter snapshots do not expose the live DOM element.
+	submitter?.click()
 }
 
 const slots = {} as FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
@@ -322,12 +327,13 @@ function useTypedBinding() {
 			profile: { country: "GB" },
 			speakers: [],
 		},
-		onSubmit({ value, input, form: binding }) {
+		onSubmit({ value, input, form: binding, submitter }) {
 			value.accepted satisfies true
 			input.name satisfies string
 			binding.api.control satisfies object
 			binding.api.register satisfies object
-			// @ts-expect-error Submit metadata is not part of Form Please.
+			submitter?.name satisfies string | undefined
+			// @ts-expect-error Submit metadata is separate from the parsed value.
 			value.meta
 		},
 		middleware: [middleware],
