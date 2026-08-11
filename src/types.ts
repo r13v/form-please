@@ -561,6 +561,67 @@ type ArrayItem<
 		? Item
 		: never
 	: never
+/** Builds an array node for one path and its item scope. */
+type ArrayNodeForPath<
+	Root,
+	Scope,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+	Path extends ArrayFieldPath<Scope>,
+	AllowFragments extends boolean,
+> = {
+	/** Identifies this node as an array. */
+	readonly kind: "array"
+	/** Overrides the stable node ID derived from the path. */
+	readonly id?: string
+	/** The object-array path relative to the current array scope. */
+	readonly path: Path
+	/** Provides the array label or a resolver that computes it. */
+	readonly label?: Resolvable<ReactUiContent, Root, Context>
+	/** Provides supporting content for the array. */
+	readonly description?: Resolvable<ReactUiContent, Root, Context>
+	/** Configures the registered array slot. */
+	readonly slotOptions?: Resolvable<ArrayOptions, Root, Context>
+	/** Controls whether the array and its items are rendered. */
+	readonly visible?: Resolvable<boolean, Root, Context>
+	/** Prevents changes to this array and its controls. */
+	readonly disabled?: Resolvable<boolean, Root, Context>
+	/** Prevents value changes without disabling the array controls. */
+	readonly readOnly?: Resolvable<boolean, Root, Context>
+	/** Adds a class to the array slot root. */
+	readonly className?: Resolvable<string, Root, Context>
+	/** Sets the array span in its parent grid. */
+	readonly span?: Resolvable<Grid | "full", Root, Context>
+	/** A new item value or a factory that creates one for each append action. */
+	readonly itemDefault: ArrayItem<Scope, Path> | (() => ArrayItem<Scope, Path>)
+	/** Nodes rendered for each array item. */
+	readonly children: readonly (AllowFragments extends true
+		? UiSourceNodeInScope<
+				Root,
+				ArrayItem<Scope, Path>,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid
+			>
+		: UiNodeInScope<
+				Root,
+				ArrayItem<Scope, Path>,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid
+			>)[]
+}
+
 /** Creates the union of valid array nodes in the current scope. */
 type ArrayNodeInScope<
 	Root,
@@ -573,56 +634,18 @@ type ArrayNodeInScope<
 	Grid extends number,
 	AllowFragments extends boolean = false,
 > = {
-	[Path in ArrayFieldPath<Scope>]: {
-		/** Identifies this node as an array. */
-		readonly kind: "array"
-		/** Overrides the stable node ID derived from the path. */
-		readonly id?: string
-		/** The object-array path relative to the current array scope. */
-		readonly path: Path
-		/** Provides the array label or a resolver that computes it. */
-		readonly label?: Resolvable<ReactUiContent, Root, Context>
-		/** Provides supporting content for the array. */
-		readonly description?: Resolvable<ReactUiContent, Root, Context>
-		/** Configures the registered array slot. */
-		readonly slotOptions?: Resolvable<ArrayOptions, Root, Context>
-		/** Controls whether the array and its items are rendered. */
-		readonly visible?: Resolvable<boolean, Root, Context>
-		/** Prevents changes to this array and its controls. */
-		readonly disabled?: Resolvable<boolean, Root, Context>
-		/** Prevents value changes without disabling the array controls. */
-		readonly readOnly?: Resolvable<boolean, Root, Context>
-		/** Adds a class to the array slot root. */
-		readonly className?: Resolvable<string, Root, Context>
-		/** Sets the array span in its parent grid. */
-		readonly span?: Resolvable<Grid | "full", Root, Context>
-		/** A new item value or a factory that creates one for each append action. */
-		readonly itemDefault:
-			| ArrayItem<Scope, Path>
-			| (() => ArrayItem<Scope, Path>)
-		/** Nodes rendered for each array item. */
-		readonly children: readonly (AllowFragments extends true
-			? UiSourceNodeInScope<
-					Root,
-					ArrayItem<Scope, Path>,
-					Controls,
-					Context,
-					FieldOptions,
-					SectionOptions,
-					ArrayOptions,
-					Grid
-				>
-			: UiNodeInScope<
-					Root,
-					ArrayItem<Scope, Path>,
-					Controls,
-					Context,
-					FieldOptions,
-					SectionOptions,
-					ArrayOptions,
-					Grid
-				>)[]
-	}
+	[Path in ArrayFieldPath<Scope>]: ArrayNodeForPath<
+		Root,
+		Scope,
+		Controls,
+		Context,
+		FieldOptions,
+		SectionOptions,
+		ArrayOptions,
+		Grid,
+		Path,
+		AllowFragments
+	>
 }[ArrayFieldPath<Scope>]
 
 /** A typed object-array node at the form root. */
@@ -818,6 +841,165 @@ type UiSourceNodeInScope<
 			Grid,
 			true
 	  >
+
+/** Removes authoring keys from every member of a node union. */
+type OmitNodeKeys<Node, Keys extends PropertyKey> = Node extends unknown
+	? Omit<Node, Keys>
+	: never
+
+/** Schema-bound helpers that create UI nodes in one path scope. */
+type UiBuilder<
+	Root,
+	Scope,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+> = {
+	/** Creates a field node at a compatible path. */
+	readonly field: <const Path extends FieldPath<Scope>>(
+		path: Path,
+		options: OmitNodeKeys<
+			FieldNodeForPath<
+				Root,
+				Scope,
+				Controls,
+				Context,
+				FieldOptions,
+				Path,
+				Grid
+			>,
+			"kind" | "path"
+		>,
+	) => FieldNodeForPath<
+		Root,
+		Scope,
+		Controls,
+		Context,
+		FieldOptions,
+		Path,
+		Grid
+	>
+	/** Creates a section node whose children stay in the current path scope. */
+	readonly section: (
+		id: string,
+		options: OmitNodeKeys<
+			SectionNodeInScope<
+				Root,
+				Scope,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid,
+				true
+			>,
+			"id" | "kind"
+		>,
+	) => SectionNodeInScope<
+		Root,
+		Scope,
+		Controls,
+		Context,
+		FieldOptions,
+		SectionOptions,
+		ArrayOptions,
+		Grid,
+		true
+	>
+	/** Creates an array node and supplies helpers bound to its item scope. */
+	readonly array: <const Path extends ArrayFieldPath<Scope>>(
+		path: Path,
+		options: OmitNodeKeys<
+			ArrayNodeForPath<
+				Root,
+				Scope,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid,
+				Path,
+				true
+			>,
+			"children" | "kind" | "path"
+		> & {
+			/** Builds the nodes rendered for each array item. */
+			readonly children: (
+				item: UiBuilder<
+					Root,
+					ArrayItem<Scope, Path>,
+					Controls,
+					Context,
+					FieldOptions,
+					SectionOptions,
+					ArrayOptions,
+					Grid
+				>,
+			) => readonly UiSourceNodeInScope<
+				Root,
+				ArrayItem<Scope, Path>,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid
+			>[]
+		},
+	) => ArrayNodeForPath<
+		Root,
+		Scope,
+		Controls,
+		Context,
+		FieldOptions,
+		SectionOptions,
+		ArrayOptions,
+		Grid,
+		Path,
+		true
+	>
+	/** Creates a custom render node. */
+	readonly render: (
+		id: string,
+		options: OmitNodeKeys<RenderNode<Root, Context>, "id" | "kind">,
+	) => RenderNode<Root, Context>
+}
+
+/** Builds schema-owned UI content with helpers bound to the root path scope. */
+export type FormDefinitionBuilder<
+	Schema extends StandardSchema,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+> = (
+	ui: UiBuilder<
+		FormInput<Schema>,
+		FormInput<Schema>,
+		Controls,
+		Context,
+		FieldOptions,
+		SectionOptions,
+		ArrayOptions,
+		Grid
+	>,
+) => readonly UiSourceNodeInScope<
+	FormInput<Schema>,
+	FormInput<Schema>,
+	Controls,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid
+>[]
 
 /** Any typed node that a form definition can contain at its root. */
 export type UiNode<

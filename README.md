@@ -30,17 +30,13 @@ const contactSchema = z
 	})
 	.transform((input) => ({ ...input, normalizedEmail: input.email.trim() }))
 
-const contactForm = kit.defineForm(contactSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			options: { type: "email" },
-		},
-	],
-})
+const contactForm = kit.defineForm(contactSchema, (ui) => [
+	ui.field("email", {
+		control: "text",
+		label: "Email",
+		options: { type: "email" },
+	}),
+])
 
 export function ContactForm() {
 	const form = kit.useForm(contactForm, {
@@ -80,24 +76,20 @@ const addressSchema = z.object({
 	city: z.string(),
 })
 
-const addressFragment = kit.defineFragment(addressSchema, {
-	ui: [
-		{ kind: "field", path: "street", control: "text", label: "Street" },
-		{ kind: "field", path: "city", control: "text", label: "City" },
-	],
-})
+const addressFragment = kit.defineFragment(addressSchema, (ui) => [
+	ui.field("street", { control: "text", label: "Street" }),
+	ui.field("city", { control: "text", label: "City" }),
+])
 
 const checkoutSchema = z.object({
 	shippingAddress: addressFragment.schema,
 	billingAddress: addressFragment.schema,
 })
 
-const checkoutForm = kit.defineForm(checkoutSchema, {
-	ui: [
-		addressFragment.fields({ at: "shippingAddress" }),
-		addressFragment.fields({ at: "billingAddress" }),
-	],
-})
+const checkoutForm = kit.defineForm(checkoutSchema, () => [
+	addressFragment.fields({ at: "shippingAddress" }),
+	addressFragment.fields({ at: "billingAddress" }),
+])
 ```
 
 Fragment resolvers receive the local fragment input. The host form still owns

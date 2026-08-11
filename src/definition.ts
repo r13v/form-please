@@ -19,6 +19,13 @@ type RuntimeNode = NormalizedNode & {
 	/** Normalized child templates for sections and arrays. */
 	readonly children?: readonly RuntimeNode[]
 }
+/** Runtime shape of schema-bound node helpers after their generic types erase. */
+type RuntimeUiBuilder = {
+	readonly field: (path: unknown, options: unknown) => object
+	readonly section: (id: unknown, options: unknown) => object
+	readonly array: (path: unknown, options: unknown) => object
+	readonly render: (id: unknown, options: unknown) => object
+}
 /** Private symbol that stores a fragment's immutable authoring template. */
 const fragmentSource = Symbol("form-please.fragment-source")
 /** Private symbol that identifies an opaque fragment placement. */
@@ -170,6 +177,50 @@ const defaultGrid = Object.freeze([1, 2, 3, 4])
 /** Path segments rejected to prevent prototype traversal. */
 const reservedSegments = new Set(["__proto__", "constructor", "prototype"])
 
+/** Stateless node helpers shared by every schema-bound definition builder. */
+const uiBuilder: RuntimeUiBuilder = Object.freeze({
+	field(path: unknown, options: unknown): object {
+		return {
+			...readBuilderOptions("Field", options),
+			kind: "field",
+			path,
+		}
+	},
+	section(id: unknown, options: unknown): object {
+		return {
+			...readBuilderOptions("Section", options),
+			id,
+			kind: "section",
+		}
+	},
+	array(path: unknown, options: unknown): object {
+		const { children: buildChildren, ...nodeOptions } = readBuilderOptions(
+			"Array",
+			options,
+		)
+		if (typeof buildChildren !== "function") {
+			throw new TypeError("Array builder children must be a function")
+		}
+		const children = buildChildren(uiBuilder) as unknown
+		if (!Array.isArray(children)) {
+			throw new TypeError("Array builder children must return a ui array")
+		}
+		return {
+			...nodeOptions,
+			children,
+			kind: "array",
+			path,
+		}
+	},
+	render(id: unknown, options: unknown): object {
+		return {
+			...readBuilderOptions("Render", options),
+			id,
+			kind: "render",
+		}
+	},
+})
+
 /** Validates, sorts, and freezes a form kit grid scale. */
 export function normalizeGrid(
 	grid: readonly unknown[] | undefined,
@@ -199,6 +250,32 @@ export function normalizeGrid(
 	return Object.freeze([...unique].sort((left, right) => left - right))
 }
 
+/** Resolves object or schema-bound builder authoring into one source object. */
+function materializeDefinitionSource(
+	source: unknown,
+	owner: "Form" | "Fragment",
+): unknown {
+	if (typeof source !== "function") {
+		return source
+	}
+	const ui = (source as (builder: RuntimeUiBuilder) => unknown)(uiBuilder)
+	if (!Array.isArray(ui)) {
+		throw new TypeError(`${owner} definition builder must return a ui array`)
+	}
+	return { ui }
+}
+
+/** Validates the configuration object supplied to one node helper. */
+function readBuilderOptions(
+	owner: "Array" | "Field" | "Render" | "Section",
+	options: unknown,
+): Record<string, unknown> {
+	if (!isRecord(options)) {
+		throw new TypeError(`${owner} builder options must be an object`)
+	}
+	return options
+}
+
 /** Validates and freezes one reusable schema-owned UI fragment. */
 export function createFormFragment(
 	schema: StandardSchema,
@@ -207,11 +284,12 @@ export function createFormFragment(
 	ownsFragment: OwnsFragment,
 ): object {
 	assertStandardSchema(schema, "Fragment")
-	if (!isRecord(source) || !Array.isArray(source.ui)) {
+	const materializedSource = materializeDefinitionSource(source, "Fragment")
+	if (!isRecord(materializedSource) || !Array.isArray(materializedSource.ui)) {
 		throw new TypeError("Fragment definition must contain a ui array")
 	}
 
-	const ui = snapshotSourceNodes(source.ui)
+	const ui = snapshotSourceNodes(materializedSource.ui)
 	normalizeNodes(
 		ui,
 		{
@@ -255,7 +333,8 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 	ownsFragment: OwnsFragment = () => false,
 ): FormDefinition<Schema> {
 	assertStandardSchema(schema, "Form")
-	if (!isRecord(source) || !Array.isArray(source.ui)) {
+	const materializedSource = materializeDefinitionSource(source, "Form")
+	if (!isRecord(materializedSource) || !Array.isArray(materializedSource.ui)) {
 		throw new TypeError("Form definition must contain a ui array")
 	}
 
@@ -265,7 +344,7 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 		ownsFragment,
 		nodes: [] as RuntimeNode[],
 	}
-	const ui = normalizeNodes(source.ui, state, "", undefined, {
+	const ui = normalizeNodes(materializedSource.ui, state, "", undefined, {
 		idPrefix: "",
 		pathPrefix: "",
 	})

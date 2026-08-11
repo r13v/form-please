@@ -7,7 +7,9 @@ showAskAi: false
 # Definitions
 
 A definition connects one Standard Schema to the UI that edits its input. Call
-`kit.defineForm(schema, { ui })` outside the component that uses the form.
+`kit.defineForm(schema, (ui) => [...])` outside the component that uses the
+form. The schema-bound helpers keep paths, controls, options, and resolver
+values connected while hiding the runtime node discriminator.
 
 ```tsx
 import { nativeFormKit } from "form-please/preset-native"
@@ -20,40 +22,30 @@ const profileSchema = z.object({
 	contactByEmail: z.boolean(),
 })
 
-const profileDefinition = nativeFormKit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "contact",
-			title: "Contact details",
-			columns: 2,
-			children: [
-				{ kind: "field", path: "name", control: "text", label: "Name" },
-				{
-					kind: "field",
-					path: "email",
-					control: "text",
-					label: "Email",
-					options: { type: "email", autoComplete: "email" },
-				},
-				{
-					kind: "field",
-					path: "company",
-					control: "text",
-					label: "Company",
-					span: "full",
-				},
-				{
-					kind: "field",
-					path: "contactByEmail",
-					control: "checkbox",
-					label: "Contact me by email",
-					span: "full",
-				},
-			],
-		},
-	],
-})
+const profileDefinition = nativeFormKit.defineForm(profileSchema, (ui) => [
+	ui.section("contact", {
+		title: "Contact details",
+		columns: 2,
+		children: [
+			ui.field("name", { control: "text", label: "Name" }),
+			ui.field("email", {
+				control: "text",
+				label: "Email",
+				options: { type: "email", autoComplete: "email" },
+			}),
+			ui.field("company", {
+				control: "text",
+				label: "Company",
+				span: "full",
+			}),
+			ui.field("contactByEmail", {
+				control: "checkbox",
+				label: "Contact me by email",
+				span: "full",
+			}),
+		],
+	}),
+])
 ```
 
 The type checker verifies these connections:
@@ -67,6 +59,9 @@ The type checker verifies these connections:
 
 `defineForm` also validates the tree at runtime. It rejects unknown controls,
 invalid path syntax, duplicate IDs, missing children, and invalid grid values.
+The object form `defineForm(schema, { ui: [...] })` remains supported for
+generated definitions and direct node composition. Both authoring styles
+produce the same normalized tree.
 
 ## Fields
 
@@ -78,19 +73,15 @@ const schema = z.object({
 	age: z.string().transform(Number),
 })
 
-const definition = nativeFormKit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "age",
-			control: "text", // The input value is a string.
-			label: "Age",
-			description: "Enter your age in years.",
-			options: { placeholder: "42" },
-			required: true,
-		},
-	],
-})
+const definition = nativeFormKit.defineForm(schema, (ui) => [
+	ui.field("age", {
+		control: "text", // The input value is a string.
+		label: "Age",
+		description: "Enter your age in years.",
+		options: { placeholder: "42" },
+		required: true,
+	}),
+])
 ```
 
 `control` selects a control from the kit registry. `options` configures that
@@ -114,22 +105,18 @@ const roleChoices = [
 	{ value: "admin", label: "Administrator" },
 ] as const
 
-nativeFormKit.defineForm(roleSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			options: {
-				options: [
-					...roleChoices,
-					{ value: "owner", label: "Owner" },
-					//       ^^^^^^^ TypeScript rejects this value.
-				],
-			},
+nativeFormKit.defineForm(roleSchema, (ui) => [
+	ui.field("role", {
+		control: "select",
+		options: {
+			options: [
+				...roleChoices,
+				{ value: "owner", label: "Owner" },
+				//       ^^^^^^^ TypeScript rejects this value.
+			],
 		},
-	],
-})
+	}),
+])
 ```
 
 The list may contain any subset of the field union; it does not have to be
@@ -149,34 +136,26 @@ A section groups related nodes. It can contain fields, arrays, render nodes,
 and other sections. A section does not change the path scope of its children.
 
 ```tsx
-{
-	kind: "section",
-	id: "delivery-address",
+ui.section("delivery-address", {
 	title: "Delivery address",
 	description: "We use this address for the current order.",
 	columns: 2,
 	children: [
-		{
-			kind: "field",
-			path: "delivery.street",
+		ui.field("delivery.street", {
 			control: "text",
 			label: "Street",
 			span: "full",
-		},
-		{
-			kind: "field",
-			path: "delivery.city",
+		}),
+		ui.field("delivery.city", {
 			control: "text",
 			label: "City",
-		},
-		{
-			kind: "field",
-			path: "delivery.postcode",
+		}),
+		ui.field("delivery.postcode", {
 			control: "text",
 			label: "Postcode",
-		},
+		}),
 	],
-}
+})
 ```
 
 `columns` sets the grid for the section children. The default kit grid accepts
@@ -189,9 +168,10 @@ slots can implement the same layout contract. See [Styling](/styling).
 
 ## Reusable fragments
 
-`kit.defineFragment(schema, { ui })` defines one schema-owned UI subtree and
-keeps the concrete schema available as `fragment.schema`. Compose that schema
-into a form schema, then place the fragment at each compatible object path:
+`kit.defineFragment(schema, (ui) => [...])` defines one schema-owned UI subtree
+and keeps the concrete schema available as `fragment.schema`. The object form
+`defineFragment(schema, { ui })` remains supported. Compose that schema into a
+form schema, then place the fragment at each compatible object path:
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:form-fragment]
@@ -229,33 +209,25 @@ const eventSchema = z.object({
 	),
 })
 
-const eventDefinition = nativeFormKit.defineForm(eventSchema, {
-	ui: [
-		{
-			kind: "array",
-			path: "speakers",
-			label: "Speakers",
-			itemDefault: () => ({ name: "", sessions: [] }),
-			children: [
-				{ kind: "field", path: "name", control: "text", label: "Name" },
-				{
-					kind: "array",
-					path: "sessions",
-					label: "Sessions",
-					itemDefault: { title: "" },
-					children: [
-						{
-							kind: "field",
-							path: "title",
-							control: "text",
-							label: "Title",
-						},
-					],
-				},
-			],
-		},
-	],
-})
+const eventDefinition = nativeFormKit.defineForm(eventSchema, (ui) => [
+	ui.array("speakers", {
+		label: "Speakers",
+		itemDefault: () => ({ name: "", sessions: [] }),
+		children: (speaker) => [
+			speaker.field("name", { control: "text", label: "Name" }),
+			speaker.array("sessions", {
+				label: "Sessions",
+				itemDefault: { title: "" },
+				children: (session) => [
+					session.field("title", {
+						control: "text",
+						label: "Title",
+					}),
+				],
+			}),
+		],
+	}),
+])
 ```
 
 Generated field paths use React Hook Form dot syntax. The title above can resolve to
@@ -265,6 +237,10 @@ Generated field paths use React Hook Form dot syntax. The title above can resolv
 Please clones the result before each insertion. Use a function when the default
 needs a new value, such as a generated ID. This function takes no arguments and
 is not a UI resolver.
+
+The `children` callback runs once while the definition is created. Its builder
+is bound to the array item, so each nested path is relative to that item. It is
+not a resolver and does not run for each rendered row.
 
 Array paths use their current index, while RHF supplies a stable row key.
 Moving or removing a row changes later paths. Put a durable ID in the schema
@@ -286,23 +262,19 @@ const accountKit = nativeFormKit.forContext<{
 	readonly canEditCompanies: boolean
 }>()
 
-const accountDefinition = accountKit.defineForm(accountSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "company",
-			control: "text",
-			label: (values) =>
-				values.accountType === "business" ? "Company" : "Organization",
-			visible: (values) => values.accountType !== "personal",
-			disabled: (_values, { context }) => !context.canEditCompanies,
-			options: (values) => ({
-				placeholder:
-					values.accountType === "nonprofit" ? "Foundation name" : "Company name",
-			}),
-		},
-	],
-})
+const accountDefinition = accountKit.defineForm(accountSchema, (ui) => [
+	ui.field("company", {
+		control: "text",
+		label: (values) =>
+			values.accountType === "business" ? "Company" : "Organization",
+		visible: (values) => values.accountType !== "personal",
+		disabled: (_values, { context }) => !context.canEditCompanies,
+		options: (values) => ({
+			placeholder:
+				values.accountType === "nonprofit" ? "Foundation name" : "Company name",
+		}),
+	}),
+])
 ```
 
 For ordinary definition nodes, the first argument is the complete, deeply

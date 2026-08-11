@@ -125,11 +125,12 @@ The returned kit has these members:
 
 ### `defineFragment`
 
-`kit.defineFragment(schema, { ui })` returns a frozen fragment with the exact
-input schema at `fragment.schema` and placement methods at `fragment.fields`.
-Fragment-authored resolvers receive the local fragment input. See [Reusable
-fragments](/definitions#reusable-fragments) for composition, context, and array
-examples.
+`kit.defineFragment(schema, (ui) => [...])` returns a frozen fragment with the
+exact input schema at `fragment.schema` and placement methods at
+`fragment.fields`. The object form `defineFragment(schema, { ui })` remains
+supported. Fragment-authored resolvers receive the local fragment input. See
+[Reusable fragments](/definitions#reusable-fragments) for composition,
+context, and array examples.
 
 ### Native controls
 
@@ -246,13 +247,21 @@ form.
 
 ## `defineForm`
 
-`kit.defineForm(schema, { ui })` validates, normalizes, and freezes a typed
-definition. The schema must implement Standard Schema. Field paths and control
-values use the schema input type, before schema transformations.
+`kit.defineForm(schema, (ui) => [...])` validates, normalizes, and freezes a
+typed definition. The schema-bound `field`, `section`, `array`, and `render`
+helpers create ordinary nodes without requiring an authored `kind` property.
+The schema must implement Standard Schema. Field paths and control values use
+the schema input type, before schema transformations.
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:define-form]
 ```
+
+`array.children` receives another builder bound to the item scope. The root
+builder and each array child callback run once while the definition is created;
+they are not value resolvers. The object form
+`defineForm(schema, { ui: [...] })` remains supported and produces the same
+normalized definition.
 
 In addition to opaque fragment placements, the UI array accepts four ordinary
 node kinds:

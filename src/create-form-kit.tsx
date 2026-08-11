@@ -56,6 +56,7 @@ import type {
 	DeepReadonly,
 	FieldSlotProps,
 	FormDefinition,
+	FormDefinitionBuilder,
 	FormDefinitionSource,
 	FormFragment,
 	FormInput,
@@ -243,6 +244,35 @@ type RuntimeSlots = FormKitSlots<
 	Record<string, unknown>
 >
 
+/** Object or schema-bound builder authoring accepted by definition methods. */
+type DefinitionAuthoringSource<
+	Schema extends StandardSchema,
+	Controls extends ControlDefinitionRegistry,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Context,
+	Grid extends number,
+> =
+	| FormDefinitionSource<
+			Schema,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+	  >
+	| FormDefinitionBuilder<
+			Schema,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+	  >
+
 /** The typed `defineFragment` method exposed by a form kit. */
 type DefineFragment<
 	Controls extends ControlDefinitionRegistry,
@@ -253,13 +283,13 @@ type DefineFragment<
 	Grid extends number,
 > = <Schema extends StandardSchema>(
 	schema: FormInput<Schema> extends FieldValues ? Schema : never,
-	source: FormDefinitionSource<
+	source: DefinitionAuthoringSource<
 		Schema,
 		Controls,
-		Context,
 		FieldOptions,
 		SectionOptions,
 		ArrayOptions,
+		Context,
 		Grid
 	>,
 ) => FormFragment<
@@ -282,13 +312,13 @@ type DefineForm<
 	Grid extends number,
 > = <Schema extends StandardSchema>(
 	schema: FormInput<Schema> extends FieldValues ? Schema : never,
-	source: FormDefinitionSource<
+	source: DefinitionAuthoringSource<
 		Schema,
 		Controls,
-		Context,
 		FieldOptions,
 		SectionOptions,
 		ArrayOptions,
+		Context,
 		Grid
 	>,
 ) => FormDefinition<
@@ -429,7 +459,9 @@ const FormIdContext = createContext<string | null>(null)
  * @example
  * ```tsx
  * const kit = createFormKit({ controls, slots })
- * const definition = kit.defineForm(schema, { ui: [] })
+ * const definition = kit.defineForm(schema, (ui) => [
+ *   ui.field("name", { control: "text" }),
+ * ])
  * ```
  *
  * @see https://r13v.github.io/form-please/get-started

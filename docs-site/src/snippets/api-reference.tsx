@@ -103,17 +103,13 @@ const addressSchema = z.object({
 
 const addressFragment = nativeFormKit
 	.forContext<AddressContext>()
-	.defineFragment(addressSchema, {
-		ui: [
-			{
-				kind: "field",
-				path: "street",
-				control: "text",
-				label: (_address, { context }) => `${context.locale}: Street`,
-			},
-			{ kind: "field", path: "city", control: "text", label: "City" },
-		],
-	})
+	.defineFragment(addressSchema, (ui) => [
+		ui.field("street", {
+			control: "text",
+			label: (_address, { context }) => `${context.locale}: Street`,
+		}),
+		ui.field("city", { control: "text", label: "City" }),
+	])
 
 const checkoutSchema = z.object({
 	billingAddress: addressFragment.schema,
@@ -122,18 +118,14 @@ const checkoutSchema = z.object({
 })
 
 const checkoutKit = nativeFormKit.forContext<AddressContext>()
-const checkoutDefinition = checkoutKit.defineForm(checkoutSchema, {
-	ui: [
-		addressFragment.fields({ at: "shippingAddress" }),
-		addressFragment.fields({ at: "billingAddress" }),
-		{
-			kind: "array",
-			path: "recipients",
-			itemDefault: { address: { city: "", street: "" } },
-			children: [addressFragment.fields({ at: "address" })],
-		},
-	],
-})
+const checkoutDefinition = checkoutKit.defineForm(checkoutSchema, (ui) => [
+	addressFragment.fields({ at: "shippingAddress" }),
+	addressFragment.fields({ at: "billingAddress" }),
+	ui.array("recipients", {
+		itemDefault: { address: { city: "", street: "" } },
+		children: () => [addressFragment.fields({ at: "address" })],
+	}),
+])
 // [!endregion form-fragment]
 
 // [!region native-factories]
@@ -334,69 +326,53 @@ const profileKit = kit.forContext<ProfileContext>()
 // [!endregion context-kit]
 
 // [!region define-form]
-const profileDefinition = profileKit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "identity",
-			title: "Profile",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "name",
-					control: "uppercase",
-					label: "Display name",
-					options: { placeholder: "ADA" },
-					required: true,
+const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
+	ui.section("identity", {
+		title: "Profile",
+		columns: 2,
+		children: [
+			ui.field("name", {
+				control: "uppercase",
+				label: "Display name",
+				options: { placeholder: "ADA" },
+				required: true,
+			}),
+			ui.field("yearsOfExperience", {
+				control: "text",
+				label: "Years of experience",
+			}),
+			ui.field("plan", {
+				control: "select",
+				label: "Plan",
+				readOnly: (_values, { context }) => !context.canEditPlan,
+				options: {
+					options: [
+						{ value: "solo", label: "Solo" },
+						{ value: "team", label: "Team" },
+					],
 				},
-				{
-					kind: "field",
-					path: "yearsOfExperience",
-					control: "text",
-					label: "Years of experience",
-				},
-				{
-					kind: "field",
-					path: "plan",
-					control: "select",
-					label: "Plan",
-					readOnly: (_values, { context }) => !context.canEditPlan,
-					options: {
-						options: [
-							{ value: "solo", label: "Solo" },
-							{ value: "team", label: "Team" },
-						],
-					},
-				},
-				{
-					kind: "field",
-					path: "teamName",
-					control: "text",
-					label: "Team name",
-					visible: (values) => values.plan === "team",
-				},
-				teamHint,
-				{
-					kind: "field",
-					path: "country",
-					control: "text",
-					label: "Country",
-					description: countryDescription,
-				},
-			],
-		},
-		{
-			kind: "array",
-			path: "speakers",
-			label: "Speakers",
-			itemDefault: { name: "" },
-			children: [
-				{ kind: "field", path: "name", control: "text", label: "Name" },
-			],
-		},
-	],
-})
+			}),
+			ui.field("teamName", {
+				control: "text",
+				label: "Team name",
+				visible: (values) => values.plan === "team",
+			}),
+			teamHint,
+			ui.field("country", {
+				control: "text",
+				label: "Country",
+				description: countryDescription,
+			}),
+		],
+	}),
+	ui.array("speakers", {
+		label: "Speakers",
+		itemDefault: { name: "" },
+		children: (speaker) => [
+			speaker.field("name", { control: "text", label: "Name" }),
+		],
+	}),
+])
 // [!endregion define-form]
 
 const defaultValues = {

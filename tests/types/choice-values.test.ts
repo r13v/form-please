@@ -62,6 +62,30 @@ nativeFormKit.defineForm(schema, {
 	],
 })
 
+nativeFormKit.defineForm(schema, (ui) => [
+	ui.field("role", {
+		control: "select",
+		options: {
+			options: [{ value: "admin", label: "Administrator" }],
+		},
+	}),
+])
+
+nativeFormKit.defineForm(schema, (ui) => [
+	ui.field("role", {
+		control: "select",
+		options: {
+			options: [
+				{
+					// @ts-expect-error Builder choice values retain the field union.
+					value: "owner",
+					label: "Owner",
+				},
+			],
+		},
+	}),
+])
+
 nativeFormKit.defineForm(schema, {
 	ui: [
 		{
@@ -103,6 +127,21 @@ contextualKit.defineForm(schema, {
 		},
 	],
 })
+
+contextualKit.defineForm(schema, (ui) => [
+	ui.field("role", {
+		control: "select",
+		options: (_values, { context }) => ({ options: context.exact }),
+	}),
+])
+
+contextualKit.defineForm(schema, (ui) => [
+	ui.field("role", {
+		control: "select",
+		// @ts-expect-error Builder resolver data retains the schema field union.
+		options: (_values, { context }) => ({ options: context.broad }),
+	}),
+])
 
 contextualKit.defineForm(schema, {
 	ui: [

@@ -61,7 +61,7 @@ the Material UI preset uses them.
 | --- | --- |
 | `src/types.ts` | Schema, path, control, definition, resolver, slot, and structural types |
 | `src/control-definition.ts` | Validate and freeze a typed control definition |
-| `src/definition.ts` | Validate, normalize, and synchronously resolve UI definitions |
+| `src/definition.ts` | Materialize authoring builders, validate, normalize, and synchronously resolve UI definitions |
 | `src/standard-schema-resolver.ts` | Validate through Standard Schema once and translate all issues to and from RHF errors |
 | `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
@@ -93,6 +93,13 @@ slots registry before calling `createFormKit`.
 ## Definition model
 
 A definition contains a Standard Schema and a recursive UI tree.
+
+Applications may author that tree as a `{ ui }` object or with the schema-bound
+builder passed to `defineForm` and `defineFragment`. Builder helpers create the
+same ordinary field, section, array, and render objects consumed by
+normalization. An array helper supplies a nested builder bound to its item
+scope. Root and array-child builder callbacks execute synchronously once during
+definition creation; they are not value resolvers and add no runtime node kind.
 
 - A field selects a schema input path and a compatible registered control.
 - A section groups nodes and supplies grid layout.

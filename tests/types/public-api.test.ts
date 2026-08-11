@@ -288,6 +288,106 @@ const definition = kit.defineForm(schema, {
 	],
 })
 
+const builderDefinition = kit.defineForm(schema, (ui) => [
+	ui.field("name", {
+		control: "localized",
+		label: (values, { context }) => {
+			const label = `${context.locale}: ${values.profile.country}`
+			// @ts-expect-error Builder resolvers receive readonly schema input.
+			values.profile.country = "FR"
+			// @ts-expect-error Builder resolver context is deeply readonly.
+			context.permissions.push("admin")
+			return label
+		},
+		options: { prefix: "Dr" },
+		slotOptions: { tone: "strong" },
+	}),
+	ui.section("profile", {
+		children: [
+			ui.field("profile.country", {
+				control: "select",
+				options: { choices: ["DE", "FR"] },
+			}),
+		],
+		slotOptions: { bordered: true },
+	}),
+	ui.array("speakers", {
+		children: (speaker) => [
+			speaker.field("name", { control: "text" }),
+			speaker.array("sessions", {
+				children: (session) => [session.field("title", { control: "text" })],
+				itemDefault: { title: "" },
+			}),
+		],
+		itemDefault: { name: "", sessions: [] },
+		label: (values) => `${values.speakers.length} speakers`,
+		slotOptions: { dense: true },
+	}),
+	ui.render("summary", {
+		component: () => null,
+		visible: (values, { context }) =>
+			values.name.length > 0 && context.permissions.length > 0,
+	}),
+])
+
+builderDefinition satisfies typeof definition
+
+kit.defineForm(schema, (ui) => [
+	// @ts-expect-error Required control options remain required in builders.
+	ui.field("name", { control: "select" }),
+])
+
+kit.defineForm(schema, (ui) => [
+	ui.field("name", {
+		// @ts-expect-error A number control cannot bind to a string path.
+		control: "number",
+	}),
+])
+
+kit.defineForm(schema, (ui) => [
+	ui.field("name", {
+		control: "text",
+		// @ts-expect-error Builder options reject removed node properties.
+		valuePolicy: "preserve",
+	}),
+])
+
+kit.defineForm(schema, (ui) => [
+	ui.array("speakers", {
+		children: (speaker) => [
+			speaker.array("sessions", {
+				children: (session) => [
+					// @ts-expect-error Nested builders expose only their item scope.
+					session.field("name", { control: "text" }),
+				],
+				itemDefault: { title: "" },
+			}),
+		],
+		// @ts-expect-error Array defaults must still match the item type.
+		itemDefault: { name: "" },
+	}),
+])
+
+const builderAddressFragment = addressKit.defineFragment(
+	addressSchema,
+	(ui) => [
+		ui.field("street", {
+			control: "text",
+			label: (address, { context }) => `${context.locale}: ${address.street}`,
+		}),
+	],
+)
+
+builderAddressFragment.schema.marker satisfies "address"
+
+kit.defineForm(fragmentHostSchema, (ui) => [
+	addressFragment.fields({ at: "shippingAddress" }),
+	ui.array("addresses", {
+		children: () => [addressFragment.fields()],
+		itemDefault: { city: "", street: "" },
+	}),
+])
+
 const middleware: FormMiddleware<Input, Context> =
 	(api) => (next) => (transaction) => {
 		transaction.nextValues.profile.country satisfies string

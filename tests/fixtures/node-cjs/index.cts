@@ -31,9 +31,10 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
-const definition: FormDefinition<typeof schema> = kit.defineForm(schema, {
-	ui: [{ kind: "field", path: "name", control: "text" }],
-})
+const definition: FormDefinition<typeof schema> = kit.defineForm(
+	schema,
+	(ui) => [ui.field("name", { control: "text" })],
+)
 const selectOptions = {
 	emptyOption: { label: "Choose" },
 	options: [{ label: "Draft", value: "draft" }],

@@ -185,6 +185,141 @@ describe("form kit", () => {
 		>()
 	})
 
+	it("normalizes schema-bound builders through the ordinary definition path", () => {
+		const authorSchema = z.object({
+			name: z.string(),
+			speakers: z.array(z.object({ name: z.string() })),
+		})
+		const Summary = () => null
+		let rootBuilds = 0
+		let itemBuilds = 0
+		const built = kit.defineForm(authorSchema, (ui) => {
+			rootBuilds += 1
+			return [
+				ui.section("profile", {
+					children: [
+						ui.field("name", {
+							control: "text",
+							label: "Name",
+						}),
+					],
+					columns: 2,
+				}),
+				ui.array("speakers", {
+					children: (item) => {
+						itemBuilds += 1
+						return [
+							item.field("name", {
+								control: "text",
+								label: "Speaker",
+							}),
+						]
+					},
+					itemDefault: { name: "" },
+				}),
+				ui.render("summary", { component: Summary }),
+			]
+		})
+		const authored = kit.defineForm(authorSchema, {
+			ui: [
+				{
+					kind: "section",
+					id: "profile",
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: "Name",
+						},
+					],
+					columns: 2,
+				},
+				{
+					kind: "array",
+					path: "speakers",
+					children: [
+						{
+							kind: "field",
+							path: "name",
+							control: "text",
+							label: "Speaker",
+						},
+					],
+					itemDefault: { name: "" },
+				},
+				{ kind: "render", id: "summary", component: Summary },
+			],
+		})
+
+		expect(rootBuilds).toBe(1)
+		expect(itemBuilds).toBe(1)
+		expect(built.ui).toEqual(authored.ui)
+		expect(built.nodes).toEqual(authored.nodes)
+		expect(Object.isFrozen(built)).toBe(true)
+		expect(built.nodes.every(Object.isFrozen)).toBe(true)
+	})
+
+	it("composes builder-authored fragments and protects node identity", () => {
+		const addressFragment = kit.defineFragment(
+			z.object({ street: z.string() }),
+			(ui) => [ui.field("street", { control: "text" })],
+		)
+		const placed = kit.defineForm(
+			z.object({ address: addressFragment.schema, name: z.string() }),
+			(ui) => [
+				ui.section("address", {
+					children: [addressFragment.fields({ at: "address" })],
+				}),
+				ui.field("name", {
+					control: "text",
+					kind: "render",
+					path: "missing",
+				} as never),
+			],
+		)
+
+		expect(placed.nodes.find((node) => node.kind === "field")?.path).toBe(
+			"address.street",
+		)
+		expect(placed.ui[1]).toMatchObject({
+			kind: "field",
+			path: "name",
+		})
+	})
+
+	it("rejects malformed schema-bound builder results", () => {
+		const arraySchema = z.object({
+			items: z.array(z.object({ name: z.string() })),
+		})
+
+		expect(() => kit.defineForm(schema, (() => ({ ui: [] })) as never)).toThrow(
+			"Form definition builder must return a ui array",
+		)
+		expect(() => kit.defineFragment(schema, (async () => []) as never)).toThrow(
+			"Fragment definition builder must return a ui array",
+		)
+		expect(() =>
+			kit.defineForm(arraySchema, (ui) => [
+				ui.array("items", {
+					children: [] as never,
+					itemDefault: { name: "" },
+				}),
+			]),
+		).toThrow("Array builder children must be a function")
+		expect(() =>
+			kit.defineForm(arraySchema, (ui) => [
+				ui.array("items", {
+					children: (() => ({})) as never,
+					itemDefault: { name: "" },
+				}),
+			]),
+		).toThrow("Array builder children must return a ui array")
+		expect(() =>
+			kit.defineForm(schema, (ui) => [ui.field("name", null as never)]),
+		).toThrow("Field builder options must be an object")
+	})
+
 	it("rejects a form binding owned by another form kit", () => {
 		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
 
