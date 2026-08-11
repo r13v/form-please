@@ -207,6 +207,22 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("shows type information for Twoslash snippets", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./examples/mui-yup")
+
+		const trigger = page
+			.locator("[data-v-twoslash-trigger]", { hasText: "createMuiFormKit" })
+			.first()
+		await expect(trigger).toBeVisible()
+		await trigger.hover()
+		await expect(page.locator(".twoslash-popup-container")).toContainText(
+			"createMuiFormKit",
+		)
+
+		expect(errors).toEqual([])
+	})
+
 	test("renders every supported live example", async ({ page }) => {
 		const errors = pageErrors(page)
 		for (const [route, label] of [

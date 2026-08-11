@@ -1,3 +1,4 @@
+// @jsx: react-jsx
 "use client"
 
 import type { FormInput, FormOutput } from "form-please"

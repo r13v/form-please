@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url"
 import { defineConfig } from "vocs/config"
 
 const basePath = process.env.BASE_PATH ?? "/"
@@ -17,6 +18,11 @@ export default defineConfig({
 		themes: {
 			light: "github-light",
 			dark: "github-dark",
+		},
+	},
+	twoslash: {
+		twoslashOptions: {
+			vfsRoot: fileURLToPath(new URL("./src/snippets", import.meta.url)),
 		},
 	},
 	socials: [{ icon: "github", link: "https://github.com/r13v/form-please" }],

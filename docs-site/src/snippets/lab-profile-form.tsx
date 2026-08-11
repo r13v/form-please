@@ -1,3 +1,4 @@
+// @jsx: react-jsx
 "use client"
 
 import { createFormKit, type FormInput, type FormOutput } from "form-please"

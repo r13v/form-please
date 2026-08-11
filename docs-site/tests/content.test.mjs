@@ -71,6 +71,23 @@ const referenceSnippets = [
 	"src/snippets/validation-guide.tsx",
 ]
 
+test("uses Twoslash for complete TypeScript snippets", async () => {
+	for (const [path] of pages) {
+		const source = await readFile(new URL(path, siteRoot), "utf8")
+		const completeSnippets = source.matchAll(
+			/^```(?:ts|tsx)([^\n]*)\n\/\/ \[!include ~\/snippets\/[^\]: ]+\]\n```/gm,
+		)
+
+		for (const snippet of completeSnippets) {
+			assert.match(
+				snippet[1],
+				/\btwoslash\b/,
+				`${path} must use Twoslash for each complete TypeScript snippet`,
+			)
+		}
+	}
+})
+
 test("documents only the supported navigation surface", async () => {
 	const config = await readFile(new URL("vocs.config.ts", siteRoot), "utf8")
 	for (const [path, title] of pages) {

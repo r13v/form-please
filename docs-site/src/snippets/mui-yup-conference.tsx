@@ -1,3 +1,4 @@
+// @jsx: react-jsx
 "use client"
 
 import type { PaletteMode } from "@mui/material"

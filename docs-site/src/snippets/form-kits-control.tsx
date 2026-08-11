@@ -1,3 +1,4 @@
+// @jsx: react-jsx
 "use client"
 
 import { type ControlProps, defineControl } from "form-please"
