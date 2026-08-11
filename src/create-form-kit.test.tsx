@@ -180,6 +180,9 @@ const definition = kit.defineForm(schema, {
 describe("form kit", () => {
 	it("keeps erased resolved slot options honest", () => {
 		expectTypeOf<ResolvedFieldNode["slotOptions"]>().toEqualTypeOf<unknown>()
+		expectTypeOf<SubmitSlotProps["values"]>().toEqualTypeOf<
+			Readonly<Record<string, unknown>>
+		>()
 	})
 
 	it("rejects a form binding owned by another form kit", () => {
@@ -1560,6 +1563,72 @@ describe("form kit", () => {
 				input: { editable: "open", locked: "preserved" },
 				value: { editable: "open", locked: "preserved" },
 			}),
+		)
+	})
+
+	it("passes typed values and submit state to a render function", async () => {
+		const onSubmit = vi.fn()
+
+		function View() {
+			const form = kit.useForm(definition, {
+				defaultValues: { name: "Ada" },
+				onSubmit,
+			})
+			return (
+				<kit.AutoForm form={form}>
+					<kit.Submit binding={form}>
+						{({ buttonProps, values, isDirty, canSubmit }) => {
+							expectTypeOf(values).toEqualTypeOf<{
+								readonly name: string
+							}>()
+							return (
+								<button {...buttonProps} disabled={!canSubmit || !isDirty}>
+									Save {values.name}
+								</button>
+							)
+						}}
+					</kit.Submit>
+				</kit.AutoForm>
+			)
+		}
+
+		render(<View />)
+		const initial = screen.getByRole("button", { name: "Save Ada" })
+		expect(initial.getAttribute("disabled")).not.toBeNull()
+
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Bob" },
+		})
+		const dirty = screen.getByRole("button", { name: "Save Bob" })
+		expect(dirty.getAttribute("disabled")).toBeNull()
+
+		fireEvent.click(dirty)
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+		expect(onSubmit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				input: { name: "Bob" },
+				value: { name: "Bob" },
+			}),
+		)
+	})
+
+	it("rejects a submit binding that does not match the surrounding form", () => {
+		function View() {
+			const mounted = kit.useForm(definition, {
+				defaultValues: { name: "Ada" },
+			})
+			const other = kit.useForm(definition, {
+				defaultValues: { name: "Grace" },
+			})
+			return (
+				<kit.Form form={mounted}>
+					<kit.Submit binding={other}>{() => null}</kit.Submit>
+				</kit.Form>
+			)
+		}
+
+		expect(() => render(<View />)).toThrow(
+			"Submit binding must match the surrounding Form",
 		)
 	})
 

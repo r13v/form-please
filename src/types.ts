@@ -1074,22 +1074,30 @@ export type ErrorMessageSlotProps = {
 	/** The validation issue to display. */
 	readonly issue: FormIssue
 }
-/** Form state and button props supplied to a submit slot component. */
-export type SubmitSlotProps = {
+/** Native button props owned by the runtime submit state. */
+type SubmitButtonProps = Omit<
+	ComponentPropsWithoutRef<"button">,
+	"disabled" | "type"
+> & {
+	/** Whether the runtime prevents submission. */
+	readonly disabled: boolean
+	/** The runtime-owned native button type. */
+	readonly type: "submit"
+}
+/** Live form state and button props supplied to a submit slot or render function. */
+export type SubmitSlotProps<
+	Schema extends StandardSchema = StandardSchema<Record<string, unknown>>,
+> = {
 	/** Native button props with runtime-owned submit and disabled values. */
-	readonly buttonProps: Omit<
-		ComponentPropsWithoutRef<"button">,
-		"disabled" | "type"
-	> & {
-		/** Whether the runtime prevents submission. */
-		readonly disabled: boolean
-		/** The runtime-owned native button type. */
-		readonly type: "submit"
-	}
-	/** The current editable form values. */
-	readonly values: Readonly<Record<string, unknown>>
+	readonly buttonProps: SubmitButtonProps
+	/** The current deeply readonly editable form values. */
+	readonly values: DeepReadonly<FormInput<Schema>>
 	/** Whether the form is running its submit handler. */
 	readonly isSubmitting: boolean
+	/** Whether the editable values differ from the default baseline. */
+	readonly isDirty: boolean
+	/** Whether the form can submit now: not validating and not submitting. */
+	readonly canSubmit: boolean
 }
 /** Structural components used by a form kit. */
 export type FormKitSlots<

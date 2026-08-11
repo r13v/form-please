@@ -53,6 +53,7 @@ import type {
 	ArraySlotProps,
 	ControlDefinitionRegistry,
 	ControlProps,
+	DeepReadonly,
 	FieldSlotProps,
 	FormDefinition,
 	FormDefinitionSource,
@@ -66,6 +67,7 @@ import type {
 	StandardSchema,
 	StructuralNodeName,
 	StructuralRootProps,
+	SubmitSlotProps,
 } from "./types.js"
 import {
 	attachValueCoordinatorCapability,
@@ -372,9 +374,19 @@ export interface FormKit<
 		readonly children?: ReactNode
 	}) => ReactElement
 	/** Renders the configured submit slot with current form state. */
-	readonly Submit: (
-		props: Omit<ComponentPropsWithoutRef<"button">, "type">,
-	) => ReactElement
+	readonly Submit: {
+		/** Renders static content through the configured submit slot. */
+		(props: Omit<ComponentPropsWithoutRef<"button">, "type">): ReactElement
+		/** Renders custom content with live state typed by the matching binding. */
+		<Schema extends StandardSchema>(
+			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
+				/** The binding mounted by the surrounding `Form`. */
+				readonly binding: FormBinding<Schema, Context>
+				/** Renders custom content from live typed submit state. */
+				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
+			},
+		): ReactElement
+	}
 	/** Composes `Form`, the error summary, and generated fields. */
 	readonly AutoForm: <Schema extends StandardSchema>(
 		props: AutoFormProps<Schema, Context>,
@@ -745,24 +757,45 @@ function assembleKit(
 	}
 
 	/** Renders the kit submit slot with live form state. */
-	function Submit(props: Omit<ComponentPropsWithoutRef<"button">, "type">) {
-		const form = useRuntimeForm()
-		const state = useFormState({ control: form.api.control })
-		const values = useWatch({ control: form.api.control })
+	function Submit<Schema extends StandardSchema>(
+		props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
+			readonly binding?: FormBinding<Schema, unknown>
+			readonly children?:
+				| ReactNode
+				| ((props: SubmitSlotProps<Schema>) => ReactNode)
+		},
+	) {
+		const { binding, children, ...nativeProps } = props
+		const runtime = useRuntimeForm()
+		if (binding !== undefined && runtimeForms.get(binding) !== runtime) {
+			throw new Error("Submit binding must match the surrounding Form")
+		}
+		const state = useFormState({ control: runtime.api.control })
+		const values = useWatch({ control: runtime.api.control })
 		const Slot = slots.Submit
+		const renderProps: SubmitSlotProps<Schema> = {
+			buttonProps: {
+				...nativeProps,
+				disabled:
+					props.disabled === true ||
+					runtime.disabled ||
+					state.isValidating ||
+					state.isSubmitting,
+				type: "submit",
+			},
+			isSubmitting: state.isSubmitting,
+			isDirty: state.isDirty,
+			canSubmit: !state.isValidating && !state.isSubmitting,
+			values: values as DeepReadonly<FormInput<Schema>>,
+		}
+		if (typeof children === "function") {
+			return <>{children(renderProps)}</>
+		}
+		const slotProps = renderProps as unknown as SubmitSlotProps
 		return (
 			<Slot
-				buttonProps={{
-					...props,
-					disabled:
-						props.disabled === true ||
-						form.disabled ||
-						state.isValidating ||
-						state.isSubmitting,
-					type: "submit",
-				}}
-				isSubmitting={state.isSubmitting}
-				values={values as Readonly<Record<string, unknown>>}
+				{...slotProps}
+				buttonProps={{ ...slotProps.buttonProps, children }}
 			/>
 		)
 	}

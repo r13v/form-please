@@ -9,7 +9,7 @@ import { ProductWorkflowDemo } from "../components/product-workflow-demo"
 # Product workflows
 
 Use this tutorial when one form spans multiple product screens. You will keep
-one Form Please binding and add application-owned workflow state around it.
+one "Form, Please" binding and add application-owned workflow state around it.
 
 At the end, the workflow will provide:
 
@@ -54,7 +54,7 @@ Copy this complete controller and example into application code:
 
 | Input | Purpose |
 | --- | --- |
-| `form` | Uses the existing Form Please binding and RHF API. |
+| `form` | Uses the existing "Form, Please" binding and RHF API. |
 | `screen` | Reads the current application-owned screen. |
 | `setScreen` | Changes the external screen state. |
 | `steps` | Defines labels, typed paths, and optional conditions. |
@@ -203,7 +203,7 @@ The snapshot has these guarantees:
 
 Changing or removing the button while validation is pending does not change the
 snapshot. Direct `form.api.handleSubmit` calls remain raw React Hook Form calls
-and do not invoke the Form Please `onSubmit` wrapper.
+and do not invoke the "Form, Please" `onSubmit` wrapper.
 
 Use `submitter` only to select a validated application action. Validate the
 action again at the server boundary. Do not use a button value as authorization.

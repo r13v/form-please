@@ -58,6 +58,20 @@ export function ContactForm() {
 }
 ```
 
+Render submit content with live typed values and state by passing a function to
+`kit.Submit`. The required `binding` types the values and must match the
+surrounding form; the button is yours:
+
+```tsx
+<kit.Submit binding={form}>
+	{({ buttonProps, values, isDirty, canSubmit }) => (
+		<button {...buttonProps} disabled={!canSubmit || !isDirty}>
+			Save {values.name}
+		</button>
+	)}
+</kit.Submit>
+```
+
 Reuse a schema-owned group of fields at compatible object paths:
 
 ```tsx

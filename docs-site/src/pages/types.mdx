@@ -277,8 +277,9 @@ required slot components. The three option generics set the corresponding
 | `ArrayItemSlotProps` | `ArrayItem` slot. |
 | `ErrorMessageSlotProps` | `ErrorMessage` slot. |
 
-`SubmitSlotProps` types the `Submit` slot. It provides `buttonProps`, current
-input `values`, and `isSubmitting`.
+`SubmitSlotProps<Schema>` types the `Submit` slot and typed render functions. It
+provides `buttonProps`, deeply readonly input `values`, `isSubmitting`,
+`isDirty`, and `canSubmit` (`!isValidating && !isSubmitting`).
 
 ### Shared structure types
 

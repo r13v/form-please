@@ -301,7 +301,12 @@ Public issues contain only `message` and optional `path`.
 `kit.Form` provides RHF and Form Please contexts and owns native submit and
 reset event handling. `kit.Fields` resolves and renders the definition.
 `kit.AutoForm` composes the error summary and generated fields. `kit.Submit`
-delegates to the configured submit slot.
+delegates to the configured submit slot. Its children may be static content or
+a function receiving live submit state: deeply readonly typed values,
+`isSubmitting`, `isDirty`, and `canSubmit` (`!isValidating && !isSubmitting`).
+The function form reads the schema from its required `binding`, which must match
+the surrounding form at runtime. A registered submit slot receives the same
+state through the schema-generic `SubmitSlotProps` contract.
 
 Controls receive typed values and managed updates plus accessibility IDs,
 metadata, options, context, and interaction flags. The control contract has no
