@@ -9,7 +9,7 @@ import {
 } from "react"
 
 import { defineControl } from "../control-definition.js"
-import type { ChoiceValue, ControlProps } from "../types.js"
+import type { ControlProps, OptionValue } from "../types.js"
 
 /** A supported HTML input type for the native text control. */
 export type NativeTextType =
@@ -21,7 +21,7 @@ export type NativeTextType =
 	| "url"
 
 /** HTML behavior supported by the native text control. */
-export type NativeTextOptions = {
+export type NativeTextProps = {
 	/** The semantic HTML input type. Defaults to `text`. */
 	readonly type?: NativeTextType
 	/** A short hint shown when the input has no value. */
@@ -31,7 +31,7 @@ export type NativeTextOptions = {
 }
 
 /** HTML behavior supported by the native textarea control. */
-export type NativeTextareaOptions = {
+export type NativeTextareaProps = {
 	/** A short hint shown when the textarea has no value. */
 	readonly placeholder?: string
 	/** A browser autofill token or token list. */
@@ -41,7 +41,7 @@ export type NativeTextareaOptions = {
 }
 
 /** HTML constraints and presentation for the native number control. */
-export type NativeNumberOptions = {
+export type NativeNumberProps = {
 	/** The minimum accepted number. */
 	readonly min?: number
 	/** The maximum accepted number. */
@@ -53,7 +53,7 @@ export type NativeNumberOptions = {
 }
 
 /** ISO date limits for the native date control. */
-export type NativeDateOptions = {
+export type NativeDateProps = {
 	/** The earliest accepted date in `YYYY-MM-DD` format. */
 	readonly min?: string
 	/** The latest accepted date in `YYYY-MM-DD` format. */
@@ -61,7 +61,7 @@ export type NativeDateOptions = {
 }
 
 /** Time limits and precision for the native time control. */
-export type NativeTimeOptions = {
+export type NativeTimeProps = {
 	/** The earliest accepted time as a valid HTML time value. */
 	readonly min?: string
 	/** The latest accepted time as a valid HTML time value. */
@@ -73,7 +73,7 @@ export type NativeTimeOptions = {
 /** One selectable value in a native select control. */
 export type NativeSelectOption<Value extends string | undefined = string> = {
 	/** The non-undefined field value represented by this option. */
-	readonly value: ChoiceValue<Exclude<Value, undefined>>
+	readonly value: OptionValue<Exclude<Value, undefined>>
 	/** The text shown to the user. */
 	readonly label: string
 	/** Whether the user cannot select this option. */
@@ -88,16 +88,14 @@ export type NativeSelectEmptyOption = {
 	readonly disabled?: boolean
 }
 
-/** Choices rendered by the native select control. */
-export type NativeSelectOptions<Value extends string | undefined = string> = {
-	/** The optional choice that maps an empty HTML value to `undefined`. */
+/** Application-owned props for the native select control. */
+export type NativeSelectProps = {
+	/** The optional entry that maps an empty HTML value to `undefined`. */
 	readonly emptyOption?: NativeSelectEmptyOption
-	/** The non-empty choices available to the user. */
-	readonly options: readonly NativeSelectOption<Value>[]
 }
 
 /** Accepted file types for the native single-file control. */
-export type NativeFileOptions = {
+export type NativeFileProps = {
 	/** A comma-separated HTML file-type filter. */
 	readonly accept?: string
 }
@@ -109,26 +107,26 @@ function NativeTextControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: inputProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeTextOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeTextProps>): ReactElement {
 	return (
 		<input
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
-			autoComplete={options.autoComplete}
+			autoComplete={inputProps.autoComplete}
 			disabled={disabled}
 			id={input.id}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) => setValue(event.currentTarget.value)}
-			placeholder={options.placeholder}
+			placeholder={inputProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			type={options.type ?? "text"}
+			type={inputProps.type ?? "text"}
 			value={value ?? ""}
 		/>
 	)
@@ -141,26 +139,26 @@ function NativeTextareaControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: textareaProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeTextareaOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeTextareaProps>): ReactElement {
 	return (
 		<textarea
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
-			autoComplete={options.autoComplete}
+			autoComplete={textareaProps.autoComplete}
 			disabled={disabled}
 			id={input.id}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) => setValue(event.currentTarget.value)}
-			placeholder={options.placeholder}
+			placeholder={textareaProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			rows={options.rows}
+			rows={textareaProps.rows}
 			value={value ?? ""}
 		/>
 	)
@@ -173,11 +171,11 @@ function NativeNumberControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: numberProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<number | undefined, NativeNumberOptions>): ReactElement {
+}: ControlProps<number | undefined, NativeNumberProps>): ReactElement {
 	/** Converts an HTML number input change to the field value contract. */
 	function handleChange(event: ChangeEvent<HTMLInputElement>): void {
 		if (event.currentTarget.value === "") {
@@ -197,16 +195,16 @@ function NativeNumberControl({
 			aria-invalid={meta.invalid || undefined}
 			disabled={disabled}
 			id={input.id}
-			max={options.max}
-			min={options.min}
+			max={numberProps.max}
+			min={numberProps.min}
 			name={input.name}
 			onBlur={blur}
 			onChange={handleChange}
-			placeholder={options.placeholder}
+			placeholder={numberProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			step={options.step}
+			step={numberProps.step}
 			type="number"
 			value={value === undefined ? "" : String(value)}
 		/>
@@ -220,19 +218,19 @@ function NativeDateControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: dateProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeDateOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeDateProps>): ReactElement {
 	return (
 		<input
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
 			disabled={disabled}
 			id={input.id}
-			max={options.max}
-			min={options.min}
+			max={dateProps.max}
+			min={dateProps.min}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) =>
@@ -258,19 +256,19 @@ function NativeTimeControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: timeProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeTimeOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeTimeProps>): ReactElement {
 	return (
 		<input
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
 			disabled={disabled}
 			id={input.id}
-			max={options.max}
-			min={options.min}
+			max={timeProps.max}
+			min={timeProps.min}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) =>
@@ -283,7 +281,7 @@ function NativeTimeControl({
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			step={options.step}
+			step={timeProps.step}
 			type="time"
 			value={value ?? ""}
 		/>
@@ -297,28 +295,28 @@ function NativeSelectControl({
 	blur,
 	input,
 	meta,
+	props: selectProps,
 	options,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeSelectOptions>): ReactElement {
-	const selectOptions = options.options
-	if (!Array.isArray(selectOptions)) {
-		throw new TypeError(
-			"createNativeControls().select requires options.options",
-		)
-	}
+}: ControlProps<
+	string | undefined,
+	NativeSelectProps,
+	unknown,
+	NativeSelectOption
+>): ReactElement {
 	if (
-		options.emptyOption !== undefined &&
-		selectOptions.some((option) => option.value === "")
+		selectProps.emptyOption !== undefined &&
+		options.some((option) => option.value === "")
 	) {
 		throw new TypeError(
-			'createNativeControls().select cannot combine options.emptyOption with an option whose value is ""',
+			'createNativeControls().select cannot combine props.emptyOption with an option whose value is ""',
 		)
 	}
-	if (value === undefined && options.emptyOption === undefined) {
+	if (value === undefined && selectProps.emptyOption === undefined) {
 		throw new TypeError(
-			"createNativeControls().select requires options.emptyOption to represent undefined",
+			"createNativeControls().select requires props.emptyOption to represent undefined",
 		)
 	}
 
@@ -340,7 +338,7 @@ function NativeSelectControl({
 
 				const nextValue = event.currentTarget.value
 				setValue(
-					nextValue === "" && options.emptyOption !== undefined
+					nextValue === "" && selectProps.emptyOption !== undefined
 						? undefined
 						: nextValue,
 				)
@@ -359,12 +357,12 @@ function NativeSelectControl({
 			required={required}
 			value={value ?? ""}
 		>
-			{options.emptyOption === undefined ? null : (
-				<option disabled={options.emptyOption.disabled} value="">
-					{options.emptyOption.label}
+			{selectProps.emptyOption === undefined ? null : (
+				<option disabled={selectProps.emptyOption.disabled} value="">
+					{selectProps.emptyOption.label}
 				</option>
 			)}
-			{selectOptions.map((option) => (
+			{options.map((option) => (
 				<option
 					disabled={option.disabled}
 					key={option.value}
@@ -432,11 +430,11 @@ function NativeFileControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: fileProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<File | undefined, NativeFileOptions>): ReactElement {
+}: ControlProps<File | undefined, NativeFileProps>): ReactElement {
 	const fileInputRef = useRef<HTMLInputElement | null>(null)
 	const [nativeFile, setNativeFile] = useState<File | undefined>(undefined)
 	const hasSubmittableNativeFile =
@@ -459,7 +457,7 @@ function NativeFileControl({
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
 			aria-readonly={readOnly || undefined}
-			accept={options.accept}
+			accept={fileProps.accept}
 			disabled={disabled}
 			id={input.id}
 			name={hasSubmittableNativeFile ? input.name : undefined}
@@ -505,27 +503,32 @@ function NativeFileControl({
  * @see https://r13v.github.io/form-please/form-kits
  */
 export function createNativeControls() {
-	const text = defineControl<string | undefined, NativeTextOptions>({
+	const text = defineControl<string | undefined, NativeTextProps>({
 		component: NativeTextControl,
 	})
 
-	const textarea = defineControl<string | undefined, NativeTextareaOptions>({
+	const textarea = defineControl<string | undefined, NativeTextareaProps>({
 		component: NativeTextareaControl,
 	})
 
-	const number = defineControl<number | undefined, NativeNumberOptions>({
+	const number = defineControl<number | undefined, NativeNumberProps>({
 		component: NativeNumberControl,
 	})
 
-	const date = defineControl<string | undefined, NativeDateOptions>({
+	const date = defineControl<string | undefined, NativeDateProps>({
 		component: NativeDateControl,
 	})
 
-	const time = defineControl<string | undefined, NativeTimeOptions>({
+	const time = defineControl<string | undefined, NativeTimeProps>({
 		component: NativeTimeControl,
 	})
 
-	const select = defineControl<string | undefined, NativeSelectOptions>({
+	const select = defineControl<
+		string | undefined,
+		NativeSelectProps,
+		unknown,
+		NativeSelectOption
+	>({
 		component: NativeSelectControl,
 	})
 
@@ -533,7 +536,7 @@ export function createNativeControls() {
 		component: NativeCheckboxControl,
 	})
 
-	const file = defineControl<File | undefined, NativeFileOptions>({
+	const file = defineControl<File | undefined, NativeFileProps>({
 		component: NativeFileControl,
 	})
 

@@ -3,7 +3,7 @@
 
 import { type ControlProps, defineControl } from "form-please"
 
-export type UppercaseOptions = {
+export type UppercaseProps = {
 	readonly placeholder?: string
 }
 
@@ -13,11 +13,11 @@ export function UppercaseControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: inputProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, UppercaseOptions>) {
+}: ControlProps<string | undefined, UppercaseProps>) {
 	return (
 		<input
 			aria-describedby={input["aria-describedby"]}
@@ -29,7 +29,7 @@ export function UppercaseControl({
 			onChange={(event) =>
 				setValue(event.currentTarget.value.toUpperCase() || undefined)
 			}
-			placeholder={options.placeholder}
+			placeholder={inputProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
@@ -38,6 +38,6 @@ export function UppercaseControl({
 	)
 }
 
-export const uppercase = defineControl<string | undefined, UppercaseOptions>({
+export const uppercase = defineControl<string | undefined, UppercaseProps>({
 	component: UppercaseControl,
 })

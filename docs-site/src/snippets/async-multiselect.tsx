@@ -46,7 +46,7 @@ export type AsyncMultiSelectOption = {
 	readonly disabled?: boolean
 }
 
-export type AsyncMultiSelectOptions = {
+export type AsyncMultiSelectProps = {
 	readonly queryKey: readonly unknown[]
 	readonly queryFn: (
 		search: string,
@@ -71,21 +71,24 @@ function AsyncMultiSelectControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: multiSelectProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string[], AsyncMultiSelectOptions>) {
+}: ControlProps<string[], AsyncMultiSelectProps>) {
 	const [open, setOpen] = useState(false)
 	const [search, setSearch] = useState("")
 	const [activeIndex, setActiveIndex] = useState<number | null>(null)
-	const debouncedSearch = useDebouncedValue(search, options.debounceMs ?? 250)
+	const debouncedSearch = useDebouncedValue(
+		search,
+		multiSelectProps.debounceMs ?? 250,
+	)
 	const searchRef = useRef<HTMLInputElement>(null)
 	const listRef = useRef<Array<HTMLElement | null>>([])
 	// [!region label-cache]
 	const optionCache = useRef(
 		new Map(
-			(options.initialOptions ?? []).map(
+			(multiSelectProps.initialOptions ?? []).map(
 				(option) => [option.value, option] as const,
 			),
 		),
@@ -93,19 +96,19 @@ function AsyncMultiSelectControl({
 
 	// [!region query-state]
 	const optionsQuery = useQuery({
-		queryKey: [...options.queryKey, debouncedSearch],
-		queryFn: ({ signal }) => options.queryFn(debouncedSearch, signal),
+		queryKey: [...multiSelectProps.queryKey, debouncedSearch],
+		queryFn: ({ signal }) => multiSelectProps.queryFn(debouncedSearch, signal),
 		enabled: open,
 		placeholderData: keepPreviousData,
-		staleTime: options.staleTime ?? 30_000,
+		staleTime: multiSelectProps.staleTime ?? 30_000,
 	})
 	// [!endregion query-state]
 
 	useEffect(() => {
-		for (const option of options.initialOptions ?? []) {
+		for (const option of multiSelectProps.initialOptions ?? []) {
 			optionCache.current.set(option.value, option)
 		}
-	}, [options.initialOptions])
+	}, [multiSelectProps.initialOptions])
 
 	useEffect(() => {
 		for (const option of optionsQuery.data ?? []) {
@@ -129,7 +132,7 @@ function AsyncMultiSelectControl({
 				label: selectedValue,
 			},
 	)
-	const maxVisibleTags = options.maxVisibleTags ?? 3
+	const maxVisibleTags = multiSelectProps.maxVisibleTags ?? 3
 	const visibleTags = selectedOptions.slice(0, maxVisibleTags)
 	const hiddenTagCount = selectedOptions.length - visibleTags.length
 	const listboxId = `${input.id}-listbox`
@@ -242,7 +245,7 @@ function AsyncMultiSelectControl({
 					)}
 					{selectedOptions.length === 0 && (
 						<span className="async-multiselect__placeholder">
-							{options.placeholder ?? "Choose options"}
+							{multiSelectProps.placeholder ?? "Choose options"}
 						</span>
 					)}
 				</div>
@@ -289,7 +292,7 @@ function AsyncMultiSelectControl({
 					restoreFocus
 				>
 					<div
-						aria-label={options.dialogLabel ?? "Options"}
+						aria-label={multiSelectProps.dialogLabel ?? "Options"}
 						className="async-multiselect__dropdown"
 						ref={refs.setFloating}
 						role="dialog"
@@ -305,7 +308,9 @@ function AsyncMultiSelectControl({
 								aria-autocomplete="list"
 								aria-controls={listboxId}
 								aria-expanded="true"
-								aria-label={options.searchPlaceholder ?? "Search options"}
+								aria-label={
+									multiSelectProps.searchPlaceholder ?? "Search options"
+								}
 								aria-required={required || undefined}
 								autoComplete="off"
 								className="async-multiselect__search-input"
@@ -313,7 +318,9 @@ function AsyncMultiSelectControl({
 									setSearch(event.currentTarget.value)
 									setActiveIndex(null)
 								}}
-								placeholder={options.searchPlaceholder ?? "Search options"}
+								placeholder={
+									multiSelectProps.searchPlaceholder ?? "Search options"
+								}
 								readOnly={readOnly}
 								ref={searchRef}
 								role="combobox"
@@ -336,7 +343,7 @@ function AsyncMultiSelectControl({
 						>
 							{optionsQuery.isError && (
 								<div className="async-multiselect__message" role="alert">
-									<span>Could not load options.</span>
+									<span>Could not load multiSelectProps.</span>
 									<button onClick={() => optionsQuery.refetch()} type="button">
 										Try again
 									</button>
@@ -346,7 +353,7 @@ function AsyncMultiSelectControl({
 								!optionsQuery.isPending &&
 								availableOptions.length === 0 && (
 									<p className="async-multiselect__message" role="status">
-										{options.emptyMessage ?? "No options found."}
+										{multiSelectProps.emptyMessage ?? "No options found."}
 									</p>
 								)}
 							{availableOptions.map((option, index) => {
@@ -411,10 +418,7 @@ function AsyncMultiSelectControl({
 	)
 }
 
-export const asyncMultiSelect = defineControl<
-	string[],
-	AsyncMultiSelectOptions
->({
+export const asyncMultiSelect = defineControl<string[], AsyncMultiSelectProps>({
 	component: AsyncMultiSelectControl,
 })
 
@@ -494,7 +498,7 @@ const definition = kit.defineForm(schema, {
 			label: "Cities",
 			description: "Search the remote list and keep more than one city.",
 			required: true,
-			options: {
+			props: {
 				queryKey: ["cities"],
 				queryFn: searchCities,
 				initialOptions: initiallySelected,

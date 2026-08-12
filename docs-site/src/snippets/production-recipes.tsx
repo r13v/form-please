@@ -9,6 +9,7 @@ import {
 	type FormInput,
 	type FormOutput,
 	fromResource,
+	matchResource,
 	type ResourceState,
 	type UiResolver,
 } from "form-please"
@@ -36,7 +37,7 @@ const profileDefinition = nativeFormKit.defineForm(profileSchema, {
 			path: "email",
 			control: "text",
 			label: "Email",
-			options: { type: "email" },
+			props: { type: "email" },
 		},
 		{
 			kind: "field",
@@ -418,7 +419,7 @@ const wizardDefinition = wizardKit.defineForm(wizardSchema, {
 			path: "email",
 			control: "text",
 			label: "Email",
-			options: { type: "email" },
+			props: { type: "email" },
 			visible: (_values, { context }) => context.step === "identity",
 		},
 		{
@@ -517,7 +518,7 @@ const normalizedProfileDefinition = nativeFormKit.defineForm(
 				path: "email",
 				control: "text",
 				label: "Email",
-				options: { type: "email" },
+				props: { type: "email" },
 			},
 		],
 	},
@@ -605,20 +606,22 @@ const departmentDescription = fromResource(selectDepartments, {
 	error: ({ error }) => error.message,
 })
 
-const departmentOptions = fromResource(selectDepartments, {
-	pending: () => ({
-		emptyOption: { label: "Loading departments" },
-		options: [],
-	}),
-	success: ({ value }) => ({
-		emptyOption: { label: "Select a department" },
-		options: value,
-	}),
-	error: () => ({
-		emptyOption: { label: "Departments unavailable" },
-		options: [],
-	}),
+const departmentProps = fromResource(selectDepartments, {
+	pending: () => ({ emptyOption: { label: "Loading departments" } }),
+	success: () => ({ emptyOption: { label: "Select a department" } }),
+	error: () => ({ emptyOption: { label: "Departments unavailable" } }),
 })
+
+const departmentOptions = ({
+	context,
+}: {
+	readonly context: DirectoryContext
+}) =>
+	matchResource(context.departments, {
+		pending: () => [],
+		success: ({ value }) => value,
+		error: () => [],
+	})
 
 const directoryKit = nativeFormKit.forContext<DirectoryContext>()
 
@@ -632,6 +635,7 @@ const directoryDefinition = directoryKit.defineForm(profileSchema, {
 			control: "select",
 			label: "Department",
 			description: departmentDescription,
+			props: departmentProps,
 			options: departmentOptions,
 			disabled: (_values, { context }) =>
 				context.departments.status !== "success",
@@ -674,7 +678,7 @@ function ProfileByMode({
 }
 // [!endregion form-modes]
 
-type CurrencyOptions = {
+type CurrencyProps = {
 	readonly currency: string
 }
 
@@ -684,14 +688,14 @@ function CurrencyControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: currencyProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<number | undefined, CurrencyOptions>) {
+}: ControlProps<number | undefined, CurrencyProps>) {
 	return (
 		<div>
-			<span aria-hidden="true">{options.currency}</span>
+			<span aria-hidden="true">{currencyProps.currency}</span>
 			<input
 				aria-describedby={input["aria-describedby"]}
 				aria-invalid={meta.invalid || undefined}
@@ -717,7 +721,7 @@ function CurrencyControl({
 }
 
 // [!region accessible-control]
-const currency = defineControl<number | undefined, CurrencyOptions>({
+const currency = defineControl<number | undefined, CurrencyProps>({
 	component: CurrencyControl,
 })
 

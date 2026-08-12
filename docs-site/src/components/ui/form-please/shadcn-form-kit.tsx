@@ -3,24 +3,25 @@
 import {
 	type ArrayItemSlotProps,
 	type ArraySlotProps,
-	type ChoiceValue,
 	type ControlProps,
 	createFormKit,
 	defineControl,
 	type ErrorMessageSlotProps,
 	type FieldSlotProps,
 	type FormKitSlots,
+	type OptionValue,
 	type SectionSlotProps,
 	type SubmitSlotProps,
 } from "form-please"
 import type {
-	NativeDateOptions,
-	NativeFileOptions,
-	NativeNumberOptions,
-	NativeSelectOptions,
-	NativeTextareaOptions,
-	NativeTextOptions,
-	NativeTimeOptions,
+	NativeDateProps,
+	NativeFileProps,
+	NativeNumberProps,
+	NativeSelectOption as NativeSelectItem,
+	NativeSelectProps,
+	NativeTextareaProps,
+	NativeTextProps,
+	NativeTimeProps,
 } from "form-please/native-controls"
 import {
 	ArrowDownIcon,
@@ -77,23 +78,22 @@ import { Slider } from "../slider"
 import { Switch } from "../switch"
 import { Textarea } from "../textarea"
 
-type ShadcnChoiceOption = {
-	readonly value: ChoiceValue<string>
+type ShadcnOption = {
+	readonly value: OptionValue<string>
 	readonly label: string
 	readonly description?: string
 	readonly disabled?: boolean
 }
 
-type ShadcnRadioOptions = {
-	readonly options: readonly ShadcnChoiceOption[]
+type ShadcnRadioProps = {
 	readonly orientation?: "horizontal" | "vertical"
 }
 
-type ShadcnSwitchOptions = {
+type ShadcnSwitchProps = {
 	readonly size?: "default" | "sm"
 }
 
-type ShadcnSliderOptions = {
+type ShadcnSliderProps = {
 	readonly min?: number
 	readonly max?: number
 	readonly step?: number
@@ -105,8 +105,7 @@ type ShadcnSliderOptions = {
 	readonly thumbCollisionBehavior?: "none" | "push" | "swap"
 }
 
-type ShadcnComboboxOptions = {
-	readonly options: readonly ShadcnChoiceOption[]
+type ShadcnComboboxProps = {
 	readonly placeholder?: string
 	readonly emptyText?: string
 	readonly autoComplete?: string
@@ -119,7 +118,7 @@ type ShadcnDatePreset = {
 	readonly label: string
 }
 
-type ShadcnDatePickerOptions = {
+type ShadcnDatePickerProps = {
 	readonly placeholder?: string
 	readonly min?: string
 	readonly max?: string
@@ -136,11 +135,11 @@ type ShadcnDateRange = {
 	readonly to?: string
 }
 
-type ShadcnDateRangePickerOptions = Omit<ShadcnDatePickerOptions, "presets"> & {
+type ShadcnDateRangePickerProps = Omit<ShadcnDatePickerProps, "presets"> & {
 	readonly numberOfMonths?: number
 }
 
-type ShadcnInputOtpOptions = {
+type ShadcnInputOtpProps = {
 	readonly maxLength: number
 	readonly pattern?: string
 	readonly groups?: readonly number[]
@@ -154,26 +153,26 @@ function ShadcnTextControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeTextOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeTextProps>): ReactElement {
 	return (
 		<Input
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
-			autoComplete={options.autoComplete}
+			autoComplete={controlProps.autoComplete}
 			disabled={disabled}
 			id={input.id}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) => setValue(event.currentTarget.value)}
-			placeholder={options.placeholder}
+			placeholder={controlProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			type={options.type ?? "text"}
+			type={controlProps.type ?? "text"}
 			value={value ?? ""}
 		/>
 	)
@@ -185,26 +184,26 @@ function ShadcnTextareaControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeTextareaOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeTextareaProps>): ReactElement {
 	return (
 		<Textarea
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
-			autoComplete={options.autoComplete}
+			autoComplete={controlProps.autoComplete}
 			disabled={disabled}
 			id={input.id}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) => setValue(event.currentTarget.value)}
-			placeholder={options.placeholder}
+			placeholder={controlProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			rows={options.rows}
+			rows={controlProps.rows}
 			value={value ?? ""}
 		/>
 	)
@@ -216,11 +215,11 @@ function ShadcnNumberControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<number | undefined, NativeNumberOptions>): ReactElement {
+}: ControlProps<number | undefined, NativeNumberProps>): ReactElement {
 	function handleChange(event: ChangeEvent<HTMLInputElement>): void {
 		if (event.currentTarget.value === "") {
 			setValue(undefined)
@@ -237,16 +236,16 @@ function ShadcnNumberControl({
 			aria-invalid={meta.invalid || undefined}
 			disabled={disabled}
 			id={input.id}
-			max={options.max}
-			min={options.min}
+			max={controlProps.max}
+			min={controlProps.min}
 			name={input.name}
 			onBlur={blur}
 			onChange={handleChange}
-			placeholder={options.placeholder}
+			placeholder={controlProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			step={options.step}
+			step={controlProps.step}
 			type="number"
 			value={value === undefined ? "" : String(value)}
 		/>
@@ -259,19 +258,19 @@ function ShadcnDateControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeDateOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeDateProps>): ReactElement {
 	return (
 		<Input
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
 			disabled={disabled}
 			id={input.id}
-			max={options.max}
-			min={options.min}
+			max={controlProps.max}
+			min={controlProps.min}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) => setValue(event.currentTarget.value || undefined)}
@@ -290,26 +289,26 @@ function ShadcnTimeControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeTimeOptions>): ReactElement {
+}: ControlProps<string | undefined, NativeTimeProps>): ReactElement {
 	return (
 		<Input
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
 			disabled={disabled}
 			id={input.id}
-			max={options.max}
-			min={options.min}
+			max={controlProps.max}
+			min={controlProps.min}
 			name={input.name}
 			onBlur={blur}
 			onChange={(event) => setValue(event.currentTarget.value || undefined)}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
-			step={options.step}
+			step={controlProps.step}
 			type="time"
 			value={value ?? ""}
 		/>
@@ -322,12 +321,18 @@ function ShadcnSelectControl({
 	blur,
 	input,
 	meta,
+	props: controlProps,
 	options,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, NativeSelectOptions>): ReactElement {
-	validateSelectOptions(value, options)
+}: ControlProps<
+	string | undefined,
+	NativeSelectProps,
+	unknown,
+	NativeSelectItem
+>): ReactElement {
+	validateSelectOptions(value, controlProps, options)
 
 	return (
 		<NativeSelect
@@ -348,7 +353,7 @@ function ShadcnSelectControl({
 
 				const nextValue = event.currentTarget.value
 				setValue(
-					nextValue === "" && options.emptyOption !== undefined
+					nextValue === "" && controlProps.emptyOption !== undefined
 						? undefined
 						: nextValue,
 				)
@@ -363,12 +368,15 @@ function ShadcnSelectControl({
 			required={required}
 			value={value ?? ""}
 		>
-			{options.emptyOption === undefined ? null : (
-				<NativeSelectOption disabled={options.emptyOption.disabled} value="">
-					{options.emptyOption.label}
+			{controlProps.emptyOption === undefined ? null : (
+				<NativeSelectOption
+					disabled={controlProps.emptyOption.disabled}
+					value=""
+				>
+					{controlProps.emptyOption.label}
 				</NativeSelectOption>
 			)}
-			{options.options.map((option) => (
+			{options.map((option) => (
 				<NativeSelectOption
 					disabled={option.disabled}
 					key={option.value}
@@ -417,11 +425,11 @@ function ShadcnFileControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<File | undefined, NativeFileOptions>): ReactElement {
+}: ControlProps<File | undefined, NativeFileProps>): ReactElement {
 	const fileInputRef = useRef<HTMLInputElement | null>(null)
 	const [nativeFile, setNativeFile] = useState<File | undefined>()
 	const hasSubmittableNativeFile =
@@ -439,7 +447,7 @@ function ShadcnFileControl({
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
 			aria-readonly={readOnly || undefined}
-			accept={options.accept}
+			accept={controlProps.accept}
 			disabled={disabled}
 			id={input.id}
 			name={hasSubmittableNativeFile ? input.name : undefined}
@@ -478,12 +486,18 @@ function ShadcnRadioControl({
 	blur,
 	input,
 	meta,
+	props: controlProps,
 	options,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, ShadcnRadioOptions>): ReactElement {
-	validateChoiceOptions("radio", options.options)
+}: ControlProps<
+	string | undefined,
+	ShadcnRadioProps,
+	unknown,
+	ShadcnOption
+>): ReactElement {
+	validateOptions("radio", options)
 
 	return (
 		<RadioGroup
@@ -491,7 +505,7 @@ function ShadcnRadioControl({
 			aria-invalid={meta.invalid || undefined}
 			aria-labelledby={`${input.id}-label`}
 			className={
-				options.orientation === "horizontal"
+				controlProps.orientation === "horizontal"
 					? "flex flex-wrap gap-4"
 					: undefined
 			}
@@ -504,7 +518,7 @@ function ShadcnRadioControl({
 			required={required}
 			value={value ?? null}
 		>
-			{options.options.map((option, index) => {
+			{options.map((option, index) => {
 				const optionId = `${input.id}-${index}`
 				return (
 					<label
@@ -539,11 +553,11 @@ function ShadcnSwitchControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<boolean, ShadcnSwitchOptions>): ReactElement {
+}: ControlProps<boolean, ShadcnSwitchProps>): ReactElement {
 	return (
 		<Switch
 			aria-describedby={input["aria-describedby"]}
@@ -558,7 +572,7 @@ function ShadcnSwitchControl({
 			onCheckedChange={(checked) => setValue(checked)}
 			readOnly={readOnly}
 			required={required}
-			size={options.size}
+			size={controlProps.size}
 			uncheckedValue="false"
 			value="true"
 		/>
@@ -566,7 +580,7 @@ function ShadcnSwitchControl({
 }
 
 function ShadcnSliderControl(
-	props: ControlProps<number, ShadcnSliderOptions>,
+	props: ControlProps<number, ShadcnSliderProps>,
 ): ReactElement {
 	// The generated shadcn wrapper uses an array default to decide how many
 	// thumbs to render, while Base UI needs a scalar value for pointer updates.
@@ -576,7 +590,7 @@ function ShadcnSliderControl(
 }
 
 function ShadcnRangeSliderControl(
-	props: ControlProps<readonly [number, number], ShadcnSliderOptions>,
+	props: ControlProps<readonly [number, number], ShadcnSliderProps>,
 ): ReactElement {
 	return renderSlider(props, props.value, undefined, (values) => {
 		if (!Array.isArray(values)) return
@@ -587,7 +601,7 @@ function ShadcnRangeSliderControl(
 }
 
 function ShadcnMultiSliderControl(
-	props: ControlProps<readonly number[], ShadcnSliderOptions>,
+	props: ControlProps<readonly number[], ShadcnSliderProps>,
 ): ReactElement {
 	return renderSlider(props, props.value, undefined, (values) => {
 		if (Array.isArray(values)) props.setValue(values)
@@ -595,12 +609,20 @@ function ShadcnMultiSliderControl(
 }
 
 function renderSlider<Value>(
-	props: ControlProps<Value, ShadcnSliderOptions>,
+	props: ControlProps<Value, ShadcnSliderProps>,
 	value: number | readonly number[],
 	defaultValue: readonly number[] | undefined,
 	setValue: (value: number | readonly number[]) => void,
 ): ReactElement {
-	const { blur, disabled, input, meta, options, readOnly, required } = props
+	const {
+		blur,
+		disabled,
+		input,
+		meta,
+		props: controlProps,
+		readOnly,
+		required,
+	} = props
 
 	return (
 		<Slider
@@ -611,12 +633,12 @@ function renderSlider<Value>(
 			aria-required={required || undefined}
 			disabled={disabled}
 			defaultValue={defaultValue}
-			format={options.format}
-			largeStep={options.largeStep}
-			locale={options.locale}
-			max={options.max}
-			min={options.min}
-			minStepsBetweenValues={options.minStepsBetweenValues}
+			format={controlProps.format}
+			largeStep={controlProps.largeStep}
+			locale={controlProps.locale}
+			max={controlProps.max}
+			min={controlProps.min}
+			minStepsBetweenValues={controlProps.minStepsBetweenValues}
 			onBlurCapture={blur}
 			onKeyDownCapture={(event) => {
 				if (readOnly && isSliderMutationKey(event.key)) preventReadOnly(event)
@@ -627,19 +649,24 @@ function renderSlider<Value>(
 			onValueChange={(nextValue) => {
 				if (!readOnly) setValue(nextValue)
 			}}
-			orientation={options.orientation}
+			orientation={controlProps.orientation}
 			ref={(element) => {
 				input.ref(element?.querySelector("input[type=range]") ?? null)
 			}}
-			step={options.step}
-			thumbCollisionBehavior={options.thumbCollisionBehavior}
+			step={controlProps.step}
+			thumbCollisionBehavior={controlProps.thumbCollisionBehavior}
 			value={Array.isArray(value) ? [...value] : value}
 		/>
 	)
 }
 
 function ShadcnComboboxControl(
-	props: ControlProps<string | undefined, ShadcnComboboxOptions>,
+	props: ControlProps<
+		string | undefined,
+		ShadcnComboboxProps,
+		unknown,
+		ShadcnOption
+	>,
 ): ReactElement {
 	const {
 		value,
@@ -647,21 +674,20 @@ function ShadcnComboboxControl(
 		blur,
 		input,
 		meta,
+		props: controlProps,
 		options,
 		disabled,
 		readOnly,
 		required,
 	} = props
-	validateChoiceOptions("combobox", options.options)
-	const values = options.options.map((option) => option.value)
-	const labels = new Map(
-		options.options.map((option) => [option.value, option.label]),
-	)
+	validateOptions("combobox", options)
+	const values = options.map((option) => option.value)
+	const labels = new Map(options.map((option) => [option.value, option.label]))
 
 	return (
 		<Combobox
-			autoComplete={options.autoComplete}
-			autoHighlight={options.autoHighlight}
+			autoComplete={controlProps.autoComplete}
+			autoHighlight={controlProps.autoHighlight}
 			disabled={disabled}
 			itemToStringLabel={(itemValue) => labels.get(itemValue) ?? itemValue}
 			items={values}
@@ -675,16 +701,16 @@ function ShadcnComboboxControl(
 				aria-invalid={meta.invalid || undefined}
 				id={input.id}
 				onBlur={blur}
-				placeholder={options.placeholder}
+				placeholder={controlProps.placeholder}
 				ref={input.ref}
-				showClear={options.showClear}
+				showClear={controlProps.showClear}
 			/>
 			<ComboboxContent>
 				<ComboboxEmpty>
-					{options.emptyText ?? "No options found."}
+					{controlProps.emptyText ?? "No options found."}
 				</ComboboxEmpty>
 				<ComboboxList>
-					{options.options.map((option) => (
+					{options.map((option) => (
 						<ComboboxItem
 							disabled={option.disabled}
 							key={option.value}
@@ -700,7 +726,12 @@ function ShadcnComboboxControl(
 }
 
 function ShadcnMultiComboboxControl(
-	props: ControlProps<readonly string[], ShadcnComboboxOptions>,
+	props: ControlProps<
+		readonly string[],
+		ShadcnComboboxProps,
+		unknown,
+		ShadcnOption
+	>,
 ): ReactElement {
 	const {
 		value,
@@ -708,22 +739,21 @@ function ShadcnMultiComboboxControl(
 		blur,
 		input,
 		meta,
+		props: controlProps,
 		options,
 		disabled,
 		readOnly,
 		required,
 	} = props
-	validateChoiceOptions("multiCombobox", options.options)
+	validateOptions("multiCombobox", options)
 	const anchor = useComboboxAnchor()
-	const values = options.options.map((option) => option.value)
-	const labels = new Map(
-		options.options.map((option) => [option.value, option.label]),
-	)
+	const values = options.map((option) => option.value)
+	const labels = new Map(options.map((option) => [option.value, option.label]))
 
 	return (
 		<Combobox
-			autoComplete={options.autoComplete}
-			autoHighlight={options.autoHighlight}
+			autoComplete={controlProps.autoComplete}
+			autoHighlight={controlProps.autoHighlight}
 			disabled={disabled}
 			itemToStringLabel={(itemValue) => labels.get(itemValue) ?? itemValue}
 			items={values}
@@ -747,7 +777,7 @@ function ShadcnMultiComboboxControl(
 								aria-invalid={meta.invalid || undefined}
 								id={input.id}
 								onBlur={blur}
-								placeholder={options.placeholder}
+								placeholder={controlProps.placeholder}
 								ref={input.ref}
 							/>
 						</>
@@ -756,10 +786,10 @@ function ShadcnMultiComboboxControl(
 			</ComboboxChips>
 			<ComboboxContent anchor={anchor}>
 				<ComboboxEmpty>
-					{options.emptyText ?? "No options found."}
+					{controlProps.emptyText ?? "No options found."}
 				</ComboboxEmpty>
 				<ComboboxList>
-					{options.options.map((option) => (
+					{options.map((option) => (
 						<ComboboxItem
 							disabled={option.disabled}
 							key={option.value}
@@ -775,7 +805,7 @@ function ShadcnMultiComboboxControl(
 }
 
 function ShadcnDatePickerControl(
-	props: ControlProps<string | undefined, ShadcnDatePickerOptions>,
+	props: ControlProps<string | undefined, ShadcnDatePickerProps>,
 ): ReactElement {
 	const {
 		value,
@@ -783,7 +813,7 @@ function ShadcnDatePickerControl(
 		blur,
 		input,
 		meta,
-		options,
+		props: controlProps,
 		disabled,
 		readOnly,
 		required,
@@ -811,13 +841,13 @@ function ShadcnDatePickerControl(
 			>
 				<CalendarIcon />
 				{selected === undefined
-					? (options.placeholder ?? "Pick a date")
+					? (controlProps.placeholder ?? "Pick a date")
 					: formatDisplayDate(selected)}
 			</PopoverTrigger>
 			<PopoverContent align="start" className="w-auto">
 				<Calendar
-					captionLayout={options.captionLayout}
-					disabled={dateMatchers(options.min, options.max)}
+					captionLayout={controlProps.captionLayout}
+					disabled={dateMatchers(controlProps.min, controlProps.max)}
 					mode="single"
 					onSelect={(date) => setValue(toIsoDate(date))}
 					selected={selected}
@@ -825,7 +855,7 @@ function ShadcnDatePickerControl(
 				<DatePresetButtons
 					disabled={disabled || readOnly}
 					onSelect={setValue}
-					presets={options.presets}
+					presets={controlProps.presets}
 				/>
 			</PopoverContent>
 		</Popover>
@@ -833,7 +863,7 @@ function ShadcnDatePickerControl(
 }
 
 function ShadcnDateRangePickerControl(
-	props: ControlProps<ShadcnDateRange, ShadcnDateRangePickerOptions>,
+	props: ControlProps<ShadcnDateRange, ShadcnDateRangePickerProps>,
 ): ReactElement {
 	const {
 		value,
@@ -841,7 +871,7 @@ function ShadcnDateRangePickerControl(
 		blur,
 		input,
 		meta,
-		options,
+		props: controlProps,
 		disabled,
 		readOnly,
 		required,
@@ -871,14 +901,14 @@ function ShadcnDateRangePickerControl(
 				}
 			>
 				<CalendarIcon />
-				{formatDisplayRange(selected, options.placeholder)}
+				{formatDisplayRange(selected, controlProps.placeholder)}
 			</PopoverTrigger>
 			<PopoverContent align="start" className="w-auto">
 				<Calendar
-					captionLayout={options.captionLayout}
-					disabled={dateMatchers(options.min, options.max)}
+					captionLayout={controlProps.captionLayout}
+					disabled={dateMatchers(controlProps.min, controlProps.max)}
 					mode="range"
-					numberOfMonths={options.numberOfMonths ?? 2}
+					numberOfMonths={controlProps.numberOfMonths ?? 2}
 					onSelect={(range) =>
 						setValue({
 							from: toIsoDate(range?.from),
@@ -927,26 +957,26 @@ function ShadcnInputOtpControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: controlProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string, ShadcnInputOtpOptions>): ReactElement {
-	const groups = resolveOtpGroups(options)
+}: ControlProps<string, ShadcnInputOtpProps>): ReactElement {
+	const groups = resolveOtpGroups(controlProps)
 	let slotIndex = 0
 
 	return (
 		<InputOTP
 			aria-describedby={input["aria-describedby"]}
 			aria-invalid={meta.invalid || undefined}
-			autoComplete={options.autoComplete}
+			autoComplete={controlProps.autoComplete}
 			disabled={disabled}
 			id={input.id}
-			maxLength={options.maxLength}
+			maxLength={controlProps.maxLength}
 			name={input.name}
 			onBlur={blur}
 			onChange={setValue}
-			pattern={options.pattern}
+			pattern={controlProps.pattern}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
@@ -957,7 +987,7 @@ function ShadcnInputOtpControl({
 				const slots = Array.from({ length: groupLength }, () => slotIndex++)
 				return (
 					<Fragment key={`${groupStart}:${groupLength}`}>
-						{groupIndex === 0 || options.separator === false ? null : (
+						{groupIndex === 0 || controlProps.separator === false ? null : (
 							<InputOTPSeparator />
 						)}
 						<InputOTPGroup>
@@ -977,60 +1007,78 @@ function ShadcnInputOtpControl({
 }
 
 const controls = Object.freeze({
-	text: defineControl<string | undefined, NativeTextOptions>({
+	text: defineControl<string | undefined, NativeTextProps>({
 		component: ShadcnTextControl,
 	}),
-	textarea: defineControl<string | undefined, NativeTextareaOptions>({
+	textarea: defineControl<string | undefined, NativeTextareaProps>({
 		component: ShadcnTextareaControl,
 	}),
-	select: defineControl<string | undefined, NativeSelectOptions>({
+	select: defineControl<
+		string | undefined,
+		NativeSelectProps,
+		unknown,
+		NativeSelectItem
+	>({
 		component: ShadcnSelectControl,
 	}),
 	checkbox: defineControl<boolean>({
 		component: ShadcnCheckboxControl,
 	}),
-	number: defineControl<number | undefined, NativeNumberOptions>({
+	number: defineControl<number | undefined, NativeNumberProps>({
 		component: ShadcnNumberControl,
 	}),
-	date: defineControl<string | undefined, NativeDateOptions>({
+	date: defineControl<string | undefined, NativeDateProps>({
 		component: ShadcnDateControl,
 	}),
-	time: defineControl<string | undefined, NativeTimeOptions>({
+	time: defineControl<string | undefined, NativeTimeProps>({
 		component: ShadcnTimeControl,
 	}),
-	file: defineControl<File | undefined, NativeFileOptions>({
+	file: defineControl<File | undefined, NativeFileProps>({
 		component: ShadcnFileControl,
 	}),
-	radio: defineControl<string | undefined, ShadcnRadioOptions>({
+	radio: defineControl<
+		string | undefined,
+		ShadcnRadioProps,
+		unknown,
+		ShadcnOption
+	>({
 		component: ShadcnRadioControl,
 	}),
-	switch: defineControl<boolean, ShadcnSwitchOptions>({
+	switch: defineControl<boolean, ShadcnSwitchProps>({
 		component: ShadcnSwitchControl,
 	}),
-	slider: defineControl<number, ShadcnSliderOptions>({
+	slider: defineControl<number, ShadcnSliderProps>({
 		component: ShadcnSliderControl,
 	}),
-	rangeSlider: defineControl<readonly [number, number], ShadcnSliderOptions>({
+	rangeSlider: defineControl<readonly [number, number], ShadcnSliderProps>({
 		component: ShadcnRangeSliderControl,
 	}),
-	multiSlider: defineControl<readonly number[], ShadcnSliderOptions>({
+	multiSlider: defineControl<readonly number[], ShadcnSliderProps>({
 		component: ShadcnMultiSliderControl,
 	}),
-	combobox: defineControl<string | undefined, ShadcnComboboxOptions>({
+	combobox: defineControl<
+		string | undefined,
+		ShadcnComboboxProps,
+		unknown,
+		ShadcnOption
+	>({
 		component: ShadcnComboboxControl,
 	}),
-	multiCombobox: defineControl<readonly string[], ShadcnComboboxOptions>({
+	multiCombobox: defineControl<
+		readonly string[],
+		ShadcnComboboxProps,
+		unknown,
+		ShadcnOption
+	>({
 		component: ShadcnMultiComboboxControl,
 	}),
-	datePicker: defineControl<string | undefined, ShadcnDatePickerOptions>({
+	datePicker: defineControl<string | undefined, ShadcnDatePickerProps>({
 		component: ShadcnDatePickerControl,
 	}),
-	dateRangePicker: defineControl<ShadcnDateRange, ShadcnDateRangePickerOptions>(
-		{
-			component: ShadcnDateRangePickerControl,
-		},
-	),
-	inputOtp: defineControl<string, ShadcnInputOtpOptions>({
+	dateRangePicker: defineControl<ShadcnDateRange, ShadcnDateRangePickerProps>({
+		component: ShadcnDateRangePickerControl,
+	}),
+	inputOtp: defineControl<string, ShadcnInputOtpProps>({
 		component: ShadcnInputOtpControl,
 	}),
 })
@@ -1257,32 +1305,33 @@ function ShadcnSubmitSlot({ buttonProps }: SubmitSlotProps): ReactElement {
 
 function validateSelectOptions(
 	value: string | undefined,
-	options: NativeSelectOptions,
+	controlProps: NativeSelectProps,
+	options: readonly NativeSelectItem[],
 ): void {
-	if (!Array.isArray(options.options)) {
-		throw new TypeError("shadcnFormKit select requires options.options")
+	if (!Array.isArray(options)) {
+		throw new TypeError("shadcnFormKit select requires options")
 	}
 	if (
-		options.emptyOption !== undefined &&
-		options.options.some((option) => option.value === "")
+		controlProps.emptyOption !== undefined &&
+		options.some((option) => option.value === "")
 	) {
 		throw new TypeError(
-			'shadcnFormKit select cannot combine options.emptyOption with an option whose value is ""',
+			'shadcnFormKit select cannot combine props.emptyOption with an option whose value is ""',
 		)
 	}
-	if (value === undefined && options.emptyOption === undefined) {
+	if (value === undefined && controlProps.emptyOption === undefined) {
 		throw new TypeError(
-			"shadcnFormKit select requires options.emptyOption to represent undefined",
+			"shadcnFormKit select requires props.emptyOption to represent undefined",
 		)
 	}
 }
 
-function validateChoiceOptions(
+function validateOptions(
 	control: string,
-	options: readonly ShadcnChoiceOption[],
+	options: readonly ShadcnOption[],
 ): void {
-	if (!Array.isArray(options) || options.length === 0) {
-		throw new TypeError(`shadcnFormKit ${control} requires options.options`)
+	if (!Array.isArray(options)) {
+		throw new TypeError(`shadcnFormKit ${control} requires options`)
 	}
 	const values = new Set<string>()
 	for (const option of options) {
@@ -1295,15 +1344,17 @@ function validateChoiceOptions(
 	}
 }
 
-function resolveOtpGroups(options: ShadcnInputOtpOptions): readonly number[] {
-	if (!Number.isInteger(options.maxLength) || options.maxLength < 1) {
+function resolveOtpGroups(
+	controlProps: ShadcnInputOtpProps,
+): readonly number[] {
+	if (!Number.isInteger(controlProps.maxLength) || controlProps.maxLength < 1) {
 		throw new TypeError("shadcnFormKit inputOtp requires a positive maxLength")
 	}
-	const groups = options.groups ?? [options.maxLength]
+	const groups = controlProps.groups ?? [controlProps.maxLength]
 	if (
 		groups.length === 0 ||
 		groups.some((group) => !Number.isInteger(group) || group < 1) ||
-		groups.reduce((total, group) => total + group, 0) !== options.maxLength
+		groups.reduce((total, group) => total + group, 0) !== controlProps.maxLength
 	) {
 		throw new TypeError(
 			"shadcnFormKit inputOtp groups must be positive integers that sum to maxLength",

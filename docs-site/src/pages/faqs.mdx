@@ -125,23 +125,29 @@ for the boundaries.
 
 ### Does "Form, Please" fetch async options?
 
-No. Your application or request library owns requests, retries, cancellation,
-and caching. Pass the current request state through form context.
+Yes. A selectable field can use an async `options` function. "Form, Please"
+invokes it, tracks the `values` and `context` properties it reads, aborts the
+previous signal when those dependencies change, and ignores stale results.
+The function still contains the application request:
 
-Use `fromResource` to convert that state into a synchronous UI resolver. Use
-`matchResource` when you need one immediate value outside a definition. See
-[Pass request state through
-context](/recipes#pass-request-state-through-context) for the form pattern.
-See [Resource state](/resources) for a TanStack Query adapter and error-state
-examples.
+```tsx
+options: async ({ values, context, signal }) =>
+	loadCities(values.country, context.locale, signal)
+```
+
+The built-in policy uses `[]` during loading and after an uncaught error. It
+does not provide caching, retries, loading UI, error UI, search, or pagination.
+Use application resource state and `fromResource` or `matchResource` when you
+need those policies. See [Resource state](/resources).
 
 ### Can a UI resolver return a promise?
 
-No. Every UI resolver must return immediately. A promise-like result causes a
-runtime error.
+Ordinary UI resolvers must return immediately. A promise-like result causes a
+runtime error. A selectable field's `options` function is the deliberate
+exception and may return a promise.
 
 Load data before or beside the form. Pass the current result through context.
-Resolvers can then derive labels, descriptions, options, visibility, and
+Resolvers can then derive labels, descriptions, control props, visibility, and
 interaction state synchronously.
 
 "Form, Please" resolves the complete UI tree after each form value change. Keep

@@ -1,15 +1,15 @@
 "use client"
 
 export type {
-	NativeDateOptions,
-	NativeFileOptions,
-	NativeNumberOptions,
+	NativeDateProps,
+	NativeFileProps,
+	NativeNumberProps,
 	NativeSelectEmptyOption,
 	NativeSelectOption,
-	NativeSelectOptions,
-	NativeTextareaOptions,
-	NativeTextOptions,
+	NativeSelectProps,
+	NativeTextareaProps,
+	NativeTextProps,
 	NativeTextType,
-	NativeTimeOptions,
+	NativeTimeProps,
 } from "./native-controls.js"
 export { createNativeControls } from "./native-controls.js"

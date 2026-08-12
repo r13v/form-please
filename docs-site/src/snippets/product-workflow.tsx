@@ -232,7 +232,7 @@ const onboardingDefinition = onboardingKit.defineForm(onboardingSchema, {
 			path: "email",
 			control: "text",
 			label: "Email",
-			options: { type: "email" },
+			props: { type: "email" },
 			visible: (_input, { context }) =>
 				context.screen === "identity" || context.screen === "review",
 		},

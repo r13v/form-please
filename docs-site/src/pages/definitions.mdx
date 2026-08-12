@@ -1,6 +1,6 @@
 ---
 title: Definitions
-description: Describe fields, sections, arrays, reusable fragments, and synchronous derived UI in one typed tree.
+description: Describe fields, sections, arrays, reusable fragments, derived UI, and selectable options in one typed tree.
 showAskAi: false
 ---
 
@@ -31,7 +31,7 @@ const profileDefinition = nativeFormKit.defineForm(profileSchema, (ui) => [
 			ui.field("email", {
 				control: "text",
 				label: "Email",
-				options: { type: "email", autoComplete: "email" },
+				props: { type: "email", autoComplete: "email" },
 			}),
 			ui.field("company", {
 				control: "text",
@@ -52,7 +52,8 @@ The type checker verifies these connections:
 
 - Each `path` exists in the schema input.
 - Each control accepts the value at its field path.
-- Control options and slot options use their registered types.
+- Control props, selectable options, and slot options use their
+  registered types.
 - Resolver context matches the kit context.
 - Array defaults match one complete array item.
 - `columns` and `span` use the kit grid.
@@ -78,22 +79,23 @@ const definition = nativeFormKit.defineForm(schema, (ui) => [
 		control: "text", // The input value is a string.
 		label: "Age",
 		description: "Enter your age in years.",
-		options: { placeholder: "42" },
+		props: { placeholder: "42" },
 		required: true,
 	}),
 ])
 ```
 
-`control` selects a control from the kit registry. `options` configures that
-control instance. A control can require options or make them optional.
+`control` selects a control from the kit registry. `props` supplies
+application-owned props to that control instance. Only controls that display a selectable list accept
+`options`.
 
 The `required` property describes the UI state. It does not add a validation
 rule. Put all data rules in the schema.
 
-### Choice values
+### Option values
 
-A choice control can mark the value it writes with `ChoiceValue<Value>`. The
-field definition then narrows each choice to the Standard Schema input type at
+A selectable control can mark the value it writes with `OptionValue<Value>`.
+The field definition then narrows each option to the Standard Schema input type at
 its `path`; the form does not need a separate value generic.
 
 ```tsx
@@ -101,33 +103,31 @@ const roleSchema = z.object({
 	role: z.enum(["admin", "member"]),
 })
 
-const roleChoices = [
+const roleOptions = [
 	{ value: "admin", label: "Administrator" },
 ] as const
 
 nativeFormKit.defineForm(roleSchema, (ui) => [
 	ui.field("role", {
 		control: "select",
-		options: {
-			options: [
-				...roleChoices,
-				{ value: "owner", label: "Owner" },
-				//       ^^^^^^^ TypeScript rejects this value.
-			],
-		},
+		options: [
+			...roleOptions,
+			{ value: "owner", label: "Owner" },
+			//       ^^^^^^^ TypeScript rejects this value.
+		],
 	}),
 ])
 ```
 
 The list may contain any subset of the field union; it does not have to be
 exhaustive. A `Role | undefined` field still accepts only `Role` as a normal
-choice, while the native `emptyOption` represents `undefined`. A
-`readonly Role[]` field narrows choices to the element union. A plain `string`
+option, while the native `props.emptyOption` represents `undefined`. A
+`readonly Role[]` field narrows options to the element union. A plain `string`
 field continues to accept arbitrary strings.
 
-The same restriction applies when `options` is a resolver. Preserve literal
+The same restriction applies when `options` is a function. Preserve literal
 types in context or resource data with `as const`, `satisfies`, or another
-explicit union type. A widened `string[]` cannot supply choices for a literal
+explicit union type. A widened `string[]` cannot supply options for a literal
 schema union.
 
 ## Sections
@@ -249,8 +249,8 @@ See [Arrays](/arrays) for custom array actions.
 
 ## Resolver values
 
-Most display, interaction, option, and layout properties accept either a
-static value or a synchronous resolver.
+Display, interaction, control props, and layout properties accept
+either a static value or a synchronous resolver.
 
 ```tsx
 const accountSchema = z.object({
@@ -269,7 +269,7 @@ const accountDefinition = accountKit.defineForm(accountSchema, (ui) => [
 			values.accountType === "business" ? "Company" : "Organization",
 		visible: (values) => values.accountType !== "personal",
 		disabled: (_values, { context }) => !context.canEditCompanies,
-		options: (values) => ({
+		props: (values) => ({
 			placeholder:
 				values.accountType === "nonprofit" ? "Foundation name" : "Company name",
 		}),
@@ -282,6 +282,35 @@ readonly schema input. This rule also applies inside array items. Resolvers
 authored by a reusable fragment receive that fragment's local input instead.
 The second argument contains the deeply readonly runtime `context` from
 `kit.useForm`.
+
+### Async options
+
+The `options` collection is the one property that may load asynchronously. Its
+function receives one object, and the runtime tracks the `values` and `context`
+properties it reads:
+
+```tsx
+ui.field("city", {
+	control: "select",
+	props: { emptyOption: { label: "Choose a city" } },
+	options: async ({ values, context, signal }) => {
+		const response = await fetch(
+			`/api/cities?country=${values.country}&locale=${context.locale}`,
+			{ signal },
+		)
+		return response.json()
+	},
+})
+```
+
+Changing `values.country` or `context.locale` aborts the previous request and
+runs the function again. Unrelated changes do not. The rendered list is empty
+during loading and after an uncaught error; catch inside the function when you
+want another fallback. The field value is preserved even when it is absent
+from the current list.
+
+Use an application resource or a custom control when you need loading or error
+UI, caching, retries, remote search, or pagination.
 
 Resolvers must return immediately. A resolver that returns a promise causes a
 runtime error. Keep requests and cache state in the application. Pass their
@@ -348,7 +377,8 @@ Field properties:
 | `control` | Yes | Selects a compatible registered control. |
 | `label` | No | Supplies string or React label content. |
 | `description` | No | Supplies string or React help content. |
-| `options` | Control-dependent | Configures the selected control. |
+| `props` | Control-dependent | Supplies application-owned props to the selected control. |
+| `options` | Option-capable controls | Supplies a static or asynchronously loaded selectable list. |
 | `required` | No | Passes UI requirement state to the control. |
 
 Section properties:
@@ -381,11 +411,11 @@ Render properties:
 | `id` | Yes | Gives the render node a stable identifier. |
 | `component` | Yes | Supplies the React component to render. |
 
-`label`, `description`, `title`, `options`, `slotOptions`, `visible`,
+`label`, `description`, `title`, `props`, `slotOptions`, `visible`,
 `disabled`, `readOnly`, `required`, `className`, `columns`, and `span` can use
 resolvers where their node type supports the property.
 
-See [Form kits](/form-kits) for control options, slot options, and
+See [Form kits](/form-kits) for control props, selectable options, slot options, and
 custom slot examples.
 
 ## IDs and paths

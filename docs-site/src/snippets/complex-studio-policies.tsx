@@ -12,6 +12,7 @@ import {
 	type FormInput,
 	type FormOutput,
 	fromResource,
+	matchResource,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -184,7 +185,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "time",
 					label: "Earliest arrival",
 					visible: (values) => values.access.earlyEnabled,
-					options: { step: 900 },
+					props: { step: 900 },
 				},
 				{
 					kind: "field",
@@ -192,7 +193,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "number",
 					label: "Early access fee",
 					visible: (values) => values.access.earlyEnabled,
-					options: { min: 0, step: 5 },
+					props: { min: 0, step: 5 },
 				},
 				{
 					kind: "field",
@@ -206,7 +207,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "time",
 					label: "Latest departure",
 					visible: (values) => values.access.lateEnabled,
-					options: { step: 900 },
+					props: { step: 900 },
 				},
 				{
 					kind: "field",
@@ -214,7 +215,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "number",
 					label: "Late departure fee",
 					visible: (values) => values.access.lateEnabled,
-					options: { min: 0, step: 5 },
+					props: { min: 0, step: 5 },
 				},
 			],
 		},
@@ -236,33 +237,29 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "number",
 					label: "Deposit amount",
 					visible: (values) => values.safeguard.depositRequired,
-					options: { min: 0, step: 25 },
+					props: { min: 0, step: 25 },
 				},
 				{
 					kind: "field",
 					path: "safeguard.currency",
 					control: "select",
 					label: "Currency",
-					options: {
-						options: [
-							{ value: "USD", label: "USD" },
-							{ value: "EUR", label: "EUR" },
-							{ value: "GBP", label: "GBP" },
-						],
-					},
+					options: [
+						{ value: "USD", label: "USD" },
+						{ value: "EUR", label: "EUR" },
+						{ value: "GBP", label: "GBP" },
+					],
 				},
 				{
 					kind: "field",
 					path: "youth.policy",
 					control: "select",
 					label: "Age policy",
-					options: {
-						options: [
-							{ value: "all-ages", label: "All ages" },
-							{ value: "sixteen-plus", label: "16 and older" },
-							{ value: "adults-only", label: "Adults only" },
-						],
-					},
+					options: [
+						{ value: "all-ages", label: "All ages" },
+						{ value: "sixteen-plus", label: "16 and older" },
+						{ value: "adults-only", label: "Adults only" },
+					],
 				},
 				{
 					kind: "field",
@@ -277,7 +274,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "textarea",
 					label: "Quiet-hours rule",
 					span: "full",
-					options: { rows: 3 },
+					props: { rows: 3 },
 				},
 			],
 		},
@@ -318,15 +315,12 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					path: "assetId",
 					control: "select",
 					label: "Equipment",
-					options: fromResource((_values, { context }) => context.equipment, {
-						pending: (_state, _values, { context }) => ({
-							options: context.savedEquipmentOptions,
+					options: ({ context }) =>
+						matchResource(context.equipment, {
+							pending: () => context.savedEquipmentOptions,
+							success: ({ value }) => value,
+							error: () => context.savedEquipmentOptions,
 						}),
-						success: ({ value }) => ({ options: value }),
-						error: (_state, _values, { context }) => ({
-							options: context.savedEquipmentOptions,
-						}),
-					}),
 				},
 				{
 					kind: "field",
@@ -339,7 +333,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					path: "replacementValue",
 					control: "number",
 					label: "Replacement value",
-					options: { min: 0, step: 50 },
+					props: { min: 0, step: 50 },
 				},
 			],
 		},
@@ -361,20 +355,18 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "number",
 					label: "Catering notice in hours",
 					visible: (values) => values.refreshments.allowed,
-					options: { min: 0, step: 1 },
+					props: { min: 0, step: 1 },
 				},
 				{
 					kind: "field",
 					path: "connectivity.mode",
 					control: "select",
 					label: "Connectivity",
-					options: {
-						options: [
-							{ value: "included", label: "Included" },
-							{ value: "request", label: "Available by request" },
-							{ value: "offline", label: "Offline space" },
-						],
-					},
+					options: [
+						{ value: "included", label: "Included" },
+						{ value: "request", label: "Available by request" },
+						{ value: "offline", label: "Offline space" },
+					],
 				},
 				{
 					kind: "field",
@@ -382,20 +374,18 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "number",
 					label: "Published minimum Mbps",
 					visible: (values) => values.connectivity.mode === "included",
-					options: { min: 1, step: 5 },
+					props: { min: 1, step: 5 },
 				},
 				{
 					kind: "field",
 					path: "animals.policy",
 					control: "select",
 					label: "Animal access",
-					options: {
-						options: [
-							{ value: "assistance-only", label: "Assistance animals only" },
-							{ value: "approval", label: "With prior approval" },
-							{ value: "not-allowed", label: "Not allowed" },
-						],
-					},
+					options: [
+						{ value: "assistance-only", label: "Assistance animals only" },
+						{ value: "approval", label: "With prior approval" },
+						{ value: "not-allowed", label: "Not allowed" },
+					],
 				},
 				{
 					kind: "field",
@@ -403,7 +393,7 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
 					control: "textarea",
 					label: "Animal access notes",
 					visible: (values) => values.animals.policy === "approval",
-					options: { rows: 3 },
+					props: { rows: 3 },
 				},
 			],
 		},

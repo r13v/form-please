@@ -20,20 +20,22 @@ import {
 import { type ReactElement, useEffect, useRef, useState } from "react"
 
 import { defineControl } from "../control-definition.js"
-import type { ControlProps } from "../types.js"
+import type { ControlProps, OptionValue } from "../types.js"
 import type {
-	MuiAutocompleteMultipleOptions,
-	MuiAutocompleteOptions,
-	MuiCheckboxOptions,
-	MuiFileOptions,
+	MuiAutocompleteMultipleProps,
+	MuiAutocompleteProps,
+	MuiCheckboxProps,
+	MuiFileProps,
 	MuiFormKitI18n,
-	MuiRadioOptions,
-	MuiRangeSliderOptions,
-	MuiSelectMultipleOptions,
-	MuiSelectOptions,
-	MuiSliderOptions,
-	MuiSwitchOptions,
-	MuiTextFieldOptions,
+	MuiRadioOption,
+	MuiRadioProps,
+	MuiRangeSliderProps,
+	MuiSelectMultipleProps,
+	MuiSelectOption,
+	MuiSelectProps,
+	MuiSliderProps,
+	MuiSwitchProps,
+	MuiTextFieldProps,
 } from "./types.js"
 import { mergeSx } from "./utils.js"
 
@@ -56,79 +58,95 @@ const visuallyHiddenInputStyle = {
 
 /** Creates the complete control registry used by the Material UI preset. */
 export function createMuiControls(i18n: MuiFormKitI18n) {
-	const text = defineControl<string | undefined, MuiTextFieldOptions>({
+	const text = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiTextControl("text"),
 	})
-	const textarea = defineControl<string | undefined, MuiTextFieldOptions>({
+	const textarea = defineControl<string | undefined, MuiTextFieldProps>({
 		component: MuiTextareaControl,
 	})
-	const password = defineControl<string | undefined, MuiTextFieldOptions>({
+	const password = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiTextControl("password"),
 	})
-	const email = defineControl<string | undefined, MuiTextFieldOptions>({
+	const email = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiTextControl("email"),
 	})
-	const url = defineControl<string | undefined, MuiTextFieldOptions>({
+	const url = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiTextControl("url"),
 	})
-	const tel = defineControl<string | undefined, MuiTextFieldOptions>({
+	const tel = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiTextControl("tel"),
 	})
-	const search = defineControl<string | undefined, MuiTextFieldOptions>({
+	const search = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiTextControl("search"),
 	})
-	const number = defineControl<number | undefined, MuiTextFieldOptions>({
+	const number = defineControl<number | undefined, MuiTextFieldProps>({
 		component: MuiNumberControl,
 	})
-	const date = defineControl<string | undefined, MuiTextFieldOptions>({
+	const date = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiDateControl("date"),
 	})
-	const time = defineControl<string | undefined, MuiTextFieldOptions>({
+	const time = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiDateControl("time"),
 	})
-	const datetimeLocal = defineControl<string | undefined, MuiTextFieldOptions>({
+	const datetimeLocal = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiDateControl("datetime-local"),
 	})
-	const select = defineControl<string | undefined, MuiSelectOptions>({
+	const select = defineControl<
+		string | undefined,
+		MuiSelectProps,
+		unknown,
+		MuiSelectOption
+	>({
 		component: MuiSelectControl,
 	})
 	const selectMultiple = defineControl<
 		readonly string[],
-		MuiSelectMultipleOptions
+		MuiSelectMultipleProps,
+		unknown,
+		MuiSelectOption
 	>({
 		component: MuiSelectMultipleControl,
 	})
-	const radio = defineControl<string | undefined, MuiRadioOptions>({
+	const radio = defineControl<
+		string | undefined,
+		MuiRadioProps,
+		unknown,
+		MuiRadioOption
+	>({
 		component: MuiRadioControl,
 	})
-	const checkbox = defineControl<boolean, MuiCheckboxOptions>({
+	const checkbox = defineControl<boolean, MuiCheckboxProps>({
 		component: MuiCheckboxControl,
 	})
-	const switchControl = defineControl<boolean, MuiSwitchOptions>({
+	const switchControl = defineControl<boolean, MuiSwitchProps>({
 		component: MuiSwitchControl,
 	})
 	const autocomplete = defineControl<
 		string | undefined,
-		MuiAutocompleteOptions
+		MuiAutocompleteProps,
+		unknown,
+		OptionValue<string>
 	>({
 		component: MuiAutocompleteControl,
 	})
 	const autocompleteMultiple = defineControl<
 		readonly string[],
-		MuiAutocompleteMultipleOptions
+		MuiAutocompleteMultipleProps,
+		unknown,
+		OptionValue<string>
 	>({
 		component: MuiAutocompleteMultipleControl,
 	})
-	const file = defineControl<File | undefined, MuiFileOptions>({
+	const file = defineControl<File | undefined, MuiFileProps>({
 		component: (props) => <MuiFileControl {...props} i18n={i18n} />,
 	})
-	const files = defineControl<readonly File[], MuiFileOptions>({
+	const files = defineControl<readonly File[], MuiFileProps>({
 		component: (props) => <MuiFilesControl {...props} i18n={i18n} />,
 	})
-	const slider = defineControl<number, MuiSliderOptions>({
+	const slider = defineControl<number, MuiSliderProps>({
 		component: MuiSliderControl,
 	})
-	const rangeSlider = defineControl<readonly number[], MuiRangeSliderOptions>({
+	const rangeSlider = defineControl<readonly number[], MuiRangeSliderProps>({
 		component: MuiRangeSliderControl,
 	})
 
@@ -161,7 +179,7 @@ export function createMuiControls(i18n: MuiFormKitI18n) {
 /** Creates a MUI string control for one semantic HTML input type. */
 function createMuiTextControl(type: TextInputType) {
 	return function MuiTextControl(
-		props: ControlProps<string | undefined, MuiTextFieldOptions>,
+		props: ControlProps<string | undefined, MuiTextFieldProps>,
 	): ReactElement {
 		return <MuiStringTextField {...props} type={type} />
 	}
@@ -170,7 +188,7 @@ function createMuiTextControl(type: TextInputType) {
 /** Creates a MUI string control for one date or time input type. */
 function createMuiDateControl(type: DateInputType) {
 	return function MuiDateControl(
-		props: ControlProps<string | undefined, MuiTextFieldOptions>,
+		props: ControlProps<string | undefined, MuiTextFieldProps>,
 	): ReactElement {
 		return <MuiStringTextField {...props} emptyIsUndefined type={type} />
 	}
@@ -178,7 +196,7 @@ function createMuiDateControl(type: DateInputType) {
 
 /** Renders a multiline MUI string control. */
 function MuiTextareaControl(
-	props: ControlProps<string | undefined, MuiTextFieldOptions>,
+	props: ControlProps<string | undefined, MuiTextFieldProps>,
 ): ReactElement {
 	return <MuiStringTextField {...props} multiline type="text" />
 }
@@ -190,14 +208,14 @@ function MuiStringTextField({
 	blur,
 	input,
 	meta,
-	options,
+	props: textFieldProps,
 	disabled,
 	readOnly,
 	required,
 	type,
 	multiline = false,
 	emptyIsUndefined = false,
-}: ControlProps<string | undefined, MuiTextFieldOptions> & {
+}: ControlProps<string | undefined, MuiTextFieldProps> & {
 	/** The semantic HTML input type. */
 	readonly type: TextInputType | DateInputType
 	/** Whether the TextField renders a textarea. */
@@ -205,7 +223,8 @@ function MuiStringTextField({
 	/** Whether an empty HTML value maps to `undefined`. */
 	readonly emptyIsUndefined?: boolean
 }): ReactElement {
-	const { onBlur, onChange, slotProps, ...muiProps } = options as TextFieldProps
+	const { onBlur, onChange, slotProps, ...muiProps } =
+		textFieldProps as TextFieldProps
 	return (
 		<TextField
 			fullWidth
@@ -251,12 +270,13 @@ function MuiNumberControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: textFieldProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<number | undefined, MuiTextFieldOptions>): ReactElement {
-	const { onBlur, onChange, slotProps, ...muiProps } = options as TextFieldProps
+}: ControlProps<number | undefined, MuiTextFieldProps>): ReactElement {
+	const { onBlur, onChange, slotProps, ...muiProps } =
+		textFieldProps as TextFieldProps
 	return (
 		<TextField
 			fullWidth
@@ -307,13 +327,18 @@ function MuiSelectControl({
 	blur,
 	input,
 	meta,
+	props: selectProps,
 	options,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, MuiSelectOptions>): ReactElement {
-	const { choices, children, inputProps, onBlur, onChange, ...muiProps } =
-		options
+}: ControlProps<
+	string | undefined,
+	MuiSelectProps,
+	unknown,
+	MuiSelectOption
+>): ReactElement {
+	const { children, inputProps, onBlur, onChange, ...muiProps } = selectProps
 	return (
 		<Select<string>
 			fullWidth
@@ -349,7 +374,7 @@ function MuiSelectControl({
 			required={required}
 			value={value ?? ""}
 		>
-			{children ?? renderSelectChoices(choices)}
+			{children ?? renderSelectOptions(options)}
 		</Select>
 	)
 }
@@ -361,13 +386,18 @@ function MuiSelectMultipleControl({
 	blur,
 	input,
 	meta,
+	props: selectProps,
 	options,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<readonly string[], MuiSelectMultipleOptions>): ReactElement {
-	const { choices, children, inputProps, onBlur, onChange, ...muiProps } =
-		options
+}: ControlProps<
+	readonly string[],
+	MuiSelectMultipleProps,
+	unknown,
+	MuiSelectOption
+>): ReactElement {
+	const { children, inputProps, onBlur, onChange, ...muiProps } = selectProps
 	return (
 		<Select<readonly string[]>
 			fullWidth
@@ -407,39 +437,43 @@ function MuiSelectMultipleControl({
 			required={required}
 			value={value}
 		>
-			{children ?? renderSelectChoices(choices)}
+			{children ?? renderSelectOptions(options)}
 		</Select>
 	)
 }
 
-/** Renders typed select choices as MUI menu items. */
-function renderSelectChoices(
-	choices: MuiSelectOptions["choices"] | MuiSelectMultipleOptions["choices"],
-) {
-	return choices?.map((choice) => (
+/** Renders typed select options as MUI menu items. */
+function renderSelectOptions(options: readonly MuiSelectOption[]) {
+	return options.map((option) => (
 		<MenuItem
-			disabled={choice.disabled}
-			key={choice.value}
-			value={choice.value}
+			disabled={option.disabled}
+			key={option.value}
+			value={option.value}
 		>
-			{choice.label}
+			{option.label}
 		</MenuItem>
 	))
 }
 
-/** Renders a MUI radio group with typed or application-rendered choices. */
+/** Renders a MUI radio group with typed or application-rendered options. */
 function MuiRadioControl({
 	value,
 	setValue,
 	blur,
 	input,
 	meta,
+	props: radioGroupProps,
 	options,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, MuiRadioOptions>): ReactElement {
-	const { choices, children, onBlur, onChange, ...muiProps } = options
+}: ControlProps<
+	string | undefined,
+	MuiRadioProps,
+	unknown,
+	MuiRadioOption
+>): ReactElement {
+	const { children, onBlur, onChange, ...muiProps } = radioGroupProps
 	return (
 		<RadioGroup
 			{...muiProps}
@@ -462,7 +496,7 @@ function MuiRadioControl({
 			value={value ?? ""}
 		>
 			{children ??
-				choices?.map((choice, index) => {
+				options.map((option, index) => {
 					const {
 						onBlur: onRadioBlur,
 						onChange: onRadioChange,
@@ -470,9 +504,9 @@ function MuiRadioControl({
 						onKeyDown: onRadioKeyDown,
 						slotProps,
 						...radioProps
-					} = choice.radioProps ?? {}
+					} = option.radioProps ?? {}
 					const { onChange: onLabelChange, ...labelProps } =
-						choice.labelProps ?? {}
+						option.labelProps ?? {}
 					const radioId = `${input.id}-${index}`
 					return (
 						<FormControlLabel
@@ -480,14 +514,14 @@ function MuiRadioControl({
 							control={
 								<Radio
 									{...radioProps}
-									disabled={disabled || choice.disabled}
+									disabled={disabled || option.disabled}
 									id={radioId}
 									onBlur={(event) => {
 										blur()
 										onRadioBlur?.(event)
 									}}
 									onChange={(event, checked) => {
-										if (!readOnly && checked) setValue(choice.value)
+										if (!readOnly && checked) setValue(option.value)
 										onRadioChange?.(event, checked)
 										onLabelChange?.(event, checked)
 									}}
@@ -508,23 +542,23 @@ function MuiRadioControl({
 											"aria-describedby": input["aria-describedby"],
 											"aria-invalid": meta.invalid || undefined,
 											"aria-readonly": readOnly || undefined,
-											checked: value === choice.value,
+											checked: value === option.value,
 											defaultChecked: undefined,
-											disabled: disabled || choice.disabled,
+											disabled: disabled || option.disabled,
 											id: radioId,
 											name: input.name,
 											ref: index === 0 ? input.ref : undefined,
 											required,
-											value: choice.value,
+											value: option.value,
 										}),
 									}}
 								/>
 							}
-							disabled={disabled || choice.disabled}
-							key={choice.value}
-							label={choice.label}
+							disabled={disabled || option.disabled}
+							key={option.value}
+							label={option.label}
 							required={required}
-							value={choice.value}
+							value={option.value}
 						/>
 					)
 				})}
@@ -539,12 +573,13 @@ function MuiCheckboxControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: checkboxProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<boolean, MuiCheckboxOptions>): ReactElement {
-	const { onBlur, onChange, onClick, slotProps, sx, ...muiProps } = options
+}: ControlProps<boolean, MuiCheckboxProps>): ReactElement {
+	const { onBlur, onChange, onClick, slotProps, sx, ...muiProps } =
+		checkboxProps
 	return (
 		<Checkbox
 			{...muiProps}
@@ -596,12 +631,12 @@ function MuiSwitchControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: switchProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<boolean, MuiSwitchOptions>): ReactElement {
-	const { onBlur, onChange, onClick, slotProps, ...muiProps } = options
+}: ControlProps<boolean, MuiSwitchProps>): ReactElement {
+	const { onBlur, onChange, onClick, slotProps, ...muiProps } = switchProps
 	return (
 		<Switch
 			{...muiProps}
@@ -652,12 +687,18 @@ function MuiAutocompleteControl({
 	blur,
 	input,
 	meta,
+	props: autocompleteProps,
 	options,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, MuiAutocompleteOptions>): ReactElement {
-	const { textFieldProps, onBlur, onChange, ...muiProps } = options
+}: ControlProps<
+	string | undefined,
+	MuiAutocompleteProps,
+	unknown,
+	OptionValue<string>
+>): ReactElement {
+	const { textFieldProps, onBlur, onChange, ...muiProps } = autocompleteProps
 	return (
 		<Autocomplete<string, false, boolean, boolean>
 			fullWidth
@@ -665,6 +706,7 @@ function MuiAutocompleteControl({
 			disabled={disabled}
 			id={input.id}
 			multiple={false}
+			options={options}
 			onBlur={(event) => {
 				blur()
 				onBlur?.(event)
@@ -697,15 +739,18 @@ function MuiAutocompleteMultipleControl({
 	blur,
 	input,
 	meta,
+	props: autocompleteProps,
 	options,
 	disabled,
 	readOnly,
 	required,
 }: ControlProps<
 	readonly string[],
-	MuiAutocompleteMultipleOptions
+	MuiAutocompleteMultipleProps,
+	unknown,
+	OptionValue<string>
 >): ReactElement {
-	const { textFieldProps, onBlur, onChange, ...muiProps } = options
+	const { textFieldProps, onBlur, onChange, ...muiProps } = autocompleteProps
 	return (
 		<Autocomplete<string, true, boolean, boolean>
 			fullWidth
@@ -713,6 +758,7 @@ function MuiAutocompleteMultipleControl({
 			disabled={disabled}
 			id={input.id}
 			multiple
+			options={options}
 			onBlur={(event) => {
 				blur()
 				onBlur?.(event)
@@ -752,8 +798,8 @@ function renderAutocompleteInput({
 	readonly params: AutocompleteRenderInputParams
 	/** Application-owned props for the rendered MUI TextField. */
 	readonly textFieldProps:
-		| MuiAutocompleteOptions["textFieldProps"]
-		| MuiAutocompleteMultipleOptions["textFieldProps"]
+		| MuiAutocompleteProps["textFieldProps"]
+		| MuiAutocompleteMultipleProps["textFieldProps"]
 	/** IDs, name, and registration ref owned by Form Please. */
 	readonly input: ControlProps<unknown>["input"]
 	/** Whether the control currently displays a validation error. */
@@ -805,13 +851,13 @@ function MuiSliderControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: sliderProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<number, MuiSliderOptions>): ReactElement {
+}: ControlProps<number, MuiSliderProps>): ReactElement {
 	const { onBlur, onChange, onKeyDown, onMouseDown, slotProps, ...muiProps } =
-		options
+		sliderProps
 	return (
 		<Slider
 			{...muiProps}
@@ -865,13 +911,13 @@ function MuiRangeSliderControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: sliderProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<readonly number[], MuiRangeSliderOptions>): ReactElement {
+}: ControlProps<readonly number[], MuiRangeSliderProps>): ReactElement {
 	const { onBlur, onChange, onKeyDown, onMouseDown, slotProps, ...muiProps } =
-		options
+		sliderProps
 	return (
 		<Slider
 			{...muiProps}
@@ -921,7 +967,7 @@ function MuiRangeSliderControl({
 
 /** Renders the MUI single-file control and tracks browser-owned file state. */
 function MuiFileControl(
-	props: ControlProps<File | undefined, MuiFileOptions> & {
+	props: ControlProps<File | undefined, MuiFileProps> & {
 		/** User-facing messages for the file control. */
 		readonly i18n: MuiFormKitI18n
 	},
@@ -954,7 +1000,7 @@ function MuiFileControl(
 
 /** Renders the MUI multi-file control and tracks browser-owned file state. */
 function MuiFilesControl(
-	props: ControlProps<readonly File[], MuiFileOptions> & {
+	props: ControlProps<readonly File[], MuiFileProps> & {
 		/** User-facing messages for the file control. */
 		readonly i18n: MuiFormKitI18n
 	},
@@ -994,7 +1040,7 @@ function MuiFileButton<Value extends File | undefined | readonly File[]>({
 	blur,
 	input,
 	meta,
-	options,
+	props: fileProps,
 	disabled,
 	readOnly,
 	required,
@@ -1003,7 +1049,7 @@ function MuiFileButton<Value extends File | undefined | readonly File[]>({
 	label,
 	multiple = false,
 	onFiles,
-}: ControlProps<Value, MuiFileOptions> & {
+}: ControlProps<Value, MuiFileProps> & {
 	/** User-facing messages for the file control. */
 	readonly i18n: MuiFormKitI18n
 	/** Whether the native input still owns the current field files. */
@@ -1020,7 +1066,7 @@ function MuiFileButton<Value extends File | undefined | readonly File[]>({
 	/** Updates the field from the native file selection. */
 	onFiles(files: FileList | null): void
 }): ReactElement {
-	const { buttonProps = {}, inputProps = {}, sx } = options
+	const { buttonProps = {}, inputProps = {}, sx } = fileProps
 	const {
 		children,
 		onClick: onButtonClick,

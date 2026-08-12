@@ -25,11 +25,13 @@ type IsValidValue<Value> =
 				: true
 
 /** Input accepted by `defineControl` when `Value` is a concrete type. */
-export type DefineControlInput<Value, Options, Context> =
+export type DefineControlInput<Value, OwnProps, Context, Option> =
 	IsValidValue<Value> extends true
 		? {
 				/** The React component that implements the control contract. */
-				readonly component: ComponentType<ControlProps<Value, Options, Context>>
+				readonly component: ComponentType<
+					ControlProps<Value, OwnProps, Context, Option>
+				>
 			}
 		: never
 
@@ -45,12 +47,13 @@ export type DefineControlInput<Value, Options, Context> =
  */
 export function defineControl<
 	Value,
-	Options = Record<string, never>,
+	OwnProps = Record<string, never>,
 	Context = unknown,
+	Option = never,
 >(
-	input: DefineControlInput<Value, Options, Context>,
-): ControlDefinition<Value, Options, Context> {
+	input: DefineControlInput<Value, OwnProps, Context, Option>,
+): ControlDefinition<Value, OwnProps, Context, Option> {
 	return Object.freeze({
 		component: input.component,
-	}) as ControlDefinition<Value, Options, Context>
+	}) as ControlDefinition<Value, OwnProps, Context, Option>
 }

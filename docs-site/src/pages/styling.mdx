@@ -276,7 +276,7 @@ complete array and submit examples.
 ## Style Material UI forms
 
 The Material UI preset uses its own responsive `Grid`. Use the application
-theme for shared styles. Use `options.sx` for a control and `slotOptions` for a
+theme for shared styles. Use `props.sx` for a control and `slotOptions` for a
 field, section, or array.
 
 ```tsx
@@ -296,7 +296,7 @@ field, section, or array.
 			control: "text",
 			label: "Proposal title",
 			span: 7,
-			options: { sx: { bgcolor: "background.paper" } },
+			props: { sx: { bgcolor: "background.paper" } },
 		},
 	],
 }

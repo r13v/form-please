@@ -43,26 +43,26 @@ const projectDefinition = projectKit.defineForm(profileSchema, {
 			path: "displayName",
 			control: "uppercase",
 			label: "Display name",
-			options: { placeholder: "ADA LOVELACE" },
+			props: { placeholder: "ADA LOVELACE" },
 		},
 		{
 			kind: "field",
 			path: "age",
 			control: "number",
 			label: "Age",
-			options: { min: 18, max: 120, step: 1 },
+			props: { min: 18, max: 120, step: 1 },
 		},
 		{
 			kind: "field",
 			path: "role",
 			control: "select",
 			label: "Role",
-			options: {
+			options: [
+				{ value: "admin", label: "Administrator" },
+				{ value: "member", label: "Member" },
+			],
+			props: {
 				emptyOption: { label: "Select a role" },
-				options: [
-					{ value: "admin", label: "Administrator" },
-					{ value: "member", label: "Member" },
-				],
 			},
 		},
 		{

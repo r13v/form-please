@@ -48,12 +48,14 @@ describe("built package entries", () => {
 				"TanStackFormKit",
 				"TanStackFormInstance",
 				"ControlFormData",
+				"ControlConfigOf",
 				"ValuePolicy",
 			]) {
 				expect(declaration).not.toContain(name)
 			}
 			for (const name of [
-				"ChoiceValue",
+				"ControlOwnPropsOf",
+				"OptionValue",
 				"FormBinding",
 				"FormDefinition",
 				"FormKit",
@@ -71,6 +73,20 @@ describe("built package entries", () => {
 				"utf8",
 			)
 			expect(persistenceDeclaration).toContain("PersistenceErrorDetails")
+
+			const nativeDeclaration = await readFile(
+				new URL(`../../dist/native-controls.${extension}`, import.meta.url),
+				"utf8",
+			)
+			expect(nativeDeclaration).toContain("NativeSelectProps")
+			expect(nativeDeclaration).not.toContain("NativeSelectConfig")
+
+			const muiDeclaration = await readFile(
+				new URL(`../../dist/preset-mui.${extension}`, import.meta.url),
+				"utf8",
+			)
+			expect(muiDeclaration).toContain("MuiSelectProps")
+			expect(muiDeclaration).not.toContain("MuiSelectConfig")
 		}
 	})
 })

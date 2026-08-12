@@ -9,12 +9,14 @@ import { describe, expect, it, vi } from "vitest"
 import type { ControlProps } from "../types.js"
 import { createMuiFormKit } from "./index.js"
 import type {
-	MuiFileOptions,
-	MuiRadioOptions,
-	MuiRangeSliderOptions,
-	MuiSelectOptions,
-	MuiSliderOptions,
-	MuiTextFieldOptions,
+	MuiFileProps,
+	MuiRadioOption,
+	MuiRadioProps,
+	MuiRangeSliderProps,
+	MuiSelectOption,
+	MuiSelectProps,
+	MuiSliderProps,
+	MuiTextFieldProps,
 } from "./types.js"
 
 const controlNames = [
@@ -67,9 +69,8 @@ describe("createMuiFormKit", () => {
 		const kit = createMuiFormKit()
 		const TextControl = kit.controls.text.component
 		const calls: string[] = []
-		const props = createControlProps<string | undefined, MuiTextFieldOptions>({
-			value: undefined,
-			options: {
+		const props = createControlProps<string | undefined, MuiTextFieldProps>({
+			props: {
 				onBlur: () => calls.push("user-blur"),
 				onChange: () => calls.push("user-change"),
 				slotProps: {
@@ -82,6 +83,7 @@ describe("createMuiFormKit", () => {
 					},
 				},
 			},
+			value: undefined,
 			setValue: () => calls.push("form-change"),
 			blur: () => calls.push("form-blur"),
 		})
@@ -109,11 +111,13 @@ describe("createMuiFormKit", () => {
 
 		render(
 			<SelectControl
-				{...createControlProps<string | undefined, MuiSelectOptions>({
-					options: {
-						choices: [{ label: "Forms", value: "forms" }],
-						inputProps: { id: "user-id", value: "user-value" },
-					},
+				{...createControlProps<
+					string | undefined,
+					MuiSelectProps,
+					MuiSelectOption
+				>({
+					props: { inputProps: { id: "user-id", value: "user-value" } },
+					options: [{ label: "Forms", value: "forms" }],
 					value: "forms",
 				})}
 			/>,
@@ -131,8 +135,8 @@ describe("createMuiFormKit", () => {
 
 		render(
 			<SliderControl
-				{...createControlProps<number, MuiSliderOptions>({
-					options: {
+				{...createControlProps<number, MuiSliderProps>({
+					props: {
 						max: 5,
 						min: 1,
 						slotProps: {
@@ -159,8 +163,8 @@ describe("createMuiFormKit", () => {
 
 		render(
 			<RangeSliderControl
-				{...createControlProps<readonly number[], MuiRangeSliderOptions>({
-					options: {
+				{...createControlProps<readonly number[], MuiRangeSliderProps>({
+					props: {
 						slotProps: { input: { id: "user-id" } },
 					},
 					value: [2, 8],
@@ -180,20 +184,23 @@ describe("createMuiFormKit", () => {
 		}
 	})
 
-	it("commits typed radio choices to Form Please state", () => {
+	it("commits typed radio options to Form Please state", () => {
 		const kit = createMuiFormKit()
 		const RadioControl = kit.controls.radio.component
 		const setValue = vi.fn()
 
 		render(
 			<RadioControl
-				{...createControlProps<string | undefined, MuiRadioOptions>({
-					options: {
-						choices: [
-							{ label: "Talk", value: "talk" },
-							{ label: "Workshop", value: "workshop" },
-						],
-					},
+				{...createControlProps<
+					string | undefined,
+					MuiRadioProps,
+					MuiRadioOption
+				>({
+					props: {},
+					options: [
+						{ label: "Talk", value: "talk" },
+						{ label: "Workshop", value: "workshop" },
+					],
 					setValue,
 					value: "talk",
 				})}
@@ -276,8 +283,8 @@ describe("createMuiFormKit", () => {
 			return (
 				<form aria-label="upload">
 					<FilesControl
-						{...createControlProps<readonly File[], MuiFileOptions>({
-							options: { inputProps: { accept: ".pdf" } },
+						{...createControlProps<readonly File[], MuiFileProps>({
+							props: { inputProps: { accept: ".pdf" } },
 							setValue,
 							value,
 						})}
@@ -309,19 +316,22 @@ describe("createMuiFormKit", () => {
 	})
 })
 
-function createControlProps<Value, Options>({
+function createControlProps<Value, OwnProps, Option = never>({
+	props,
 	value,
 	options,
 	setValue = vi.fn(),
 	blur = vi.fn(),
 }: {
 	readonly value: Value
-	readonly options: Options
+	readonly props: OwnProps
+	readonly options?: readonly Option[]
 	setValue?(value: Value): void
 	blur?(): void
-}): ControlProps<Value, Options> {
+}): ControlProps<Value, OwnProps, unknown, Option> {
 	return {
 		blur,
+		props,
 		context: {},
 		disabled: false,
 		input: {
@@ -338,11 +348,11 @@ function createControlProps<Value, Options>({
 			touched: false,
 			validating: false,
 		},
-		options,
+		...(options === undefined ? {} : { options }),
 		path: "field",
 		readOnly: false,
 		required: false,
 		setValue,
 		value,
-	}
+	} as ControlProps<Value, OwnProps, unknown, Option>
 }

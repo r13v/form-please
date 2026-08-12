@@ -40,7 +40,7 @@ function ExternalStoreStatus() {
 // [!endregion use-snapshot]
 
 // [!region define-control]
-type UppercaseOptions = {
+type UppercaseProps = {
 	readonly placeholder?: string
 }
 
@@ -50,11 +50,11 @@ function UppercaseControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: inputProps,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, UppercaseOptions>) {
+}: ControlProps<string | undefined, UppercaseProps>) {
 	return (
 		<input
 			aria-describedby={input["aria-describedby"]}
@@ -66,7 +66,7 @@ function UppercaseControl({
 			onChange={(event) =>
 				setValue(event.currentTarget.value.toUpperCase() || undefined)
 			}
-			placeholder={options.placeholder}
+			placeholder={inputProps.placeholder}
 			readOnly={readOnly}
 			ref={input.ref}
 			required={required}
@@ -75,7 +75,7 @@ function UppercaseControl({
 	)
 }
 
-const uppercase = defineControl<string | undefined, UppercaseOptions>({
+const uppercase = defineControl<string | undefined, UppercaseProps>({
 	component: UppercaseControl,
 })
 // [!endregion define-control]
@@ -175,19 +175,19 @@ const preferencesDefinition = nativeFormKit.defineForm(preferencesSchema, {
 			path: "email",
 			control: "text",
 			label: "Email",
-			options: { type: "email", autoComplete: "email" },
+			props: { type: "email", autoComplete: "email" },
 		},
 		{
 			kind: "field",
 			path: "plan",
 			control: "select",
 			label: "Plan",
-			options: {
+			options: [
+				{ value: "solo", label: "Solo" },
+				{ value: "team", label: "Team" },
+			],
+			props: {
 				emptyOption: { label: "Select a plan" },
-				options: [
-					{ value: "solo", label: "Solo" },
-					{ value: "team", label: "Team" },
-				],
 			},
 		},
 		{
@@ -195,7 +195,7 @@ const preferencesDefinition = nativeFormKit.defineForm(preferencesSchema, {
 			path: "seats",
 			control: "number",
 			label: "Seats",
-			options: { min: 1, max: 100, step: 1 },
+			props: { min: 1, max: 100, step: 1 },
 		},
 		{
 			kind: "field",
@@ -234,12 +234,12 @@ const muiSettingsDefinition = muiKit.defineForm(muiSettingsSchema, {
 			path: "role",
 			control: "select",
 			label: "Role",
-			options: {
+			options: [
+				{ value: "developer", label: "Developer" },
+				{ value: "designer", label: "Designer" },
+			],
+			props: {
 				displayEmpty: true,
-				choices: [
-					{ value: "developer", label: "Developer" },
-					{ value: "designer", label: "Designer" },
-				],
 			},
 		},
 		{
@@ -247,7 +247,7 @@ const muiSettingsDefinition = muiKit.defineForm(muiSettingsSchema, {
 			path: "topics",
 			control: "autocomplete-multiple",
 			label: "Topics",
-			options: { options: ["React", "TypeScript", "Accessibility"] },
+			options: ["React", "TypeScript", "Accessibility"],
 		},
 		{
 			kind: "field",
@@ -260,7 +260,7 @@ const muiSettingsDefinition = muiKit.defineForm(muiSettingsSchema, {
 			path: "priority",
 			control: "slider",
 			label: "Priority",
-			options: { min: 0, max: 10, step: 1 },
+			props: { min: 0, max: 10, step: 1 },
 		},
 	],
 })
@@ -334,7 +334,7 @@ const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
 			ui.field("name", {
 				control: "uppercase",
 				label: "Display name",
-				options: { placeholder: "ADA" },
+				props: { placeholder: "ADA" },
 				required: true,
 			}),
 			ui.field("yearsOfExperience", {
@@ -345,12 +345,10 @@ const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
 				control: "select",
 				label: "Plan",
 				readOnly: (_values, { context }) => !context.canEditPlan,
-				options: {
-					options: [
-						{ value: "solo", label: "Solo" },
-						{ value: "team", label: "Team" },
-					],
-				},
+				options: [
+					{ value: "solo", label: "Solo" },
+					{ value: "team", label: "Team" },
+				],
 			}),
 			ui.field("teamName", {
 				control: "text",

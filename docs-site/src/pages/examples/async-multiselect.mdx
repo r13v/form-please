@@ -64,7 +64,7 @@ renders repeatable rows, but this control updates one `string[]` value.
 
 ## 2. Define and register the control
 
-The options contract separates request settings from display text:
+The control props separate request settings from display text:
 
 ```tsx
 // [!include ~/snippets/async-multiselect.tsx:option-contract]
@@ -115,8 +115,10 @@ Add every value that changes the response to the base `queryKey`. For example,
 use `queryKey: ["cities", tenantId, locale]` when the tenant and locale change
 the option list.
 
-"Form, Please" resolves field options synchronously. Pass the asynchronous
-function as `queryFn`. Do not return a promise from the `options` resolver.
+The generic async field `options` API loads a complete list. This custom control
+owns remote search instead, because query text, previous results, retries, and
+loading UI are part of its interaction. Pass the asynchronous function through
+the control `props` as `queryFn`.
 
 ## 5. Configure the field
 
@@ -126,24 +128,24 @@ Add the field to the form definition:
 // [!include ~/snippets/async-multiselect.tsx:field-definition]
 ```
 
-The control requires these request options:
+The control requires these request props:
 
-| Option | Purpose |
+| Prop | Purpose |
 | --- | --- |
 | `queryKey` | Identifies the option source and its request context. |
 | `queryFn` | Returns options for one search and supports cancellation. |
 
-These options control request and label behavior:
+These properties control request and label behavior:
 
-| Option | Default | Purpose |
+| Prop | Default | Purpose |
 | --- | --- | --- |
 | `initialOptions` | `[]` | Supplies labels for initial selected IDs. |
 | `debounceMs` | `250` | Delays a query after the search text changes. |
 | `staleTime` | `30_000` | Sets the option cache freshness period. |
 
-These options control visible text and tag count:
+These properties control visible text and tag count:
 
-| Option | Default |
+| Prop | Default |
 | --- | --- |
 | `maxVisibleTags` | `3` |
 | `placeholder` | `"Choose options"` |

@@ -14,7 +14,7 @@ React.
 
 Structural slots also need data that is specific to the registered design
 system. A tooltip-capable `Field` slot, for example, needs its tooltip text
-without overloading control `options` or adding a universal tooltip property
+without overloading control `props` or adding a universal tooltip property
 to every form.
 
 ## Decision
@@ -52,7 +52,7 @@ base kit or an incompatible sibling.
   field structure and require coordination with the existing `Field` slot.
 - A single untyped options bag preserves runtime flexibility but loses the
   relationship between a node and the registered structural slot.
-- Reusing control `options` mixes value-editor configuration with field,
+- Reusing control `props` mixes value-editor props with field,
   section, or array presentation and does not cover non-field nodes.
 
 ## Consequences
@@ -61,7 +61,7 @@ base kit or an incompatible sibling.
   a render node or weakening field semantics.
 - Design systems can define open-ended structural capabilities while form
   definitions remain type checked.
-- `slotOptions` is independent from a field control's `options`.
+- `slotOptions` is independent from a field control's `props`.
 - `ArrayItem` and `ErrorMessage` remain unchanged because this decision covers
   definition-owned field, section, and array nodes.
 - Definitions containing React elements are React-only and cannot cross a

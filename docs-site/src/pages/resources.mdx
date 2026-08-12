@@ -1,23 +1,24 @@
 ---
 title: Resource state
-description: Represent application-owned request state and map it into synchronous form UI.
+description: Represent application-owned request state and map it into form UI.
 showAskAi: false
 ---
 
 # Resource state
 
-Use resource state when remote data changes labels, options, descriptions, or
+Use resource state when remote data changes labels, descriptions, permissions, or
 interaction state in a form.
 
-"Form, Please" does not send requests. It also does not own caches, retries,
-cancellation, or previous data. Keep that work in the application or a request
-library. Pass the current result through form context.
+For a simple selectable list, prefer an async field `options` function. Use
+resource state when the application must expose pending or error state, retain
+previous data, cache, retry, search, or coordinate several UI properties.
 
 | Required result | Helper |
 | --- | --- |
 | Derive a value immediately | `matchResource` |
 | Define a synchronous UI resolver | `fromResource` |
 | Load or refresh remote data | Application code or a request library |
+| Load one selectable list without request UI | Async field `options` |
 
 ## Define the resource states
 
@@ -77,12 +78,13 @@ Each branch receives these arguments in this order:
 3. Resolver details, which contain the readonly form context.
 
 Use only the arguments that the branch needs. In the example, the success
-description reads the selected plan. The options resolver reads saved options
+description reads the selected plan. The options function reads saved options
 from context during pending and error states.
 
 `fromResource` returns a normal synchronous UI resolver. The selector and all
 branches must return synchronously. Load data before or beside the form. Do not
-pass an `async` function to `fromResource`.
+pass an `async` function to `fromResource`; field `options` has its own async
+contract.
 
 ## Pass the resource through context
 

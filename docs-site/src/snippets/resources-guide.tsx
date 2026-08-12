@@ -77,15 +77,12 @@ const countryDescription = fromResource(selectCountries, {
 	error: ({ error }) => `Cannot load countries: ${error.message}`,
 })
 
-const countryOptions = fromResource(selectCountries, {
-	pending: (_state, _values, { context }) => ({
-		options: context.savedCountryOptions,
-	}),
-	success: ({ value }) => ({ options: value }),
-	error: (_state, _values, { context }) => ({
-		options: context.savedCountryOptions,
-	}),
-})
+const countryOptions = ({ context }: { readonly context: ProfileContext }) =>
+	matchResource(context.countries, {
+		pending: () => context.savedCountryOptions,
+		success: ({ value }) => value,
+		error: () => context.savedCountryOptions,
+	})
 // [!endregion resource-resolvers]
 
 const profileKit = nativeFormKit.forContext<ProfileContext>()
@@ -98,12 +95,10 @@ const profileDefinition = profileKit.defineForm(profileSchema, {
 			path: "plan",
 			control: "select",
 			label: "Plan",
-			options: {
-				options: [
-					{ value: "solo", label: "Solo" },
-					{ value: "team", label: "Team" },
-				],
-			},
+			options: [
+				{ value: "solo", label: "Solo" },
+				{ value: "team", label: "Team" },
+			],
 		},
 		{
 			kind: "field",

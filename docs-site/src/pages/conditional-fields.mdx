@@ -1,6 +1,6 @@
 ---
 title: Conditional fields
-description: Derive visibility, interaction state, content, and control options from values and context.
+description: Derive visibility, interaction state, content, and control props from values and context.
 showAskAi: false
 ---
 
@@ -50,14 +50,18 @@ These field properties accept a static value or a synchronous resolver:
 | `disabled`, `readOnly` | Changes the control interaction state. | `false` |
 | `required` | Passes required UI state to the control. | `false` |
 | `label`, `description` | Changes displayed content. | No content |
-| `options`, `slotOptions` | Changes control or slot configuration. | Control-dependent |
+| `props`, `slotOptions` | Changes control props or slot configuration. | Control-dependent |
 
 Layout properties such as `className` and `span` also accept resolvers. See
 [Definitions](/definitions#resolver-values) for the complete property reference.
 
-Resolvers must return immediately. A resolver that returns a promise causes a
-runtime error. Keep resolvers small and free of side effects. Do not fetch data
-or update form state in a resolver.
+Ordinary resolvers must return immediately. A resolver that returns a promise
+causes a runtime error. Keep resolvers small and free of side effects. Do not
+fetch data or update form state in an ordinary resolver.
+
+A selectable field's `options` property has a separate function contract. It
+may return a promise and tracks the `values` and `context` properties it reads.
+See [Async options](/definitions#async-options).
 
 ## Apply one condition to a group
 

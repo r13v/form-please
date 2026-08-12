@@ -6,7 +6,7 @@ showAskAi: false
 
 # API
 
-Use this page to find public imports, options, return values, and runtime
+Use this page to find public imports, configuration, return values, and runtime
 behavior. Form, Please adds typed UI definitions to React Hook Form. Each form
 binding exposes the complete React Hook Form API as `form.api`.
 
@@ -60,9 +60,9 @@ safe and consistent during server rendering.
 
 ## `defineControl`
 
-`defineControl<Value, Options, Context>()` creates one control definition. Its
-generic parameters connect the control to compatible schema paths, field
-options, and form context.
+`defineControl<Value, OwnProps, Context, Option>()` creates one control definition. Its
+generic parameters connect the control to compatible schema paths, application-owned
+props, selectable options, and form context.
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:define-control]
@@ -78,7 +78,8 @@ The control component receives these props:
 | `blur()` | Mark the field as blurred. Call it from the interactive element. |
 | `input` | Generated `id`, `name`, focus `ref`, and optional `aria-describedby`. |
 | `meta` | Dirty, touched, validating, error, and displayed-error state. |
-| `options` | Deeply readonly options from the field definition. |
+| `props` | Deeply readonly application-owned props from the field definition. |
+| `options` | Current readonly collection for an option-capable control. |
 | `context` | Deeply readonly context from `useForm`. |
 | `disabled`, `readOnly` | Resolved form, parent, and field interaction state. |
 | `required` | Resolved presentation state. It does not add schema validation. |
@@ -136,18 +137,18 @@ context, and array examples.
 
 `createNativeControls()` returns a fresh frozen registry on each call.
 
-| Control | Value type | Options |
+| Control | Value type | Props and selectable options |
 | --- | --- | --- |
 | `text` | `string \| undefined` | `type`, `placeholder`, `autoComplete` |
 | `textarea` | `string \| undefined` | `placeholder`, `autoComplete`, `rows` |
-| `select` | `string \| undefined` | Required `options`; optional `emptyOption` |
-| `checkbox` | `boolean` | No options |
+| `select` | `string \| undefined` | Field `options`; optional `props.emptyOption` |
+| `checkbox` | `boolean` | No props or options |
 | `number` | `number \| undefined` | `min`, `max`, `step`, `placeholder` |
 | `date` | `string \| undefined` | `min`, `max` |
 | `time` | `string \| undefined` | `min`, `max`, `step` |
 | `file` | `File \| undefined` | `accept` |
 
-Use an `emptyOption` when a select value can be `undefined`. Do not also add an
+Use `props.emptyOption` when a select value can be `undefined`. Do not also add an
 option whose value is an empty string.
 
 ```tsx
@@ -155,9 +156,9 @@ option whose value is an empty string.
 ```
 
 Import the option types from `form-please/native-controls`. The entry exports
-`NativeTextOptions`, `NativeTextareaOptions`, `NativeSelectOptions`,
-`NativeNumberOptions`, `NativeDateOptions`, `NativeTimeOptions`, and
-`NativeFileOptions`. It also exports the related select and text types.
+`NativeTextProps`, `NativeTextareaProps`, `NativeSelectProps`,
+`NativeNumberProps`, `NativeDateProps`, `NativeTimeProps`, and
+`NativeFileProps`. It also exports the related select and text types.
 
 ### Default slots
 
@@ -216,22 +217,22 @@ The `i18n` object supports `addItem`, `removeItem`, `moveItemUp`,
 
 The registry contains these controls:
 
-| Value type | Control names | Options type |
+| Value type | Control names | Props type |
 | --- | --- | --- |
-| `string \| undefined` | `text`, `textarea`, `password`, `email`, `url`, `tel`, `search`, `date`, `time`, `datetime-local` | `MuiTextFieldOptions` |
-| `number \| undefined` | `number` | `MuiTextFieldOptions` |
-| `string \| undefined` | `select` | `MuiSelectOptions` |
-| `readonly string[]` | `select-multiple` | `MuiSelectMultipleOptions` |
-| `string \| undefined` | `radio` | `MuiRadioOptions` |
-| `boolean` | `checkbox`, `switch` | `MuiCheckboxOptions` or `MuiSwitchOptions` |
-| `string \| undefined` | `autocomplete` | `MuiAutocompleteOptions` |
-| `readonly string[]` | `autocomplete-multiple` | `MuiAutocompleteMultipleOptions` |
-| `File \| undefined` | `file` | `MuiFileOptions` |
-| `readonly File[]` | `files` | `MuiFileOptions` |
-| `number` | `slider` | `MuiSliderOptions` |
-| `readonly number[]` | `range-slider` | `MuiRangeSliderOptions` |
+| `string \| undefined` | `text`, `textarea`, `password`, `email`, `url`, `tel`, `search`, `date`, `time`, `datetime-local` | `MuiTextFieldProps` |
+| `number \| undefined` | `number` | `MuiTextFieldProps` |
+| `string \| undefined` | `select` | `MuiSelectProps` |
+| `readonly string[]` | `select-multiple` | `MuiSelectMultipleProps` |
+| `string \| undefined` | `radio` | `MuiRadioProps` |
+| `boolean` | `checkbox`, `switch` | `MuiCheckboxProps` or `MuiSwitchProps` |
+| `string \| undefined` | `autocomplete` | `MuiAutocompleteProps` |
+| `readonly string[]` | `autocomplete-multiple` | `MuiAutocompleteMultipleProps` |
+| `File \| undefined` | `file` | `MuiFileProps` |
+| `readonly File[]` | `files` | `MuiFileProps` |
+| `number` | `slider` | `MuiSliderProps` |
+| `readonly number[]` | `range-slider` | `MuiRangeSliderProps` |
 
-Select and radio `choices`, plus autocomplete `options`, narrow to the schema
+Select, radio, and autocomplete field `options` narrow to the schema
 input union at the selected path. Multiple controls use the array element
 union. Custom select children and autocomplete `freeSolo` values remain outside
 that inference contract.
@@ -240,7 +241,7 @@ that inference contract.
 // [!include ~/snippets/api-reference.tsx:mui-fields]
 ```
 
-The preset also exports its option, choice, slot-option, and localization
+The preset also exports its control props, option, slot-option, and localization
 types. The application owns `ThemeProvider`, `CssBaseline`, and theme
 configuration. See the [Material UI example](/examples/mui-yup) for a complete
 form.
@@ -275,14 +276,17 @@ node kinds:
 
 Field, section, and array nodes support resolved labels or descriptions. They
 also support `visible`, `disabled`, `readOnly`, `className`, `span`, and typed
-`slotOptions`. Fields add `required` and typed control `options`. Sections add
+`slotOptions`. Fields add `required`, typed control `props`, and selectable
+`options` when the control supports them. Sections add
 `title` and `columns`.
 
-Each supported property accepts a static value or a synchronous resolver. An
+Each supported property except field `options` accepts a static value or a synchronous resolver. An
 ordinary node resolver receives the complete deeply readonly schema input and
 `{ context }`; a fragment-authored resolver receives its local fragment input.
 Form, Please resolves the complete tree after each value change. It throws when
-a resolver returns a promise.
+an ordinary resolver returns a promise. Field `options` may be an async
+`({ values, context, signal }) => options` function with tracked dependencies,
+cancellation, and `[]` fallback behavior.
 
 Hidden fields keep their React Hook Form values. The `required` property changes
 the UI state only. Put every data rule in the schema.

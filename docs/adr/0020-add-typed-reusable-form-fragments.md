@@ -7,7 +7,7 @@
 
 Applications repeat schema-shaped UI groups such as addresses, contact details,
 and ranges at several object paths and inside generated arrays. Reusing only the
-Standard Schema does not reuse controls, options, slots, layout, or local UI
+Standard Schema does not reuse controls, props, selectable options, slots, layout, or local UI
 rules. Plain typed functions can remove object-literal duplication, but they
 must manually preserve the form input, control registry, context, slot, grid,
 and relative-path relationships.

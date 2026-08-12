@@ -115,8 +115,9 @@ numeric array segments such as `speakers.0.name`. `FieldPath`, `PathValue`, and
 `ArrayFieldPath` delegate to RHF path types. Generated arrays contain object
 items; primitive arrays can use an application-owned control.
 
-The type system aligns field paths with control values, control options,
-control context, slot options, array item defaults, and grid values.
+The type system aligns field paths with control values, control own props,
+selectable option values, control context, slot options, array item defaults,
+and grid values.
 
 `defineFragment` retains the exact supplied Standard Schema as
 `fragment.schema`. `fragment.fields({ at })` creates an opaque authoring
@@ -146,9 +147,23 @@ value at that fragment placement and the fragment's minimum context. This local
 value remains the fragment root inside its nested arrays. Host-wide conditions
 belong on ordinary nodes around the placement.
 
-Resolvers must return synchronously. Promise-like results cause an explicit
-error. Readonly is a TypeScript contract; the runtime does not deep-clone or
-proxy resolver input.
+Ordinary resolvers, including control `props`, must return synchronously.
+Promise-like results cause an explicit error. Readonly is a TypeScript contract;
+the runtime does not deep-clone or proxy ordinary resolver input.
+
+A selectable field's `options` property is the one asynchronous resolution
+boundary. It accepts either a static readonly array or a function receiving
+`{ values, context, signal }`. Function inputs are deep proxies. Property reads,
+including reads after `await`, become dependencies; the function runs again
+when one of those values changes. The previous signal is aborted, stale results
+are ignored, and the rendered collection is `[]` while the current request is
+pending or after it rejects. Form values, including a selected value absent
+from the current collection, are preserved.
+
+This boundary owns only per-field execution, dependency tracking, cancellation,
+and latest-result ordering. It exposes no loading or error state and provides
+no cache, retry, search, or pagination policy. Applications that need those
+policies continue to own resource state or a custom control.
 
 Visibility affects rendering only. Hidden fields preserve their React Hook
 Form values because unregistration is disabled.
@@ -316,8 +331,9 @@ the surrounding form at runtime. A registered submit slot receives the same
 state through the schema-generic `SubmitSlotProps` contract.
 
 Controls receive typed values and managed updates plus accessibility IDs,
-metadata, options, context, and interaction flags. The control contract has no
-browser serialization mode. Submission uses React Hook Form values.
+metadata, application-owned props, selectable options when supported, context,
+and interaction flags. The control contract has no browser serialization mode.
+Submission uses React Hook Form values.
 
 Slots own structural markup for fields, sections, arrays, array items, errors,
 and submit buttons.

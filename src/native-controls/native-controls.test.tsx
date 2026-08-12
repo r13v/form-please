@@ -8,10 +8,11 @@ import { describe, expect, it, vi } from "vitest"
 import type { ControlProps } from "../types.js"
 import {
 	createNativeControls,
-	type NativeFileOptions,
-	type NativeNumberOptions,
-	type NativeSelectOptions,
-	type NativeTextOptions,
+	type NativeFileProps,
+	type NativeNumberProps,
+	type NativeSelectOption,
+	type NativeSelectProps,
+	type NativeTextProps,
 } from "./native-controls.js"
 
 describe("createNativeControls", () => {
@@ -39,17 +40,17 @@ describe("createNativeControls", () => {
 		render(
 			<>
 				<controls.text.component
-					{...controlProps<string | undefined, NativeTextOptions>({
+					{...controlProps<string | undefined, NativeTextProps>({
+						props: { type: "search" },
 						name: "title",
-						options: { type: "search" },
 						setValue: setText,
 						value: "Ada",
 					})}
 				/>
 				<controls.number.component
-					{...controlProps<number | undefined, NativeNumberOptions>({
+					{...controlProps<number | undefined, NativeNumberProps>({
+						props: { min: 0 },
 						name: "age",
-						options: { min: 0 },
 						setValue: setNumber,
 						value: 7,
 					})}
@@ -78,12 +79,14 @@ describe("createNativeControls", () => {
 
 		render(
 			<controls.select.component
-				{...controlProps<string | undefined, NativeSelectOptions>({
+				{...controlProps<
+					string | undefined,
+					NativeSelectProps,
+					NativeSelectOption
+				>({
+					props: { emptyOption: { label: "Choose" } },
 					name: "status",
-					options: {
-						emptyOption: { label: "Choose" },
-						options: [{ label: "Draft", value: "draft" }],
-					},
+					options: [{ label: "Draft", value: "draft" }],
 					setValue,
 					value: undefined,
 				})}
@@ -106,8 +109,8 @@ describe("createNativeControls", () => {
 		render(
 			<controls.checkbox.component
 				{...controlProps<boolean, Record<string, never>>({
+					props: {},
 					name: "accepted",
-					options: {},
 					readOnly: true,
 					setValue,
 					value: true,
@@ -129,9 +132,9 @@ describe("createNativeControls", () => {
 			return (
 				<>
 					<controls.file.component
-						{...controlProps<File | undefined, NativeFileOptions>({
+						{...controlProps<File | undefined, NativeFileProps>({
+							props: { accept: ".png" },
 							name: "avatar",
-							options: { accept: ".png" },
 							setValue,
 							value,
 						})}
@@ -155,7 +158,8 @@ describe("createNativeControls", () => {
 	})
 })
 
-function controlProps<Value, Options>({
+function controlProps<Value, OwnProps, Option = never>({
+	props,
 	name,
 	value,
 	options,
@@ -164,12 +168,14 @@ function controlProps<Value, Options>({
 }: {
 	readonly name: string
 	readonly value: Value
-	readonly options: Options
+	readonly props: OwnProps
+	readonly options?: readonly Option[]
 	setValue(value: Value): void
 	readonly readOnly?: boolean
-}): ControlProps<Value, Options> {
+}): ControlProps<Value, OwnProps, unknown, Option> {
 	return {
 		blur: vi.fn(),
+		props,
 		context: {},
 		disabled: false,
 		input: {
@@ -185,11 +191,11 @@ function controlProps<Value, Options>({
 			touched: false,
 			validating: false,
 		},
-		options,
+		...(options === undefined ? {} : { options }),
 		path: name,
 		readOnly,
 		required: false,
 		setValue,
 		value,
-	}
+	} as ControlProps<Value, OwnProps, unknown, Option>
 }

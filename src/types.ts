@@ -56,10 +56,10 @@ export type PathValue<
 	? FieldPathValue<Value, Extract<Path, RhfFieldPath<Value>>>
 	: never
 
-/** Marks one control option value for narrowing to a field's schema input union. */
-declare const choiceValue: unique symbol
-export type ChoiceValue<Value> = Value & {
-	readonly [choiceValue]?: Value
+/** Marks one selectable option value for narrowing to a field's schema input union. */
+declare const optionValue: unique symbol
+export type OptionValue<Value> = Value & {
+	readonly [optionValue]?: Value
 }
 /** A React Hook Form dot path that selects an object array in `Value`. */
 export type ArrayFieldPath<Value> = Value extends FieldValues
@@ -77,8 +77,9 @@ export type FormIssue = {
 /** Values, metadata, and actions supplied to a registered control component. */
 export type ControlProps<
 	Value,
-	Options = Record<string, never>,
+	OwnProps = Record<string, never>,
 	Context = unknown,
+	Option = never,
 > = {
 	/** The absolute React Hook Form path for this control. */
 	readonly path: string
@@ -114,8 +115,8 @@ export type ControlProps<
 		/** Whether the field has at least one validation issue. */
 		readonly invalid: boolean
 	}
-	/** Control-specific options from the field definition. */
-	readonly options: Readonly<Options>
+	/** Application-owned props from the field definition. */
+	readonly props: Readonly<OwnProps>
 	/** The deeply readonly runtime context for the form. */
 	readonly context: DeepReadonly<Context>
 	/** Whether the control must reject user input. */
@@ -124,32 +125,40 @@ export type ControlProps<
 	readonly readOnly: boolean
 	/** Whether the definition marks the field as required. */
 	readonly required: boolean
-}
+} & ([Option] extends [never]
+	? Record<never, never>
+	: {
+			/** Selectable options supplied by the field definition. */
+			readonly options: readonly Option[]
+		})
 
 /** A private key that carries control type information without runtime data. */
 declare const controlTypes: unique symbol
 /** Type information retained by a control definition for inference. */
-type ControlTypes<Value, Options, Context> = {
+type ControlTypes<Value, OwnProps, Context, Option> = {
 	/** The field value accepted by the control. */
 	readonly value: Value
-	/** The configuration accepted by the control. */
-	readonly options: Options
+	/** The application-owned props accepted by the control. */
+	readonly props: OwnProps
 	/** The runtime context required by the control. */
 	readonly context: Context
-	/** Field-dependent choice options derived from the declared options type. */
-	readonly choiceOptions: ChoiceOptionsTypeFor<Options>
+	/** One selectable option accepted by the control. */
+	readonly option: Option
 }
 
 /** A registered control component and its inferred type contract. */
 export type ControlDefinition<
 	Value,
-	Options = Record<string, never>,
+	OwnProps = Record<string, never>,
 	Context = unknown,
+	Option = never,
 > = {
 	/** The React component that renders the control. */
-	readonly component: ComponentType<ControlProps<Value, Options, Context>>
+	readonly component: ComponentType<
+		ControlProps<Value, OwnProps, Context, Option>
+	>
 	/** Phantom type data used to infer the control contract. */
-	readonly [controlTypes]?: ControlTypes<Value, Options, Context>
+	readonly [controlTypes]?: ControlTypes<Value, OwnProps, Context, Option>
 }
 /** A control definition with an unknown contract. */
 export type AnyControlDefinition = {
@@ -158,9 +167,9 @@ export type AnyControlDefinition = {
 	/** Phantom type data used to infer the control contract. */
 	readonly [controlTypes]?: {
 		readonly value: unknown
-		readonly options: unknown
+		readonly props: unknown
 		readonly context: unknown
-		readonly choiceOptions: unknown
+		readonly option: unknown
 	}
 }
 /** A readonly registry of named control definitions. */
@@ -174,129 +183,63 @@ export type ControlValueOf<Control> = Control extends {
 }
 	? Value
 	: never
-/** Extracts the configuration accepted by a control definition. */
-export type ControlOptionsOf<Control> = Control extends {
+/** Extracts the application-owned props accepted by a control definition. */
+export type ControlOwnPropsOf<Control> = Control extends {
 	/** Phantom type data retained by a control definition. */
-	readonly [controlTypes]?: { readonly options: infer Options }
+	readonly [controlTypes]?: { readonly props: infer OwnProps }
 }
-	? Options
+	? OwnProps
+	: never
+
+/** Extracts one selectable option accepted by a control definition. */
+export type ControlOptionOf<Control> = Control extends {
+	/** Phantom type data retained by a control definition. */
+	readonly [controlTypes]?: { readonly option: infer Option }
+}
+	? Option
 	: never
 
 /** Extracts the selectable member type from a scalar or array field value. */
-type FieldChoiceValue<Value> = Value extends readonly (infer Item)[]
+type FieldOptionValue<Value> = Value extends readonly (infer Item)[]
 	? Item
 	: Exclude<Value, undefined>
 
-/** Replaces one marked choice value with its compatible field member union. */
-type ResolveChoiceValue<Value, FieldValue> =
-	IsChoiceValue<Value> extends true
-		? Value extends { readonly [choiceValue]?: infer Allowed }
-			? Extract<FieldChoiceValue<FieldValue>, Allowed>
+/** Replaces one marked option value with its compatible field member union. */
+type ResolveOptionValue<Value, FieldValue> =
+	IsOptionValue<Value> extends true
+		? Value extends { readonly [optionValue]?: infer Allowed }
+			? Extract<FieldOptionValue<FieldValue>, Allowed>
 			: never
 		: Value
 
-/** Resolves a scalar choice or marked properties on one structured choice. */
-type ResolveChoiceItem<Item, FieldValue> =
-	IsChoiceValue<Item> extends true
-		? ResolveChoiceValue<Item, FieldValue>
+/** Resolves a scalar option or marked properties on one structured option. */
+type ResolveOption<Item, FieldValue> =
+	IsOptionValue<Item> extends true
+		? ResolveOptionValue<Item, FieldValue>
 		: Item extends object
 			? {
-					readonly [Key in keyof Item]: ResolveChoiceValue<
+					readonly [Key in keyof Item]: ResolveOptionValue<
 						Item[Key],
 						FieldValue
 					>
 				}
 			: Item
 
-/** Resolves marked items in one immediate control-options collection. */
-type ResolveChoiceCollection<Value, FieldValue> =
-	Value extends readonly (infer Item)[]
-		? readonly ResolveChoiceItem<Item, FieldValue>[]
-		: Value
-
-/** Tests whether one value carries the choice marker. */
-type IsChoiceValue<Value> =
+/** Tests whether one value carries the option marker. */
+type IsOptionValue<Value> =
 	IsAny<Value> extends true
 		? false
 		: IsNever<Value> extends true
 			? false
-			: typeof choiceValue extends keyof Value
+			: typeof optionValue extends keyof Value
 				? true
 				: false
 
-/** Tests whether a collection item contains a marked choice value. */
-type IsChoiceItem<Item> =
-	IsChoiceValue<Item> extends true
-		? true
-		: Item extends object
-			? true extends {
-					[Key in keyof Item]: IsChoiceValue<Item[Key]>
-				}[keyof Item]
-				? true
-				: false
-			: false
-
-/** Tests whether one options property is a marked choice collection. */
-type IsChoiceCollection<Value> = Value extends readonly (infer Item)[]
-	? IsChoiceItem<Item>
-	: false
-
-/** Finds immediate options properties that contain marked choices. */
-type ChoiceCollectionKeyOf<Options> = {
-	[Key in keyof Options]-?: true extends IsChoiceCollection<Options[Key]>
-		? Key
-		: never
-}[keyof Options]
-type ChoiceCollectionKey<Options> = Options extends unknown
-	? ChoiceCollectionKeyOf<Options>
-	: never
-
-/** Applies marked choice collections to a field value supplied later. */
-interface ChoiceOptionsType {
-	readonly fieldValue: unknown
-	readonly type: object
-}
-
-/** Replaces marked collections without collapsing an options union. */
-type ResolveChoiceOptions<
-	Options,
-	Keys extends PropertyKey,
-	FieldValue,
-> = Options extends unknown
-	? Omit<Options, Extract<Keys, keyof Options>> & {
-			readonly [Key in Extract<Keys, keyof Options>]: ResolveChoiceCollection<
-				Options[Key],
-				FieldValue
-			>
-		}
-	: never
-
-/** Retains one options type for later field specialization. */
-interface ResolveChoiceOptionsType<Options, Keys extends PropertyKey>
-	extends ChoiceOptionsType {
-	readonly type: ResolveChoiceOptions<Options, Keys, this["fieldValue"]>
-}
-
-/** Derives an optional specialization contract once per control options type. */
-type ChoiceOptionsTypeFor<Options> = [ChoiceCollectionKey<Options>] extends [
-	never,
-]
-	? undefined
-	: ResolveChoiceOptionsType<Options, ChoiceCollectionKey<Options>>
-
-/** Reads the cached specialization contract from a control definition. */
-type ChoiceOptionsTypeOf<Control> = Control extends {
-	readonly [controlTypes]?: { readonly choiceOptions: infer OptionsType }
-}
-	? OptionsType
-	: undefined
-
-/** Specializes the declared control options for one schema field path. */
-type ControlOptionsFor<Control, FieldValue> =
-	ChoiceOptionsTypeOf<Control> extends infer OptionsType extends
-		ChoiceOptionsType
-		? (OptionsType & { readonly fieldValue: FieldValue })["type"]
-		: ControlOptionsOf<Control>
+/** Specializes one declared selectable option for a schema field path. */
+type ControlOptionFor<Control, FieldValue> = ResolveOption<
+	ControlOptionOf<Control>,
+	FieldValue
+>
 /** Extracts the runtime context required by a control definition. */
 export type ControlContextOf<Control> = Control extends {
 	/** Phantom type data retained by a control definition. */
@@ -323,6 +266,26 @@ export type UiResolver<Result, Input = unknown, Context = unknown> = (
 export type Resolvable<Value, Input, Context> =
 	| (Value extends (...args: never[]) => unknown ? never : Value)
 	| UiResolver<Value, Input, Context>
+
+/** Data supplied to a field-options resolver. */
+export type FieldOptionsResolverDetails<Input = unknown, Context = unknown> = {
+	/** The current deeply readonly resolver input. */
+	readonly values: UiResolverValues<Input>
+	/** The deeply readonly runtime context for the current form. */
+	readonly context: DeepReadonly<Context>
+	/** Cancels work after dependencies change or the field unmounts. */
+	readonly signal: AbortSignal
+}
+
+/** Loads selectable field options from current values and context. */
+export type FieldOptionsResolver<Option, Input = unknown, Context = unknown> = (
+	details: FieldOptionsResolverDetails<Input, Context>,
+) => readonly Option[] | PromiseLike<readonly Option[]>
+
+/** A fixed selectable option list or a resolver that loads one. */
+export type FieldOptionsSource<Option, Input = unknown, Context = unknown> =
+	| readonly Option[]
+	| FieldOptionsResolver<Option, Input, Context>
 /** Content that a form definition can place in labels and descriptions. */
 export type ReactUiContent = ReactElement | string
 /** Interaction state supplied to a custom render node. */
@@ -423,24 +386,34 @@ type FieldNodeForPath<
 		[Name in CompatibleControlName<Scope, Controls, Context, Path>]: {
 			/** The registered control used to edit this field. */
 			readonly control: Name
-			// biome-ignore lint/complexity/noBannedTypes: This conditional detects whether the options type has required properties.
-		} & ({} extends ControlOptionsFor<Controls[Name], PathValue<Scope, Path>>
+			// biome-ignore lint/complexity/noBannedTypes: This conditional detects whether the own-props type has required properties.
+		} & ({} extends ControlOwnPropsOf<Controls[Name]>
 			? {
-					/** Configures the selected control. */
-					readonly options?: Resolvable<
-						ControlOptionsFor<Controls[Name], PathValue<Scope, Path>>,
+					/** Supplies application-owned props to the selected control. */
+					readonly props?: Resolvable<
+						ControlOwnPropsOf<Controls[Name]>,
 						Root,
 						Context
 					>
 				}
 			: {
-					/** Configures the selected control. */
-					readonly options: Resolvable<
-						ControlOptionsFor<Controls[Name], PathValue<Scope, Path>>,
+					/** Supplies application-owned props to the selected control. */
+					readonly props: Resolvable<
+						ControlOwnPropsOf<Controls[Name]>,
 						Root,
 						Context
 					>
-				})
+				}) &
+			([ControlOptionOf<Controls[Name]>] extends [never]
+				? Record<never, never>
+				: {
+						/** Supplies selectable options for the selected control. */
+						readonly options: FieldOptionsSource<
+							ControlOptionFor<Controls[Name], PathValue<Scope, Path>>,
+							Root,
+							Context
+						>
+					})
 	}[CompatibleControlName<Scope, Controls, Context, Path>]
 
 /** Creates the union of valid field nodes in the current scope. */

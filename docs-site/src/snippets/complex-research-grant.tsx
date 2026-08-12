@@ -246,24 +246,20 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "applicantKind",
 					control: "select",
 					label: "Applying as",
-					options: {
-						options: [
-							{ value: "person", label: "An individual" },
-							{ value: "collective", label: "A collective" },
-						],
-					},
+					options: [
+						{ value: "person", label: "An individual" },
+						{ value: "collective", label: "A collective" },
+					],
 				},
 				{
 					kind: "field",
 					path: "jurisdiction",
 					control: "select",
 					label: "Administrative scope",
-					options: {
-						options: [
-							{ value: "local", label: "Domestic" },
-							{ value: "international", label: "Cross-border" },
-						],
-					},
+					options: [
+						{ value: "local", label: "Domestic" },
+						{ value: "international", label: "Cross-border" },
+					],
 				},
 				{
 					kind: "field",
@@ -277,7 +273,7 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "contact.email",
 					control: "text",
 					label: "Contact email",
-					options: { type: "email" },
+					props: { type: "email" },
 					required: true,
 				},
 			],
@@ -294,12 +290,12 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "organization.path",
 					control: "select",
 					label: "Representation",
-					options: {
+					options: [
+						{ value: "registered", label: "Registered collective" },
+						{ value: "forming", label: "Collective in formation" },
+					],
+					props: {
 						emptyOption: { label: "Choose a path", disabled: true },
-						options: [
-							{ value: "registered", label: "Registered collective" },
-							{ value: "forming", label: "Collective in formation" },
-						],
 					},
 				},
 				{
@@ -343,13 +339,11 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "project.stream",
 					control: "select",
 					label: "Funding stream",
-					options: {
-						options: [
-							{ value: "research", label: "Independent research" },
-							{ value: "public-program", label: "Public program" },
-							{ value: "education", label: "Open education" },
-						],
-					},
+					options: [
+						{ value: "research", label: "Independent research" },
+						{ value: "public-program", label: "Public program" },
+						{ value: "education", label: "Open education" },
+					],
 				},
 				{
 					kind: "field",
@@ -367,21 +361,21 @@ const grantDefinition = kit.defineForm(grantSchema, {
 						"At least 80 characters; this becomes the public summary.",
 					span: "full",
 					required: true,
-					options: { rows: 5 },
+					props: { rows: 5 },
 				},
 				{
 					kind: "field",
 					path: "project.requestedFunds",
 					control: "number",
 					label: "Requested funds",
-					options: { min: 1_000, max: 250_000, step: 500 },
+					props: { min: 1_000, max: 250_000, step: 500 },
 				},
 				{
 					kind: "field",
 					path: "project.durationMonths",
 					control: "number",
 					label: "Duration in months",
-					options: { min: 1, max: 36, step: 1 },
+					props: { min: 1, max: 36, step: 1 },
 				},
 			],
 		},
@@ -396,12 +390,10 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "payout.method",
 					control: "select",
 					label: "Disbursement route",
-					options: {
-						options: [
-							{ value: "bank", label: "Settlement account" },
-							{ value: "digital-wallet", label: "Digital wallet" },
-						],
-					},
+					options: [
+						{ value: "bank", label: "Settlement account" },
+						{ value: "digital-wallet", label: "Digital wallet" },
+					],
 				},
 				{
 					kind: "field",
@@ -422,13 +414,11 @@ const grantDefinition = kit.defineForm(grantSchema, {
 					path: "reporting.status",
 					control: "select",
 					label: "Reporting status",
-					options: {
-						options: [
-							{ value: "registered", label: "Registered" },
-							{ value: "exempt", label: "Exempt" },
-							{ value: "pending", label: "Pending" },
-						],
-					},
+					options: [
+						{ value: "registered", label: "Registered" },
+						{ value: "exempt", label: "Exempt" },
+						{ value: "pending", label: "Pending" },
+					],
 				},
 				{
 					kind: "field",

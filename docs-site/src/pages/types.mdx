@@ -30,7 +30,7 @@ Start with these types in application code:
 | Accept a valid field name. | `FieldPath<Value>` |
 | Type shared form UI. | `UiNode<Input, Controls, ...>` |
 | Type a reusable form fragment. | `FormFragment<Schema, Controls, ...>` |
-| Type a custom control component. | `ControlProps<Value, Options, Context>` |
+| Type a custom control component. | `ControlProps<Value, OwnProps, Context, Option>` |
 | Type form-local value middleware. | `FormMiddleware<Input, Context>` |
 
 Most calls to `defineForm`, `useForm`, and `createFormKit` infer the remaining
@@ -93,12 +93,12 @@ Use `UiNode` when the UI tree is declared separately:
 ```
 
 The node generics carry the schema input, control registry, context, slot
-options, and grid values through the complete tree.
+configuration, selectable options, and grid values through the complete tree.
 
 | Type | Purpose |
 | --- | --- |
 | `UiNode<Input, Controls, ...>` | Union of ordinary field, section, array, and render source nodes. |
-| `FieldNode<Input, Controls, ...>` | Field node with compatible paths, controls, and options. |
+| `FieldNode<Input, Controls, ...>` | Field node with compatible paths, controls, props, and selectable options. |
 | `SectionNode<Input, Controls, ...>` | Section node with typed child nodes. |
 | `ArrayNode<Input, Controls, ...>` | Array node whose child paths are relative to one item. |
 | `RenderNode<Input, Context>` | React component node with resolved interaction state. |
@@ -143,7 +143,7 @@ infers its grid union from `createFormKit({ grid })`.
 
 ## Control types
 
-`defineControl<Value, Options, Context>()` returns a typed
+`defineControl<Value, OwnProps, Context, Option>()` returns a typed
 `ControlDefinition`. The value type controls which schema fields can use the
 control. The context type controls which form kits can use it.
 
@@ -153,27 +153,31 @@ control. The context type controls which form kits can use it.
 
 | Type | Purpose |
 | --- | --- |
-| `ControlProps<Value, Options, Context>` | Props passed to a custom control component. |
-| `ControlDefinition<Value, Options, Context>` | Typed control returned by `defineControl`. |
-| `DefineControlInput<Value, Options, Context>` | Input object accepted by `defineControl`. |
-| `ChoiceValue<Value>` | Marks a control option value for narrowing to the selected schema input path. |
+| `ControlProps<Value, OwnProps, Context, Option>` | Props passed to a custom control component. |
+| `ControlDefinition<Value, OwnProps, Context, Option>` | Typed control returned by `defineControl`. |
+| `DefineControlInput<Value, OwnProps, Context, Option>` | Input object accepted by `defineControl`. |
+| `OptionValue<Value>` | Marks a control option value for narrowing to the selected schema input path. |
+| `FieldOptionsSource<Option, Input, Context>` | Static options or a tracked options function. |
+| `FieldOptionsResolver<Option, Input, Context>` | Function that returns options synchronously or asynchronously. |
+| `FieldOptionsResolverDetails<Input, Context>` | Readonly `values`, `context`, and cancellation `signal`. |
 | `ControlDefinitionRegistry` | Readonly record of named control definitions. |
 | `AnyControlDefinition` | Non-specific control type used in registries. |
 
-Put `ChoiceValue<Value>` on the scalar item of an immediate options collection,
-or on one property of each structured item. A field definition replaces the
-marker with the compatible schema input union at its `path`. The control still
-receives its declared broad `Options` through `ControlProps`.
+Put `OptionValue<Value>` on the scalar option or on one property of a structured
+option. A field definition replaces the marker with the compatible schema input
+union at its `path`. The control receives `OwnProps` through `props` and the
+resolved collection through `options`.
 
-See [Choice controls](/form-kits#choice-controls) for a custom control and
-[Choice values](/definitions#choice-values) for definition-side inference.
+See [Option controls](/form-kits#option-controls) for a custom control and
+[Option values](/definitions#option-values) for definition-side inference.
 
 The extraction types read the hidden contract from a control definition:
 
 | Type | Extracts |
 | --- | --- |
 | `ControlValueOf<Control>` | Field value type. |
-| `ControlOptionsOf<Control>` | Definition-node `options` type. |
+| `ControlOwnPropsOf<Control>` | Definition-node `props` type. |
+| `ControlOptionOf<Control>` | One selectable option item. |
 | `ControlContextOf<Control>` | Required form context type. |
 
 Use these extraction types for wrappers and integration tests. Application

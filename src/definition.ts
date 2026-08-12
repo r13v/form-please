@@ -115,8 +115,12 @@ export type ResolvedFieldNode = ResolvedNodeBase<"field"> & {
 	readonly description: ReactUiContent | undefined
 	/** The resolved field-slot configuration. */
 	readonly slotOptions: unknown
-	/** The resolved control configuration. */
+	/** The resolved application-owned control props. */
+	readonly props: unknown
+	/** The static option list or resolver supplied by the definition. */
 	readonly options: unknown
+	/** The current value scope supplied to an option resolver. */
+	readonly optionValues: unknown
 	/** Whether the definition marks the field as required. */
 	readonly required: boolean
 }
@@ -638,12 +642,15 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 							pathPrefix,
 							context,
 						),
-						options: resolveOptional(
-							node.options,
+						props: resolveOptional(
+							node.props,
 							resolverValues,
 							pathPrefix,
 							context,
 						),
+						options: node.options,
+						optionValues:
+							typeof node.options === "function" ? resolverValues : undefined,
 					})
 					break
 				}

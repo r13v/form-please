@@ -78,7 +78,7 @@ const kit = createFormKit({
 				/>
 			),
 		}),
-		select: defineControl<string, { readonly options: readonly string[] }>({
+		select: defineControl<string, Record<string, never>, unknown, string>({
 			component: ({ value, setValue, blur, input, options }) => (
 				<select
 					id={input.id}
@@ -88,7 +88,7 @@ const kit = createFormKit({
 					ref={input.ref}
 					value={value}
 				>
-					{options.options.map((option) => (
+					{options.map((option) => (
 						<option key={option} value={option}>
 							{option}
 						</option>
@@ -671,7 +671,7 @@ describe("form kit", () => {
 					path: "country",
 					control: "select",
 					label: "Country",
-					options: { options: ["US", "FR", "blocked"] },
+					options: ["US", "FR", "blocked"],
 				},
 				{ kind: "field", path: "city", control: "text", label: "City" },
 			],
@@ -765,6 +765,69 @@ describe("form kit", () => {
 		unsubscribe()
 	})
 
+	it("loads field options, tracks accessed values, and preserves the selection", async () => {
+		const loadOptions = vi.fn(
+			async ({ values }: { readonly values: { readonly query: string } }) => [
+				values.query,
+			],
+		)
+		const optionSchema = z.object({
+			choice: z.string(),
+			query: z.string(),
+			unrelated: z.string(),
+		})
+		const optionDefinition = kit.defineForm(optionSchema, {
+			ui: [
+				{
+					kind: "field",
+					path: "query",
+					control: "text",
+					label: "Option query",
+				},
+				{
+					kind: "field",
+					path: "unrelated",
+					control: "text",
+					label: "Unrelated value",
+				},
+				{
+					kind: "field",
+					path: "choice",
+					control: "select",
+					label: "Loaded choice",
+					options: loadOptions,
+				},
+			],
+		})
+		let readChoice = () => ""
+
+		function Form() {
+			const form = kit.useForm(optionDefinition, {
+				defaultValues: { choice: "first", query: "first", unrelated: "a" },
+			})
+			readChoice = () => form.api.getValues("choice")
+			return <kit.AutoForm form={form} />
+		}
+
+		render(<Form />)
+		await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(1))
+		expect(screen.getByRole("option", { name: "first" })).not.toBeNull()
+
+		fireEvent.change(screen.getByLabelText("Unrelated value"), {
+			target: { value: "b" },
+		})
+		expect(loadOptions).toHaveBeenCalledTimes(1)
+
+		fireEvent.change(screen.getByLabelText("Option query"), {
+			target: { value: "second" },
+		})
+		await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(2))
+		await waitFor(() =>
+			expect(screen.getByRole("option", { name: "second" })).not.toBeNull(),
+		)
+		expect(readChoice()).toBe("first")
+	})
+
 	it("does not add React commits when pass-through middleware edits a large form", () => {
 		const fieldCount = 40
 		const largeSchema = z.object({
@@ -850,12 +913,19 @@ describe("form kit", () => {
 					string,
 					{ readonly alternate?: string; readonly marker?: string }
 				>({
-					component: ({ value, setValue, blur, input, options, path }) => {
+					component: ({
+						value,
+						setValue,
+						blur,
+						input,
+						props: controlProps,
+						path,
+					}) => {
 						controlRenders(path)
 						return (
 							<input
 								data-option-key={
-									Object.hasOwn(options, "marker") ? "marker" : "alternate"
+									Object.hasOwn(controlProps, "marker") ? "marker" : "alternate"
 								}
 								id={input.id}
 								name={input.name}
@@ -927,7 +997,7 @@ describe("form kit", () => {
 							path: "details",
 							control: "text",
 							label: "Details",
-							options: (values) =>
+							props: (values) =>
 								values.mode === "show"
 									? { marker: undefined }
 									: { alternate: undefined },
@@ -1041,7 +1111,7 @@ describe("form kit", () => {
 	})
 
 	it("updates every resolvable UI property without retaining stale presentation", () => {
-		type ProbeOptions = { readonly token?: string }
+		type ProbeToken = { readonly token?: string }
 		type ProbeRootProps = FieldSlotProps["rootProps"] & {
 			readonly "data-disabled"?: string
 			readonly "data-fp-path"?: string
@@ -1050,13 +1120,13 @@ describe("form kit", () => {
 		}
 		const probeKit = createFormKit({
 			controls: {
-				text: defineControl<string, ProbeOptions>({
+				text: defineControl<string, ProbeToken>({
 					component: ({
 						value,
 						setValue,
 						blur,
 						input,
-						options,
+						props: probeProps,
 						path,
 						disabled,
 						readOnly,
@@ -1066,7 +1136,7 @@ describe("form kit", () => {
 							<output data-testid={`control-props-${path}`}>
 								{JSON.stringify({
 									disabled,
-									options: options.token,
+									props: probeProps.token,
 									readOnly,
 									required,
 								})}
@@ -1099,7 +1169,7 @@ describe("form kit", () => {
 					disabled,
 					readOnly,
 					required,
-				}: FieldSlotProps<ProbeOptions>) => {
+				}: FieldSlotProps<ProbeToken>) => {
 					const probeRoot = rootProps as ProbeRootProps
 					const path = String(probeRoot["data-fp-path"])
 					return (
@@ -1132,7 +1202,7 @@ describe("form kit", () => {
 					description,
 					slotOptions,
 					children,
-				}: SectionSlotProps<ProbeOptions>) => {
+				}: SectionSlotProps<ProbeToken>) => {
 					const probeRoot = rootProps as ProbeRootProps
 					return (
 						<section {...rootProps}>
@@ -1161,7 +1231,7 @@ describe("form kit", () => {
 					slotOptions,
 					canAdd,
 					children,
-				}: ArraySlotProps<ProbeOptions>) => {
+				}: ArraySlotProps<ProbeToken>) => {
 					const probeRoot = rootProps as ProbeRootProps
 					const path = String(probeRoot["data-fp-path"])
 					return (
@@ -1223,7 +1293,7 @@ describe("form kit", () => {
 					readOnly: (values) => values.driver === "after",
 					className: (values) => `${values.driver}-field-class`,
 					span: (values) => (values.driver === "after" ? "full" : 1),
-					options: (values) => ({ token: values.driver }),
+					props: (values) => ({ token: values.driver }),
 				},
 				{
 					kind: "field",
@@ -1360,13 +1430,13 @@ describe("form kit", () => {
 				id: "control-props-subject",
 				before: {
 					disabled: false,
-					options: "before",
+					props: "before",
 					readOnly: false,
 					required: false,
 				},
 				after: {
 					disabled: true,
-					options: "after",
+					props: "after",
 					readOnly: true,
 					required: true,
 				},
@@ -1784,7 +1854,7 @@ describe("form kit", () => {
 					path: "format",
 					control: "select",
 					label: "Format",
-					options: { options: ["remote", "in-person"] },
+					options: ["remote", "in-person"],
 				},
 				{
 					kind: "field",
@@ -2216,7 +2286,7 @@ describe("form kit", () => {
 					path: "mode",
 					control: "select",
 					label: "Conditional mode",
-					options: { options: ["hide", "show"] },
+					options: ["hide", "show"],
 				},
 				{
 					kind: "field",

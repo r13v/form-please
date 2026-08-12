@@ -12,7 +12,7 @@ UI controls, structural slots, and grid integration, and declares Material UI
 
 The preset does not provide a `ThemeProvider`, `CssBaseline`, or application
 theme. Applications continue to own visual defaults and may pass supported
-Material UI presentation options through their form definitions.
+Material UI presentation props through their form definitions.
 
 ## Considered Options
 

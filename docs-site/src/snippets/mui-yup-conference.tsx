@@ -108,7 +108,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Proposal title",
 					required: true,
 					span: 7,
-					options: {
+					props: {
 						placeholder: "Designing forms people can finish",
 						sx: { bgcolor: "background.paper" },
 					},
@@ -120,7 +120,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Contact email",
 					required: true,
 					span: 5,
-					options: {
+					props: {
 						autoComplete: "email",
 						placeholder: "speaker@example.com",
 						sx: { bgcolor: "background.paper" },
@@ -133,12 +133,12 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Session format",
 					required: true,
 					span: 6,
-					options: {
+					options: [
+						{ value: "talk", label: "Talk" },
+						{ value: "workshop", label: "Workshop" },
+					],
+					props: {
 						row: true,
-						choices: [
-							{ value: "talk", label: "Talk" },
-							{ value: "workshop", label: "Workshop" },
-						],
 						sx: { minHeight: 56 },
 					},
 				},
@@ -149,8 +149,8 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Topics",
 					required: true,
 					span: 6,
-					options: {
-						options: Object.keys(topicLabels) as TopicId[],
+					options: Object.keys(topicLabels) as TopicId[],
+					props: {
 						getOptionLabel: (option) => topicLabels[option as TopicId],
 						textFieldProps: { placeholder: "Search topics" },
 						sx: { bgcolor: "background.paper" },
@@ -163,7 +163,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Speaker experience",
 					description: "Years presenting to professional audiences.",
 					span: 6,
-					options: {
+					props: {
 						marks: true,
 						max: 5,
 						min: 1,
@@ -180,7 +180,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					description:
 						"Enable this when the speaker will not attend in person.",
 					span: 6,
-					options: { color: "secondary" },
+					props: { color: "secondary" },
 				},
 				{
 					kind: "field",
@@ -189,7 +189,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Preferred date",
 					required: true,
 					span: 3,
-					options: { sx: { bgcolor: "background.paper" } },
+					props: { sx: { bgcolor: "background.paper" } },
 				},
 				{
 					kind: "field",
@@ -198,7 +198,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Start time",
 					required: true,
 					span: 3,
-					options: { sx: { bgcolor: "background.paper" } },
+					props: { sx: { bgcolor: "background.paper" } },
 				},
 				{
 					kind: "field",
@@ -207,7 +207,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Draft slides",
 					description: "Optional PDF, up to the application's upload limit.",
 					span: 6,
-					options: {
+					props: {
 						buttonProps: { color: "secondary" },
 						inputProps: { accept: "application/pdf,.pdf" },
 						sx: { justifyContent: "flex-start" },
@@ -220,7 +220,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "Abstract",
 					required: true,
 					span: "full",
-					options: {
+					props: {
 						minRows: 4,
 						placeholder: "Explain what attendees will learn.",
 						sx: { bgcolor: "background.paper" },
@@ -233,7 +233,7 @@ const conferenceDefinition = kit.defineForm(conferenceSchema, {
 					label: "I can attend at the selected date and time",
 					required: true,
 					span: "full",
-					options: { color: "secondary", sx: { p: 0.5 } },
+					props: { color: "secondary", sx: { p: 0.5 } },
 				},
 			],
 		},

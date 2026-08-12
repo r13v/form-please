@@ -245,14 +245,14 @@ const orderDefinition = nativeFormKit.defineForm(orderSchema, {
 			path: "quantity",
 			control: "number",
 			label: "Quantity",
-			options: { min: 1, step: 1 },
+			props: { min: 1, step: 1 },
 		},
 		{
 			kind: "field",
 			path: "unitPrice",
 			control: "number",
 			label: "Unit price",
-			options: { min: 0, step: 0.01 },
+			props: { min: 0, step: 0.01 },
 		},
 		{
 			kind: "field",
@@ -260,7 +260,7 @@ const orderDefinition = nativeFormKit.defineForm(orderSchema, {
 			control: "number",
 			label: "Total",
 			readOnly: true,
-			options: { min: 0, step: 0.01 },
+			props: { min: 0, step: 0.01 },
 		},
 	],
 })
@@ -343,7 +343,7 @@ const discountDefinition = nativeFormKit.defineForm(discountSchema, {
 			path: "discount",
 			control: "number",
 			label: "Discount percentage",
-			options: { min: 0, max: 100, step: 1 },
+			props: { min: 0, max: 100, step: 1 },
 		},
 	],
 })

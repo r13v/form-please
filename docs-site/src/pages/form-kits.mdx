@@ -34,9 +34,10 @@ structure, adds one project control, and produces a kit that can render a form.
 
 ### 1. Define one project control
 
-Use `defineControl<Value, Options, Context>()` to define the control contract.
+Use `defineControl<Value, OwnProps, Context, Option>()` to define the control contract.
 `Value` must match the schema input type for each field that uses the control.
-`Options` configures one field. `Context` supplies shared runtime data.
+`OwnProps` describes application-owned props for one field. `Context` supplies shared runtime data. Set
+`Option` only when the control displays a selectable collection.
 
 ```tsx twoslash
 // [!include ~/snippets/form-kits-control.tsx]
@@ -61,7 +62,7 @@ grid; a finished kit does not have a runtime extension API.
 ### 3. Define fields with the kit
 
 The control registry keys become the allowed `control` values. TypeScript checks
-the schema path, control value type, and options together:
+the schema path, control value type, props, and options together:
 
 ```tsx
 // [!include ~/snippets/form-kits.tsx:control-options]
@@ -106,7 +107,7 @@ content.
 
 ### Control props
 
-`ControlProps<Value, Options, Context>` contains these properties:
+`ControlProps<Value, OwnProps, Context, Option>` contains these properties:
 
 | Property | Purpose |
 | --- | --- |
@@ -116,7 +117,8 @@ content.
 | `blur()` | Mark the field as blurred. Call it from the component blur event. |
 | `input` | IDs, the field name, and the focus ref for the interactive element. |
 | `meta` | Validation and interaction state for the field. |
-| `options` | The readonly field options from the definition. |
+| `props` | The readonly application-owned props from the definition. |
+| `options` | The current readonly selectable collection, for option-capable controls. |
 | `context` | The deeply readonly context from `kit.useForm`. |
 | `disabled` | Prevent all interaction when this value is `true`. |
 | `readOnly` | Show the value but prevent changes when this value is `true`. |
@@ -149,11 +151,11 @@ Native text inputs support a `readOnly` property. Some components do not.
 A custom select, checkbox, or file control must prevent changes when `readOnly`
 is `true`.
 
-### Choice controls
+### Option controls
 
-Mark the value written by a reusable choice control with `ChoiceValue<Value>`.
-The marker can be a scalar item or one property of a structured item in any
-immediate array inside the control's options. It has no runtime representation.
+Mark the value written by a reusable option item with `OptionValue<Value>`.
+Declare that item as the fourth `defineControl` type argument. The marker has
+no runtime representation.
 
 ```tsx
 // [!include ~/snippets/types-guide.tsx:choice-control]
@@ -164,26 +166,26 @@ path such as `"admin" | "member"`, the field definition accepts only those IDs.
 For an array field, it uses the array element union. Nested option objects are
 not searched for choice collections.
 
-Use `as const` or `satisfies` when choices are declared outside the field node.
+Use `as const` or `satisfies` when options are declared outside the field node.
 Otherwise, TypeScript can widen a literal ID such as `"admin"` to `string`.
-Read [Choice values](/definitions#choice-values) for definition examples.
+Read [Option values](/definitions#option-values) for definition examples.
 
 ### Shipped native controls
 
 `createNativeControls()` returns a fresh, frozen registry.
 
-| Control | Value type | Options |
+| Control | Value type | Props |
 | --- | --- | --- |
 | `text` | `string \| undefined` | `type`, `placeholder`, `autoComplete` |
 | `textarea` | `string \| undefined` | `placeholder`, `autoComplete`, `rows` |
 | `number` | `number \| undefined` | `min`, `max`, `step`, `placeholder` |
 | `date` | `string \| undefined` | `min`, `max` |
 | `time` | `string \| undefined` | `min`, `max`, `step` |
-| `select` | `string \| undefined` | `options` and an optional `emptyOption` |
-| `checkbox` | `boolean` | No options. |
+| `select` | `string \| undefined` | Optional `emptyOption`; items come from field `options`. |
+| `checkbox` | `boolean` | No props. |
 | `file` | `File \| undefined` | `accept` |
 
-The `select` control requires `options.options`. Add `emptyOption` when the
+The `select` control requires field `options`. Add `props.emptyOption` when the
 current value can be `undefined`. Do not combine `emptyOption` with an item
 whose value is an empty string.
 
@@ -194,32 +196,31 @@ from `form-please/preset-native` when you need the complete native baseline.
 
 `createMuiFormKit()` supplies these controls:
 
-| Controls | Value type | Option type |
+| Controls | Value type | Props type |
 | --- | --- | --- |
-| `text`, `textarea`, `password`, `email`, `url`, `tel`, `search` | `string \| undefined` | `MuiTextFieldOptions` |
-| `date`, `time`, `datetime-local` | `string \| undefined` | `MuiTextFieldOptions` |
-| `number` | `number \| undefined` | `MuiTextFieldOptions` |
-| `select` | `string \| undefined` | `MuiSelectOptions` |
-| `select-multiple` | `readonly string[]` | `MuiSelectMultipleOptions` |
-| `radio` | `string \| undefined` | `MuiRadioOptions` |
-| `autocomplete` | `string \| undefined` | `MuiAutocompleteOptions` |
-| `autocomplete-multiple` | `readonly string[]` | `MuiAutocompleteMultipleOptions` |
-| `checkbox` | `boolean` | `MuiCheckboxOptions` |
-| `switch` | `boolean` | `MuiSwitchOptions` |
-| `file` | `File \| undefined` | `MuiFileOptions` |
-| `files` | `readonly File[]` | `MuiFileOptions` |
-| `slider` | `number` | `MuiSliderOptions` |
-| `range-slider` | `readonly number[]` | `MuiRangeSliderOptions` |
+| `text`, `textarea`, `password`, `email`, `url`, `tel`, `search` | `string \| undefined` | `MuiTextFieldProps` |
+| `date`, `time`, `datetime-local` | `string \| undefined` | `MuiTextFieldProps` |
+| `number` | `number \| undefined` | `MuiTextFieldProps` |
+| `select` | `string \| undefined` | `MuiSelectProps` |
+| `select-multiple` | `readonly string[]` | `MuiSelectMultipleProps` |
+| `radio` | `string \| undefined` | `MuiRadioProps` |
+| `autocomplete` | `string \| undefined` | `MuiAutocompleteProps` |
+| `autocomplete-multiple` | `readonly string[]` | `MuiAutocompleteMultipleProps` |
+| `checkbox` | `boolean` | `MuiCheckboxProps` |
+| `switch` | `boolean` | `MuiSwitchProps` |
+| `file` | `File \| undefined` | `MuiFileProps` |
+| `files` | `readonly File[]` | `MuiFileProps` |
+| `slider` | `number` | `MuiSliderProps` |
+| `range-slider` | `readonly number[]` | `MuiRangeSliderProps` |
 
-Import these option types from `form-please/preset-mui`. The option types omit
+Import these props types from `form-please/preset-mui`. The props types omit
 props that the kit owns, such as the current value, field name, disabled state,
 and input ref.
 
-The structured `choices` accepted by select and radio controls, and the
-`options` arrays accepted by autocomplete controls, narrow to the selected
-schema path. This rule also applies to their multiple-value variants. Custom
-select children and autocomplete `freeSolo` values are application-owned and
-do not participate in choice-value inference.
+The field `options` accepted by select, radio, and autocomplete controls narrow
+to the selected schema path. This rule also applies to their multiple-value
+variants. Custom select children and autocomplete `freeSolo` values are
+application-owned and do not participate in option-value inference.
 
 ### Value and submission rules
 

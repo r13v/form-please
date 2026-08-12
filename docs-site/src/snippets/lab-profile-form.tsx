@@ -102,7 +102,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					control: "text",
 					label: "Name",
 					required: true,
-					options: {
+					props: {
 						placeholder: "Enter your name",
 						autoComplete: "name",
 					},
@@ -113,12 +113,10 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					control: "select",
 					label: "Account type",
 					required: true,
-					options: {
-						options: [
-							{ value: "personal", label: "Personal" },
-							{ value: "company", label: "Company" },
-						],
-					},
+					options: [
+						{ value: "personal", label: "Personal" },
+						{ value: "company", label: "Company" },
+					],
 				},
 				// [!region conditional-field]
 				{
@@ -128,7 +126,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					label: "Company name",
 					required: ({ accountType }) => accountType === "company",
 					visible: ({ accountType }) => accountType === "company",
-					options: {
+					props: {
 						placeholder: "Compiler Labs",
 						autoComplete: "organization",
 					},
@@ -140,9 +138,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					control: "select",
 					label: "Country",
 					required: true,
-					options: {
-						options: countryOptions,
-					},
+					options: countryOptions,
 				},
 				{
 					kind: "field",
@@ -157,7 +153,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					label: "Avatar",
 					description:
 						"Choose a PNG file. The File stays in the React Hook Form input.",
-					options: {
+					props: {
 						accept: "image/png",
 					},
 				},
@@ -181,7 +177,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					control: "text",
 					label: "Email",
 					required: true,
-					options: {
+					props: {
 						type: "email",
 						placeholder: "ada@example.com",
 						autoComplete: "email",
@@ -192,7 +188,7 @@ export const profileDefinition = kit.defineForm(profileSchema, {
 					path: "label",
 					control: "text",
 					label: "Label",
-					options: {
+					props: {
 						placeholder: "primary",
 					},
 				},

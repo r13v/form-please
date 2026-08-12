@@ -85,7 +85,7 @@ const baseKit = createFormKit({
 	controls: {
 		text: defineControl<string>({ component: () => null }),
 		number: defineControl<number | undefined>({ component: () => null }),
-		select: defineControl<string, { readonly choices: readonly string[] }>({
+		select: defineControl<string, Record<string, never>, unknown, string>({
 			component: () => null,
 		}),
 		localized: defineControl<string, { readonly prefix?: string }, Context>({
@@ -136,7 +136,7 @@ const addressFragment = addressKit.defineFragment(addressSchema, {
 					kind: "field",
 					path: "city",
 					control: "select",
-					options: { choices: ["Paris"] },
+					options: ["Paris"],
 				},
 			],
 		},
@@ -245,7 +245,7 @@ const definition = kit.defineForm(schema, {
 			kind: "field",
 			path: "name",
 			control: "localized",
-			options: { prefix: "Dr" },
+			props: { prefix: "Dr" },
 			slotOptions: { tone: "strong" },
 			label: (values, { context }) => {
 				const label = `${context.locale}: ${values.profile.country}`
@@ -265,7 +265,7 @@ const definition = kit.defineForm(schema, {
 					kind: "field",
 					path: "profile.country",
 					control: "select",
-					options: { choices: ["DE", "FR"] },
+					options: ["DE", "FR"],
 				},
 			],
 		},
@@ -299,14 +299,14 @@ const builderDefinition = kit.defineForm(schema, (ui) => [
 			context.permissions.push("admin")
 			return label
 		},
-		options: { prefix: "Dr" },
+		props: { prefix: "Dr" },
 		slotOptions: { tone: "strong" },
 	}),
 	ui.section("profile", {
 		children: [
 			ui.field("profile.country", {
 				control: "select",
-				options: { choices: ["DE", "FR"] },
+				options: ["DE", "FR"],
 			}),
 		],
 		slotOptions: { bordered: true },
@@ -333,7 +333,7 @@ const builderDefinition = kit.defineForm(schema, (ui) => [
 builderDefinition satisfies typeof definition
 
 kit.defineForm(schema, (ui) => [
-	// @ts-expect-error Required control options remain required in builders.
+	// @ts-expect-error Required control props remain required in builders.
 	ui.field("name", { control: "select" }),
 ])
 
@@ -467,7 +467,7 @@ void kit.tf
 
 kit.defineForm(schema, {
 	ui: [
-		// @ts-expect-error Required control options cannot be omitted.
+		// @ts-expect-error Required control props cannot be omitted.
 		{
 			kind: "field",
 			path: "name",

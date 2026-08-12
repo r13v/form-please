@@ -70,6 +70,7 @@ import type {
 	StructuralRootProps,
 	SubmitSlotProps,
 } from "./types.js"
+import { useFieldOptions } from "./use-field-options.js"
 import {
 	attachValueCoordinatorCapability,
 	type BeforeUpdateResult,
@@ -1033,12 +1034,19 @@ function GeneratedField({
 	const blurRef = useRef(field.onBlur)
 	blurRef.current = field.onBlur
 	const blur = useRef(() => blurRef.current()).current
+	const resolvedOptions = useFieldOptions(
+		node.options,
+		node.optionValues,
+		form.context,
+	)
 	const control = controls[String(node.control)]
 	if (control === undefined || typeof control.component !== "function") {
 		throw new TypeError(`Unknown control "${String(node.control)}"`)
 	}
 	const Control = control.component as ComponentType<
-		ControlProps<unknown, unknown, unknown>
+		ControlProps<unknown, unknown, unknown> & {
+			readonly options?: readonly unknown[]
+		}
 	>
 	const { ref: fieldRef, value } = field
 
@@ -1047,6 +1055,7 @@ function GeneratedField({
 			<Slot
 				control={
 					<Control
+						props={node.props ?? {}}
 						context={form.context}
 						disabled={node.disabled}
 						input={{
@@ -1072,7 +1081,9 @@ function GeneratedField({
 							displayErrors,
 							invalid: displayErrors.length > 0,
 						}}
-						options={node.options ?? {}}
+						{...(node.options === undefined
+							? {}
+							: { options: resolvedOptions })}
 						path={path}
 						readOnly={node.readOnly}
 						required={node.required === true}
@@ -1122,6 +1133,7 @@ function GeneratedField({
 			inputId,
 			node,
 			path,
+			resolvedOptions,
 			slots,
 			touched,
 			validating,

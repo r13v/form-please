@@ -91,14 +91,14 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					control: "text",
 					label: "Title",
 					required: true,
-					options: { placeholder: "Designing useful constraints" },
+					props: { placeholder: "Designing useful constraints" },
 				},
 				{
 					kind: "field",
 					path: "track",
 					control: "select",
 					label: "Track",
-					options: { options: choiceOptions.track },
+					options: choiceOptions.track,
 				},
 				{
 					kind: "field",
@@ -106,14 +106,14 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					control: "textarea",
 					label: "Abstract",
 					required: true,
-					options: { rows: 4 },
+					props: { rows: 4 },
 				},
 				{
 					kind: "field",
 					path: "capacity",
 					control: "number",
 					label: "Capacity",
-					options: { min: 6, max: 80, step: 1 },
+					props: { min: 6, max: 80, step: 1 },
 				},
 				{
 					kind: "field",
@@ -126,7 +126,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "startsAt",
 					control: "time",
 					label: "Preferred start time",
-					options: { step: 900 },
+					props: { step: 900 },
 				},
 				{
 					kind: "field",
@@ -139,7 +139,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "brief",
 					control: "file",
 					label: "Optional brief",
-					options: { accept: ".pdf,.md,text/markdown,application/pdf" },
+					props: { accept: ".pdf,.md,text/markdown,application/pdf" },
 				},
 			],
 		},
@@ -147,7 +147,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 			kind: "section",
 			id: "experience",
 			title: "Session experience",
-			description: "Base UI choice controls and each slider value shape.",
+			description: "Base UI option controls and each slider value shape.",
 			columns: 2,
 			children: [
 				{
@@ -155,14 +155,14 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "format",
 					control: "radio",
 					label: "Format",
-					options: { options: choiceOptions.format },
+					options: choiceOptions.format,
 				},
 				{
 					kind: "field",
 					path: "recordingAllowed",
 					control: "switch",
 					label: "Allow a recording",
-					options: { size: "sm" },
+					props: { size: "sm" },
 				},
 				{
 					kind: "field",
@@ -170,7 +170,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					control: "slider",
 					label: "Duration",
 					description: "One numeric value, in minutes.",
-					options: {
+					props: {
 						min: 30,
 						max: 180,
 						step: 15,
@@ -183,7 +183,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					control: "rangeSlider",
 					label: "Audience experience range",
 					description: "A fixed two-number tuple.",
-					options: { min: 0, max: 10, step: 1, minStepsBetweenValues: 2 },
+					props: { min: 0, max: 10, step: 1, minStepsBetweenValues: 2 },
 				},
 				{
 					kind: "field",
@@ -191,7 +191,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					control: "multiSlider",
 					label: "Agenda checkpoints",
 					description: "An arbitrary array of numeric thumbs.",
-					options: { min: 0, max: 100, step: 5 },
+					props: { min: 0, max: 100, step: 5 },
 				},
 			],
 		},
@@ -199,7 +199,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 			kind: "section",
 			id: "schedule",
 			title: "Discovery and schedule",
-			description: "Searchable choices, calendar values, and OTP input.",
+			description: "Searchable options, calendar values, and OTP input.",
 			columns: 2,
 			children: [
 				{
@@ -207,8 +207,8 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "venue",
 					control: "combobox",
 					label: "Venue",
-					options: {
-						options: choiceOptions.venue,
+					options: choiceOptions.venue,
+					props: {
 						placeholder: "Search venues",
 						showClear: true,
 					},
@@ -218,8 +218,8 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "topics",
 					control: "multiCombobox",
 					label: "Topics",
-					options: {
-						options: choiceOptions.topics,
+					options: choiceOptions.topics,
+					props: {
 						placeholder: "Add topics",
 					},
 				},
@@ -228,7 +228,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "workshopDate",
 					control: "datePicker",
 					label: "Workshop date",
-					options: {
+					props: {
 						placeholder: "Pick a date",
 						captionLayout: "dropdown",
 						presets: [
@@ -242,7 +242,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					path: "availability",
 					control: "dateRangePicker",
 					label: "Travel availability",
-					options: { numberOfMonths: 2 },
+					props: { numberOfMonths: 2 },
 				},
 				{
 					kind: "field",
@@ -250,7 +250,7 @@ const workshopDefinition = kit.defineForm(workshopSchema, {
 					control: "inputOtp",
 					label: "Invite code",
 					required: true,
-					options: {
+					props: {
 						maxLength: 6,
 						groups: [3, 3],
 						separator: true,

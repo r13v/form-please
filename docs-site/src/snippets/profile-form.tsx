@@ -31,7 +31,7 @@ const profileDefinition = kit.defineForm(profileSchema, {
 			path: "email",
 			control: "text",
 			label: "Email",
-			options: { type: "email", autoComplete: "email" },
+			props: { type: "email", autoComplete: "email" },
 			required: true,
 		},
 	],

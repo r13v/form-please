@@ -23,7 +23,7 @@ const releaseDefinition = nativeFormKit.defineForm(releaseSchema, {
 			path: "description",
 			control: "textarea",
 			label: "Description",
-			options: { rows: 5 },
+			props: { rows: 5 },
 		},
 	],
 })

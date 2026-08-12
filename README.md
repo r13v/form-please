@@ -34,7 +34,7 @@ const contactForm = kit.defineForm(contactSchema, (ui) => [
 	ui.field("email", {
 		control: "text",
 		label: "Email",
-		options: { type: "email" },
+		props: { type: "email" },
 	}),
 ])
 
@@ -106,7 +106,8 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
 - The RHF resolver parses the Standard Schema once and returns transformed
   output while the submit wrapper preserves the editable input snapshot.
 - Ordinary UI resolvers receive the complete deeply readonly schema input and
-  runtime context. They must be synchronous.
+  runtime context. They must be synchronous. A selectable field's `options`
+  may instead be an async function of `{ values, context, signal }`.
 - Fragment resolvers receive their local deeply readonly fragment input and
   minimum context.
 - Use `beforeUpdate` and `afterUpdate` for one form-local managed update rule.
@@ -144,8 +145,9 @@ The Material UI preset requires `@mui/material`, `@emotion/react`, and
 ## Resources
 
 `ResourceState`, `matchResource`, and `fromResource` map application-owned
-request state into synchronous form UI. Form, Please does not own fetching,
-caching, cancellation, or retries.
+request state into synchronous form UI. For the common selectable-list case,
+an async field `options` function gets dependency tracking and cancellation.
+Form, Please does not add caching or retries.
 
 ## Documentation
 

@@ -33,7 +33,7 @@ equal kit.
 
 - Reassembling a kit with `createFormKit` and object spreads provides no
   explicit compatibility boundary or collision protection.
-- Last-write-wins control replacement can silently reinterpret field options,
+- Last-write-wins control replacement can silently reinterpret field props,
   rendering, and `FormData` serialization in an existing definition.
 - Structural comparison of controls and slots cannot reliably prove that an
   existing form has the runtime identity expected by a kit.

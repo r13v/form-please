@@ -21,7 +21,7 @@ const articleDefinition = nativeFormKit.defineForm(articleSchema, {
 			path: "summary",
 			control: "textarea",
 			label: "Summary",
-			options: { rows: 5 },
+			props: { rows: 5 },
 		},
 	],
 })

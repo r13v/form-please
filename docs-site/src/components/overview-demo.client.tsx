@@ -25,7 +25,7 @@ const profileDefinition = kit.defineForm(profileSchema, {
 			control: "text",
 			label: "Name",
 			required: true,
-			options: {
+			props: {
 				placeholder: "Ada Lovelace",
 				autoComplete: "name",
 			},
@@ -36,7 +36,7 @@ const profileDefinition = kit.defineForm(profileSchema, {
 			control: "text",
 			label: "Email",
 			required: true,
-			options: {
+			props: {
 				type: "email",
 				placeholder: "ada@example.com",
 				autoComplete: "email",

@@ -6,7 +6,10 @@ import {
 } from "form-please"
 import type { DefaultSlotsI18n } from "form-please/default-slots"
 import { createDefaultSlots } from "form-please/default-slots"
-import type { NativeSelectOptions } from "form-please/native-controls"
+import type {
+	NativeSelectOption,
+	NativeSelectProps,
+} from "form-please/native-controls"
 import { createNativeControls } from "form-please/native-controls"
 import { nativeFormKit } from "form-please/preset-native"
 
@@ -35,10 +38,12 @@ const definition: FormDefinition<typeof schema> = kit.defineForm(
 	schema,
 	(ui) => [ui.field("name", { control: "text" })],
 )
-const selectOptions = {
+const selectProps = {
 	emptyOption: { label: "Choose" },
-	options: [{ label: "Draft", value: "draft" }],
-} satisfies NativeSelectOptions
+} satisfies NativeSelectProps
+const selectOptions = [
+	{ label: "Draft", value: "draft" },
+] satisfies readonly NativeSelectOption[]
 const i18n = { arrayAdd: "Add" } satisfies Partial<DefaultSlotsI18n>
 const label = fromResource(
 	(values: Readonly<Input>) =>
@@ -53,6 +58,7 @@ const label = fromResource(
 )
 
 void definition
+void selectProps
 void selectOptions
 void i18n
 void label

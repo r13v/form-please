@@ -17,12 +17,10 @@ const deliveryDefinition = nativeFormKit.defineForm(deliverySchema, {
 			path: "delivery",
 			control: "select",
 			label: "Delivery method",
-			options: {
-				options: [
-					{ value: "pickup", label: "Pick up" },
-					{ value: "shipping", label: "Ship" },
-				],
-			},
+			options: [
+				{ value: "pickup", label: "Pick up" },
+				{ value: "shipping", label: "Ship" },
+			],
 		},
 		// [!region derived-field]
 		{
@@ -40,7 +38,7 @@ const deliveryDefinition = nativeFormKit.defineForm(deliverySchema, {
 			visible: ({ delivery }) => delivery === "shipping",
 			readOnly: ({ locked }) => locked,
 			required: ({ delivery }) => delivery === "shipping",
-			options: ({ delivery }) => {
+			props: ({ delivery }) => {
 				if (delivery === "shipping") {
 					return { placeholder: "12 Analytical Engine Way" }
 				}
@@ -106,9 +104,7 @@ const editorDefinition = editorKit.defineForm(editorSchema, {
 			control: "select",
 			label: "Country",
 			disabled: (_values, { context }) => !context.canEdit,
-			options: (_values, { context }) => ({
-				options: context.countries,
-			}),
+			options: ({ context }) => context.countries,
 		},
 	],
 })
@@ -141,7 +137,7 @@ const contactsDefinition = nativeFormKit.defineForm(contactsSchema, {
 					path: "email",
 					control: "text",
 					label: "Email",
-					options: { type: "email" },
+					props: { type: "email" },
 				},
 			],
 		},

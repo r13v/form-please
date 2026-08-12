@@ -4,9 +4,8 @@
 
 import {
 	type ArrayFieldPath,
-	type ChoiceValue,
 	type ControlContextOf,
-	type ControlOptionsOf,
+	type ControlOwnPropsOf,
 	type ControlProps,
 	type ControlValueOf,
 	type CreateFormKitOptions,
@@ -20,6 +19,7 @@ import {
 	type FormKitSlots,
 	type FormOutput,
 	type FormPleaseStyle,
+	type OptionValue,
 	type PathValue,
 	type ResourceState,
 	type UiNode,
@@ -113,7 +113,7 @@ const profileDefinition = profileKit.defineForm(profileSchema, {
 })
 // [!endregion ui-types]
 
-type MoneyOptions = {
+type MoneyProps = {
 	readonly min?: number
 	readonly currencyLabel: string
 }
@@ -129,12 +129,12 @@ function MoneyControl({
 	blur,
 	input,
 	meta,
-	options,
+	props: moneyProps,
 	context,
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<number | undefined, MoneyOptions, MoneyContext>) {
+}: ControlProps<number | undefined, MoneyProps, MoneyContext>) {
 	return (
 		<>
 			<input
@@ -143,7 +143,7 @@ function MoneyControl({
 				disabled={disabled}
 				id={input.id}
 				lang={context.locale}
-				min={options.min}
+				min={moneyProps.min}
 				name={input.name}
 				onBlur={blur}
 				onChange={(event) => {
@@ -160,30 +160,33 @@ function MoneyControl({
 				type="number"
 				value={value ?? ""}
 			/>
-			<span aria-hidden="true">{options.currencyLabel}</span>
+			<span aria-hidden="true">{moneyProps.currencyLabel}</span>
 		</>
 	)
 }
 
 const moneyInput = {
 	component: MoneyControl,
-} satisfies DefineControlInput<number | undefined, MoneyOptions, MoneyContext>
+} satisfies DefineControlInput<
+	number | undefined,
+	MoneyProps,
+	MoneyContext,
+	never
+>
 
-const money = defineControl<number | undefined, MoneyOptions, MoneyContext>(
+const money = defineControl<number | undefined, MoneyProps, MoneyContext>(
 	moneyInput,
 )
 
 type MoneyValue = ControlValueOf<typeof money> // number | undefined
-type MoneyControlOptions = ControlOptionsOf<typeof money> // MoneyOptions
+type MoneyControlOwnProps = ControlOwnPropsOf<typeof money> // MoneyProps
 type RequiredContext = ControlContextOf<typeof money> // MoneyContext
 // [!endregion control-types]
 
 // [!region choice-control]
-type RoleChoiceOptions = {
-	readonly items: readonly {
-		readonly id: ChoiceValue<string>
-		readonly label: string
-	}[]
+type RoleOption = {
+	readonly id: OptionValue<string>
+	readonly label: string
 }
 
 function RoleChoiceControl({
@@ -196,7 +199,7 @@ function RoleChoiceControl({
 	disabled,
 	readOnly,
 	required,
-}: ControlProps<string | undefined, RoleChoiceOptions>) {
+}: ControlProps<string | undefined, unknown, unknown, RoleOption>) {
 	return (
 		<select
 			aria-describedby={input["aria-describedby"]}
@@ -214,7 +217,7 @@ function RoleChoiceControl({
 			value={value ?? ""}
 		>
 			<option value="">Choose a role</option>
-			{options.items.map((item) => (
+			{options.map((item) => (
 				<option key={item.id} value={item.id}>
 					{item.label}
 				</option>
@@ -223,7 +226,12 @@ function RoleChoiceControl({
 	)
 }
 
-const roleChoice = defineControl<string | undefined, RoleChoiceOptions>({
+const roleChoice = defineControl<
+	string | undefined,
+	unknown,
+	unknown,
+	RoleOption
+>({
 	component: RoleChoiceControl,
 })
 // [!endregion choice-control]

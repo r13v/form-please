@@ -1,6 +1,6 @@
 # ADR 0007: Project application resources synchronously
 
-- Status: Accepted
+- Status: Superseded by ADR 0022
 - Date: 2026-07-31
 
 ## Context
