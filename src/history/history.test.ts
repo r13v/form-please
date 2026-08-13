@@ -2,7 +2,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
 
 import type { FormBinding } from "../create-form-kit.js"
-import { areFormValuesEqual, cloneFormValue } from "../form-value.js"
+import { cloneFormValue } from "../form-value.js"
 import {
 	attachValueCoordinatorCapability,
 	createValueCoordinator,
@@ -19,6 +19,7 @@ type Values = {
 	name: string
 	optional?: string
 	items: { name: string }[]
+	tags?: Set<string>
 }
 
 describe("managed value history", () => {
@@ -295,26 +296,83 @@ describe("managed value history", () => {
 		expect(harness.getValues().name).toBe(42)
 	})
 
-	it("clones retained Date and RegExp values while preserving opaque leaves", () => {
-		const blob = new Blob(["profile"])
-		const source = {
-			blob,
-			createdAt: new Date("2026-08-05T00:00:00.000Z"),
-			pattern: /form/gi,
-		}
-		source.pattern.lastIndex = 2
-		const clone = cloneFormValue(source)
+	it("retains structured values independently of later live mutation", () => {
+		const harness = createHarness({ historyOptions: { groupWindow: 0 } })
+		harness.update((draft) => {
+			draft.tags = new Set(["draft"])
+		})
+		harness.update((draft) => {
+			draft.tags?.add("review")
+		})
 
-		expect(clone).not.toBe(source)
-		expect(clone.createdAt).not.toBe(source.createdAt)
-		expect(clone.createdAt).toEqual(source.createdAt)
-		expect(clone.pattern).not.toBe(source.pattern)
-		expect(clone.pattern).toEqual(source.pattern)
-		expect(clone.pattern.lastIndex).toBe(2)
-		expect(clone.blob).toBe(blob)
-		expect(areFormValuesEqual(new Date(Number.NaN), new Date(Number.NaN))).toBe(
-			true,
+		const exported = harness.history.export()
+		harness.setRawValues({ items: [], name: "", tags: new Set(["mutated"]) })
+
+		expect([...(exported.entries[1]?.tags ?? [])]).toEqual(["draft"])
+		expect([...(exported.entries[2]?.tags ?? [])]).toEqual(["draft", "review"])
+	})
+
+	it("rejects operations that cannot address a retained position", async () => {
+		const harness = createHarness()
+
+		for (const index of [Number.NaN, Number.POSITIVE_INFINITY]) {
+			await expect(harness.history.seek(index)).rejects.toThrow(
+				"History seek index must be an integer",
+			)
+		}
+		expect(await harness.history.seek(-1)).toBe("unavailable")
+		expect(await harness.history.undo()).toBe("unavailable")
+		expect(await harness.history.redo()).toBe("unavailable")
+		expect(() => harness.history.subscribe(undefined as never)).toThrow(
+			"History listener must be a function",
 		)
+	})
+
+	it("notifies subscribers once per snapshot change and stops after release", async () => {
+		const harness = createHarness({ historyOptions: { groupWindow: 0 } })
+		const listener = vi.fn()
+		const release = harness.history.subscribe(listener)
+
+		harness.control("name", "A")
+		expect(listener).toHaveBeenCalledTimes(1)
+
+		harness.update((draft) => {
+			draft.name = "A"
+		})
+		expect(listener).toHaveBeenCalledTimes(1)
+
+		expect(await harness.history.undo()).toBe("applied")
+		expect(listener).toHaveBeenCalledTimes(2)
+
+		release()
+		release()
+		expect(await harness.history.redo()).toBe("applied")
+		expect(listener).toHaveBeenCalledTimes(2)
+	})
+
+	it("keeps retention and navigation consistent for an unbounded journal", async () => {
+		const harness = createHarness({
+			historyOptions: { groupWindow: 0, limit: Number.POSITIVE_INFINITY },
+		})
+		for (let step = 0; step < 150; step += 1) {
+			harness.control("name", `name-${step}`)
+		}
+
+		expect(harness.history.getSnapshot()).toEqual({
+			canRedo: false,
+			canUndo: true,
+			index: 150,
+			length: 150,
+		})
+		expect(await harness.history.seek(0)).toBe("applied")
+		expect(harness.getValues().name).toBe("")
+		expect(
+			await harness.history.import({
+				entries: [{ items: [], name: "imported" }],
+				index: 0,
+				version: 1,
+			}),
+		).toBe("applied")
 	})
 
 	it("rejects invalid retention and grouping options", () => {

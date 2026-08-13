@@ -17,6 +17,20 @@ describe("resource helpers", () => {
 		).toBe("failed")
 	})
 
+	it("names an unsupported status instead of silently choosing a branch", () => {
+		const cases = {
+			pending: () => "loading",
+			success: () => "ready",
+			error: () => "failed",
+		}
+
+		for (const status of ["loaded", "", undefined, null, 1]) {
+			expect(() => matchResource({ status } as never, cases as never)).toThrow(
+				`Unsupported resource status "${String(status)}"`,
+			)
+		}
+	})
+
 	it("passes full values and context through fromResource", () => {
 		const resolve = fromResource(
 			(

@@ -21,6 +21,40 @@ describe("localStorage persistence adapter", () => {
 		expect(await adapter.load("profile")).toBeUndefined()
 	})
 
+	it("requires a storage getter instead of a captured storage object", () => {
+		for (const getStorage of [undefined, null, {}, "localStorage"]) {
+			expect(() =>
+				createLocalStorageAdapter(getStorage as unknown as () => never),
+			).toThrow("localStorage adapter requires a storage getter")
+		}
+	})
+
+	it("propagates a rejected write so persistence can report it", async () => {
+		const quotaExceeded = new Error("QuotaExceededError")
+		const adapter = createLocalStorageAdapter(() => ({
+			getItem: () => null,
+			removeItem: () => undefined,
+			setItem: () => {
+				throw quotaExceeded
+			},
+		}))
+
+		await expect(adapter.save("profile", { name: "Ada" })).rejects.toBe(
+			quotaExceeded,
+		)
+	})
+
+	it("distinguishes a missing key from a stored JSON null", async () => {
+		const adapter = createLocalStorageAdapter(() => ({
+			getItem: (key: string) => (key === "stored" ? "null" : null),
+			removeItem: () => undefined,
+			setItem: () => undefined,
+		}))
+
+		expect(await adapter.load("missing")).toBeUndefined()
+		expect(await adapter.load("stored")).toBeNull()
+	})
+
 	it("surfaces malformed stored JSON as a load failure", async () => {
 		const adapter = createLocalStorageAdapter(() => ({
 			getItem: () => "not-json",

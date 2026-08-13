@@ -101,6 +101,115 @@ describe("createNativeControls", () => {
 		expect(setValue).toHaveBeenNthCalledWith(2, undefined)
 	})
 
+	it("clears the number value while the input holds unparsable text", () => {
+		const controls = createNativeControls()
+		const setValue = vi.fn()
+
+		render(
+			<controls.number.component
+				{...controlProps<number | undefined, NativeNumberProps>({
+					name: "amount",
+					props: {},
+					setValue,
+					value: 7,
+				})}
+			/>,
+		)
+		const input = screen.getByRole("spinbutton")
+
+		// A number input sanitizes partial text to "", so the field value clears
+		// until the typed number parses again.
+		for (const partial of ["-", "e", "1e", "."]) {
+			fireEvent.change(input, { target: { value: partial } })
+			expect(setValue).toHaveBeenLastCalledWith(undefined)
+		}
+
+		fireEvent.change(input, { target: { value: "-5.5" } })
+		expect(setValue).toHaveBeenLastCalledWith(-5.5)
+	})
+
+	it("renders a number value that no longer round-trips through the input", () => {
+		const controls = createNativeControls()
+		const props = { name: "amount", props: {}, setValue: vi.fn() }
+
+		const view = render(
+			<controls.number.component
+				{...controlProps<number | undefined, NativeNumberProps>({
+					...props,
+					value: -0,
+				})}
+			/>,
+		)
+		expect(screen.getByRole("spinbutton")).toHaveProperty("value", "0")
+
+		view.rerender(
+			<controls.number.component
+				{...controlProps<number | undefined, NativeNumberProps>({
+					...props,
+					value: Number.NaN,
+				})}
+			/>,
+		)
+		expect(screen.getByRole("spinbutton")).toHaveProperty("value", "")
+	})
+
+	it("preserves a selected value that the current options omit", () => {
+		const controls = createNativeControls()
+		const setValue = vi.fn()
+
+		render(
+			<controls.select.component
+				{...controlProps<
+					string | undefined,
+					NativeSelectProps,
+					NativeSelectOption
+				>({
+					name: "status",
+					options: [{ label: "Draft", value: "draft" }],
+					props: { emptyOption: { label: "Choose" } },
+					setValue,
+					value: "archived",
+				})}
+			/>,
+		)
+
+		expect(screen.getByRole("combobox")).toHaveProperty("value", "")
+		expect(setValue).not.toHaveBeenCalled()
+		expect(
+			screen.getAllByRole("option").map((option) => option.textContent),
+		).toEqual(["Choose", "Draft"])
+	})
+
+	it("rejects a select configuration that cannot express undefined", () => {
+		const controls = createNativeControls()
+		const select = (
+			props: NativeSelectProps,
+			value: string | undefined,
+			options: readonly NativeSelectOption[],
+		) => (
+			<controls.select.component
+				{...controlProps<
+					string | undefined,
+					NativeSelectProps,
+					NativeSelectOption
+				>({ name: "status", options, props, setValue: vi.fn(), value })}
+			/>
+		)
+
+		expect(() => render(select({}, undefined, []))).toThrow(
+			"requires props.emptyOption to represent undefined",
+		)
+		expect(() =>
+			render(
+				select({ emptyOption: { label: "Choose" } }, "", [
+					{ label: "Empty", value: "" },
+				]),
+			),
+		).toThrow(
+			'cannot combine props.emptyOption with an option whose value is ""',
+		)
+	})
+
 	it("does not write checkbox state when the form is read-only", async () => {
 		const controls = createNativeControls()
 		const setValue = vi.fn()

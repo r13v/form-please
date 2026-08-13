@@ -9,6 +9,14 @@ export function cloneFormValue<Value>(value: Value): Value {
 	if (value instanceof Set) {
 		return new Set([...value].map((item) => cloneFormValue(item))) as Value
 	}
+	if (value instanceof Map) {
+		return new Map(
+			[...value].map(([key, item]) => [
+				cloneFormValue(key),
+				cloneFormValue(item),
+			]),
+		) as Value
+	}
 	if (typeof Blob !== "undefined" && value instanceof Blob) return value
 	if (typeof FileList !== "undefined" && value instanceof FileList) return value
 	if (Array.isArray(value)) {
@@ -41,6 +49,15 @@ export function areFormValuesEqual(left: unknown, right: unknown): boolean {
 		const rightItems = [...right]
 		return leftItems.every((item, index) =>
 			areFormValuesEqual(item, rightItems[index]),
+		)
+	}
+	if (left instanceof Map && right instanceof Map) {
+		if (left.size !== right.size) return false
+		const rightEntries = [...right]
+		return [...left].every(
+			([key, item], index) =>
+				areFormValuesEqual(key, rightEntries[index]?.[0]) &&
+				areFormValuesEqual(item, rightEntries[index]?.[1]),
 		)
 	}
 	if (Array.isArray(left) && Array.isArray(right)) {

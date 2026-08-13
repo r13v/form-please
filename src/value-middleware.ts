@@ -175,9 +175,11 @@ export function getValueCoordinatorCapability<
 	Input extends FieldValues,
 	Context = unknown,
 >(target: object): ValueCoordinatorCapability<Input, Context> {
-	const capability = (target as Record<PropertyKey, unknown>)[
-		valueCoordinatorCapabilityKey
-	]
+	const capability =
+		target === null ||
+		(typeof target !== "object" && typeof target !== "function")
+			? undefined
+			: (target as Record<PropertyKey, unknown>)[valueCoordinatorCapabilityKey]
 	if (capability === undefined) {
 		throw new TypeError(
 			"Managed value feature requires a current Form Please form binding",

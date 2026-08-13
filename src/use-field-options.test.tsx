@@ -153,6 +153,70 @@ describe("useFieldOptions", () => {
 		expect(screen.getByTestId("options").textContent).toBe('["fr"]')
 	})
 
+	it("renders an empty collection for every result that is not an array", async () => {
+		for (const result of [undefined, null, "DE", { 0: "DE", length: 1 }]) {
+			const view = render(
+				<Harness context={{}} source={() => result} values={{}} />,
+			)
+			await waitFor(() =>
+				expect(screen.getByTestId("options").textContent).toBe("[]"),
+			)
+			view.unmount()
+		}
+	})
+
+	it("aborts the pending request when the field unmounts", async () => {
+		let captured: AbortSignal | undefined
+		const pending = deferred<readonly string[]>()
+		const view = render(
+			<Harness
+				context={{}}
+				source={({ signal }: { readonly signal: AbortSignal }) => {
+					captured = signal
+					return pending.promise
+				}}
+				values={{}}
+			/>,
+		)
+
+		await waitFor(() => expect(captured).toBeDefined())
+		expect(captured?.aborted).toBe(false)
+		view.unmount()
+		expect(captured?.aborted).toBe(true)
+
+		await act(async () => {
+			pending.resolve(["late"])
+			await pending.promise
+		})
+	})
+
+	it("unwraps tracked proxies from the resolved collection", async () => {
+		const option = { code: "DE" }
+		const values = { available: [option] }
+		const source = ({ values: tracked }: { readonly values: typeof values }) =>
+			Promise.resolve(tracked.available)
+
+		function IdentityHarness() {
+			const options = useFieldOptions(source, values, {})
+			if (options.length === 0) return <output data-testid="identity" />
+			return (
+				<output data-testid="identity">
+					{[
+						options === values.available ? "same-array" : "copied-array",
+						options[0] === option ? "raw-option" : "proxied-option",
+					].join(",")}
+				</output>
+			)
+		}
+
+		render(<IdentityHarness />)
+		await waitFor(() =>
+			expect(screen.getByTestId("identity").textContent).toBe(
+				"same-array,raw-option",
+			),
+		)
+	})
+
 	it("clears resolved options when the resolver changes", async () => {
 		const next = deferred<readonly string[]>()
 		const first: FieldOptionsResolver<string, unknown> = () => ["first"]

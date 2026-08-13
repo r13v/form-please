@@ -336,6 +336,133 @@ describe("value middleware coordinator", () => {
 		expect(harness.commit).not.toHaveBeenCalled()
 	})
 
+	it("rejects a middleware update issued while the pipeline initializes", () => {
+		expect(() =>
+			createHarness([
+				(api) => {
+					api.update((draft) => {
+						draft.quantity = 99
+					})
+					return (next) => (transaction) => next(transaction.patches)
+				},
+			]),
+		).toThrow("cannot update values while the pipeline initializes")
+	})
+
+	it("names the missing form binding for every non-binding capability host", () => {
+		for (const host of [null, undefined, 1, "form", Symbol("form"), {}]) {
+			expect(() =>
+				getValueCoordinatorCapability(host as unknown as object),
+			).toThrow("requires a current Form Please form binding")
+		}
+	})
+
+	it("stays usable after middleware forwards an unresolvable patch path", () => {
+		let fail = true
+		const harness = createHarness([
+			() => (next) => (transaction) => {
+				if (!fail) return next(transaction.patches)
+				fail = false
+				return next([{ op: "replace", path: ["missing", "deep"], value: 1 }])
+			},
+		])
+
+		expect(() =>
+			harness.coordinator.update((draft) => {
+				draft.quantity = 2
+			}),
+		).toThrow("path doesn't resolve")
+		expect(harness.commit).not.toHaveBeenCalled()
+		expect(harness.getValues()).toMatchObject({ quantity: 1 })
+
+		harness.coordinator.update((draft) => {
+			draft.quantity = 3
+		})
+		expect(harness.getValues()).toMatchObject({ quantity: 3 })
+	})
+
+	it("rejects middleware patches that drop a top-level key before committing", () => {
+		const harness = createHarness(
+			[() => (next) => () => next([{ op: "remove", path: ["note"] }])],
+			{ items: [], note: "keep", quantity: 1, total: 2 },
+		)
+
+		expect(() =>
+			harness.coordinator.update((draft) => {
+				draft.quantity = 2
+			}),
+		).toThrow("assign undefined instead")
+		expect(harness.commit).not.toHaveBeenCalled()
+		expect(harness.getValues()).toHaveProperty("note", "keep")
+	})
+
+	it("commits an unchanged transaction when middleware erases every patch", () => {
+		const afterUpdate = vi.fn()
+		const harness = createHarness([() => (next) => () => next([])], undefined, {
+			afterUpdate,
+		})
+
+		const result = harness.coordinator.update((draft) => {
+			draft.quantity = 5
+		}) as ValueTransaction<Values>
+
+		expect(result.patches).toEqual([])
+		expect(result.nextValues).toEqual(result.previousValues)
+		expect(harness.getValues()).toMatchObject({ quantity: 1 })
+		expect(harness.commit).toHaveBeenCalledOnce()
+		expect(afterUpdate).toHaveBeenCalledOnce()
+	})
+
+	it("keeps the coordinator usable after a recipe throws", () => {
+		const harness = createHarness([])
+		const failure = new Error("recipe failed")
+
+		expect(() =>
+			harness.coordinator.update(() => {
+				throw failure
+			}),
+		).toThrow(failure)
+		expect(harness.commit).not.toHaveBeenCalled()
+
+		harness.coordinator.update((draft) => {
+			draft.quantity = 7
+		})
+		expect(harness.getValues()).toMatchObject({ quantity: 7 })
+	})
+
+	it("compacts an adjusted whole-value replacement into identity-changed keys", () => {
+		const harness = createHarness(
+			[],
+			{ items: [], note: "kept", quantity: 1, total: 2 },
+			{
+				beforeUpdate(draft) {
+					draft.total = 99
+				},
+			},
+		)
+
+		const result = harness.coordinator.update(() => ({
+			items: [],
+			note: "kept",
+			quantity: 4,
+			total: 8,
+		})) as ValueTransaction<Values>
+
+		// An unchanged primitive is dropped, while a replaced object identity is
+		// still published because the coordinator compares keys with Object.is.
+		expect(result.patches).toEqual([
+			{ op: "replace", path: ["items"], value: [] },
+			{ op: "replace", path: ["quantity"], value: 4 },
+			{ op: "replace", path: ["total"], value: 99 },
+		])
+		expect(harness.getValues()).toEqual({
+			items: [],
+			note: "kept",
+			quantity: 4,
+			total: 99,
+		})
+	})
+
 	it("restores complete history values through hooks and a distinct terminal", () => {
 		const sources: ValueTransaction<Values>["source"][] = []
 		const harness = createHarness(

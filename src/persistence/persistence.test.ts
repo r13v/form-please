@@ -274,6 +274,162 @@ describe("form persistence middleware", () => {
 		expect(await readStored(storage)).toEqual({ items: [], name: "Unsaved" })
 	})
 
+	it("rejects every configuration a persisted form cannot rely on", () => {
+		const adapter = createMemoryStorage().adapter
+		const base = { adapter, key: "profile", version: 1 } as const
+
+		for (const [options, message] of [
+			[undefined, "options must be an object"],
+			[{ ...base, adapter: {} }, "must define load, save, and remove"],
+			[{ ...base, adapter: null }, "must define load, save, and remove"],
+			[{ ...base, key: "" }, "must be a non-empty string"],
+			[{ ...base, key: 1 }, "must be a non-empty string"],
+			[{ ...base, version: -1 }, "must be a non-negative integer"],
+			[{ ...base, version: 1.5 }, "must be a non-negative integer"],
+			[{ ...base, saveDelay: -1 }, "finite non-negative number"],
+			[{ ...base, saveDelay: Number.POSITIVE_INFINITY }, "finite non-negative"],
+			[{ ...base, migrate: 1 }, "migrate must be a function"],
+			[{ ...base, onError: 1 }, "onError must be a function"],
+			[{ ...base, codecs: {} }, "codecs must be an array"],
+			[{ ...base, codecs: [{ tag: "" }] }, "non-empty strings"],
+			[{ ...base, codecs: [null] }, "index 0 must be an object"],
+			[
+				{ ...base, codecs: [{ tag: "date" }] },
+				"must define canEncode, encode, and decode",
+			],
+		] as const) {
+			expect(() =>
+				createPersistenceMiddleware(
+					options as unknown as CreatePersistenceOptions,
+				),
+			).toThrow(message)
+		}
+	})
+
+	it("refuses operations that contradict the current persistence phase", async () => {
+		const storage = createMemoryStorage()
+		let releaseLoad = (): void => undefined
+		storage.load.mockImplementationOnce(
+			async () =>
+				new Promise((resolve) => {
+					releaseLoad = () => resolve(undefined)
+				}),
+		)
+		const harness = createHarness({ saveDelay: 10_000, storage })
+
+		await expect(harness.persistence.flush()).rejects.toThrow(
+			"flush requires active persistence",
+		)
+
+		const restoring = harness.persistence.restore()
+		expect(harness.persistence.getSnapshot().phase).toBe("restoring")
+		expect(harness.persistence.restore()).toBe(restoring)
+		expect(() => harness.persistence.start()).toThrow(
+			"cannot start while restore is running",
+		)
+		await expect(harness.persistence.clear()).rejects.toThrow(
+			"clear cannot run while restore is running",
+		)
+
+		releaseLoad()
+		expect(await restoring).toBe("empty")
+		expect(await harness.persistence.restore()).toBe("empty")
+
+		harness.persistence.start()
+		expect(harness.persistence.getSnapshot().phase).toBe("active")
+	})
+
+	it("rejects a restore requested after an unrestored form started saving", async () => {
+		const harness = createHarness({ saveDelay: 10_000 })
+		harness.persistence.start()
+
+		await expect(harness.persistence.restore()).rejects.toThrow(
+			"restore cannot run after start",
+		)
+		expect(harness.persistence.getSnapshot().phase).toBe("active")
+	})
+
+	it("requires an attached form handle before observing values", () => {
+		const feature = createPersistenceMiddleware({
+			adapter: createMemoryStorage().adapter,
+			key: "profile",
+			version: 1,
+		})
+		let values: Values = { items: [], name: "" }
+		const coordinator = createValueCoordinator({
+			commit: (transaction) => {
+				values = transaction.nextValues as Values
+			},
+			getContext: () => undefined,
+			getValues: () => values,
+			middleware: [feature],
+			restore: (transaction) => {
+				values = transaction.nextValues as Values
+			},
+		})
+		const detached = { api: undefined, update: coordinator.update }
+		attachValueCoordinatorCapability(detached, coordinator)
+		const handle = feature.handle(
+			detached as unknown as FormBinding<StandardSchemaV1<Values>>,
+		)
+
+		expect(() => handle.start()).toThrow(
+			"require a current Form Please form handle",
+		)
+		expect(handle.getSnapshot()).toEqual({
+			phase: "idle",
+			save: { status: "idle" },
+		})
+	})
+
+	it("keeps a conflicting restore result stable and only recovers through start", async () => {
+		const storage = createMemoryStorage()
+		storage.value = await encoded({ items: [], name: "Stored" })
+		let releaseLoad = (): void => undefined
+		storage.load.mockImplementationOnce(
+			async () =>
+				new Promise((resolve) => {
+					releaseLoad = () => resolve(storage.value)
+				}),
+		)
+		const harness = createHarness({ saveDelay: 0, storage })
+
+		const restoring = harness.persistence.restore()
+		harness.setRawValues({ items: [], name: "Live edit" })
+		releaseLoad()
+
+		expect(await restoring).toBe("conflict")
+		expect(harness.getValues().name).toBe("Live edit")
+		expect(await harness.persistence.restore()).toBe("conflict")
+
+		harness.persistence.start()
+		await vi.waitFor(async () =>
+			expect(await readStored(storage)).toEqual({
+				items: [],
+				name: "Live edit",
+			}),
+		)
+	})
+
+	it("stops publishing snapshots after a listener releases its subscription", async () => {
+		const harness = createHarness({ saveDelay: 0 })
+		const listener = vi.fn()
+		const release = harness.persistence.subscribe(listener)
+
+		expect(() => harness.persistence.subscribe(undefined as never)).toThrow(
+			"listener must be a function",
+		)
+		harness.persistence.start()
+		expect(listener).toHaveBeenCalled()
+
+		const seen = listener.mock.calls.length
+		release()
+		release()
+		harness.setRawValues({ items: [], name: "After release" })
+		await harness.persistence.flush()
+		expect(listener).toHaveBeenCalledTimes(seen)
+	})
+
 	it("migrates decoded values and immediately rewrites the current envelope", async () => {
 		const storage = createMemoryStorage()
 		storage.value = await encodePersistenceEnvelope(

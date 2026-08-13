@@ -1,3 +1,4 @@
+import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it } from "vitest"
 
 import {
@@ -116,6 +117,85 @@ describe("Standard Schema resolver", () => {
 		])
 	})
 
+	it("accepts every Standard Schema path segment shape", async () => {
+		const resolver = createStandardSchemaResolver(
+			issuingSchema([
+				{
+					message: "object segment",
+					path: [{ key: "profile" }, { key: "age" }],
+				},
+				{ message: "numeric segment", path: ["items", 0, "name"] },
+				{ message: "symbol segment", path: [Symbol("secret")] },
+				{ message: "mixed segments", path: ["items", { key: 1 }, "name"] },
+			]),
+		)
+
+		const result = await resolver({}, undefined, resolverOptions)
+
+		expect(fieldErrorsToIssues(result.errors)).toEqual([
+			{ message: "symbol segment", path: "Symbol(secret)" },
+			{ message: "object segment", path: "profile.age" },
+			{ message: "numeric segment", path: "items.0.name" },
+			{ message: "mixed segments", path: "items.1.name" },
+		])
+	})
+
+	it("keeps distinct messages for one path and drops exact duplicates", async () => {
+		const resolver = createStandardSchemaResolver(
+			issuingSchema([
+				{ message: "too short", path: ["name"] },
+				{ message: "too short", path: ["name"] },
+				{ message: "reserved word", path: ["name"] },
+				{ message: "unknown", path: [] },
+				{ message: "unknown" },
+			]),
+		)
+
+		const result = await resolver({}, undefined, resolverOptions)
+
+		expect(result.values).toEqual({})
+		expect(fieldErrorsToIssues(result.errors)).toEqual([
+			{ message: "unknown" },
+			{ message: "too short", path: "name" },
+			{ message: "reserved word", path: "name" },
+		])
+		expect(fieldErrorToIssues(result.errors.name, "name")).toEqual([
+			{ message: "too short", path: "name" },
+			{ message: "reserved word", path: "name" },
+		])
+	})
+
+	it("keeps a parent issue visible when a child path also fails", async () => {
+		const resolver = createStandardSchemaResolver(
+			issuingSchema([
+				{ message: "child invalid", path: ["profile", "age"] },
+				{ message: "parent invalid", path: ["profile"] },
+			]),
+		)
+
+		const result = await resolver({}, undefined, resolverOptions)
+
+		expect(fieldErrorsToIssues(result.errors)).toEqual([
+			{ message: "parent invalid", path: "profile" },
+			{ message: "child invalid", path: "profile.age" },
+		])
+	})
+
+	it("returns no issues for error trees without schema content", () => {
+		for (const value of [
+			undefined,
+			null,
+			0,
+			"message",
+			[],
+			{},
+			{ types: {} },
+		]) {
+			expect(fieldErrorsToIssues(value)).toEqual([])
+			expect(fieldErrorToIssues(value)).toEqual([])
+		}
+	})
+
 	it("reads the root shape RHF uses for field-array errors", () => {
 		expect(
 			fieldErrorToIssues(
@@ -203,3 +283,16 @@ describe("Standard Schema resolver", () => {
 		])
 	})
 })
+
+/** Creates a schema that always reports the supplied Standard Schema issues. */
+function issuingSchema(
+	issues: readonly StandardSchemaV1.Issue[],
+): StandardSchema<Record<string, unknown>, never> {
+	return {
+		"~standard": {
+			validate: () => ({ issues }),
+			vendor: "resolver-issue-test",
+			version: 1,
+		},
+	}
+}

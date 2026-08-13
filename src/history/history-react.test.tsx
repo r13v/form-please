@@ -1,6 +1,7 @@
 "use client"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { useState } from "react"
 import { useFormState } from "react-hook-form"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
@@ -75,6 +76,41 @@ describe("history React Hook Form integration", () => {
 			expect(screen.getByTestId("history-position").textContent).toBe("0:1"),
 		)
 		expect(history.snapshot.canRedo).toBe(true)
+	})
+
+	it("keeps one hook result identity until navigation state changes", async () => {
+		const feature = createHistoryMiddleware({ groupWindow: 0 })
+		const results: UseHistoryResult<Input>[] = []
+		let rerender!: () => void
+
+		function View() {
+			const [tick, setTick] = useState(0)
+			rerender = () => setTick(tick + 1)
+			const form = kit.useForm(definition, {
+				defaultValues: { items: [], name: "Ada" },
+				middleware: [feature],
+			})
+			results.push(useHistory(form, feature))
+			return <kit.AutoForm form={form} />
+		}
+
+		render(<View />)
+		const initial = results.at(-1)
+
+		act(() => rerender())
+		expect(results.at(-1)).toBe(initial)
+		expect(Object.isFrozen(initial)).toBe(true)
+
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Grace" },
+		})
+		await waitFor(() => expect(results.at(-1)).not.toBe(initial))
+		expect(results.at(-1)?.snapshot).toEqual({
+			canRedo: false,
+			canUndo: true,
+			index: 1,
+			length: 1,
+		})
 	})
 
 	it("restores optional top-level keys and generated array structure", async () => {
