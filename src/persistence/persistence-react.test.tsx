@@ -1,7 +1,7 @@
 "use client"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { StrictMode } from "react"
+import { StrictMode, useMemo } from "react"
 import { useFormState } from "react-hook-form"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
@@ -10,6 +10,7 @@ import type { FormBinding } from "../create-form-kit.js"
 import { createFormKit } from "../create-form-kit.js"
 import { createDefaultSlots } from "../default-slots/index.js"
 import { createNativeControls } from "../native-controls/index.js"
+import { attachValueCoordinatorCapability } from "../value-middleware.js"
 import {
 	decodePersistenceEnvelope,
 	encodePersistenceEnvelope,
@@ -229,6 +230,74 @@ describe("persistence React Hook Form integration", () => {
 				})
 			).value,
 		).toEqual({ items: [], name: "Grace" })
+	})
+
+	it("releases RHF observation on unmount without discarding a scheduled save", async () => {
+		vi.useFakeTimers()
+		try {
+			const storage = createMemoryAdapter()
+			const feature = createPersistenceMiddleware({
+				adapter: storage.adapter,
+				key: "profile",
+				saveDelay: 50,
+				version: 1,
+			})
+			let activeSubscriptions = 0
+			let persistence!: UsePersistenceResult
+
+			function View() {
+				const form = kit.useForm(definition, {
+					defaultValues: { items: [], name: "Ada" },
+					middleware: [feature],
+				})
+				const observedForm = useMemo(() => {
+					const api = Object.create(form.api) as typeof form.api
+					Object.defineProperty(api, "subscribe", {
+						value: (options: Parameters<typeof form.api.subscribe>[0]) => {
+							activeSubscriptions++
+							const unsubscribe = form.api.subscribe(options)
+							let active = true
+							return () => {
+								if (!active) return
+								active = false
+								activeSubscriptions--
+								unsubscribe()
+							}
+						},
+					})
+					const binding = { ...form, api }
+					attachValueCoordinatorCapability(binding, form)
+					return binding
+				}, [form])
+				persistence = usePersistence(observedForm, feature)
+				return <kit.AutoForm form={form} />
+			}
+
+			const view = render(<View />)
+			await act(async () => persistence.restore())
+			expect(activeSubscriptions).toBe(1)
+
+			fireEvent.change(screen.getByLabelText("Name"), {
+				target: { value: "Grace" },
+			})
+			expect(persistence.getSnapshot().save.status).toBe("scheduled")
+
+			view.unmount()
+			expect(activeSubscriptions).toBe(0)
+			await act(async () => vi.advanceTimersByTimeAsync(50))
+
+			expect(storage.saveCalls).toHaveLength(1)
+			expect(
+				(
+					await decodePersistenceEnvelope(storage.value as JsonValue, {
+						codecs: [],
+						version: 1,
+					})
+				).value,
+			).toEqual({ items: [], name: "Grace" })
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 })
 

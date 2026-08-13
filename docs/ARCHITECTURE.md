@@ -291,7 +291,9 @@ publication, including raw `form.api` changes. Autosave uses a trailing delay,
 coalesces the latest input, and serializes writes. `flush()` writes the current
 active input. `clear()` removes storage without changing live input. Storage
 failures do not roll values back and retry only after another edit or explicit
-operation.
+operation. `usePersistence` releases its RHF subscription after its last hook
+instance unmounts. A save that is already scheduled or in flight still finishes
+with the last observed input, so unmounting does not discard an accepted edit.
 
 The envelope has its own protocol version and an application version. Migration
 runs on decoded older values. Tagged asynchronous codecs support explicit

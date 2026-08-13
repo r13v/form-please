@@ -134,6 +134,18 @@ const idleSave = Object.freeze({ status: "idle" as const })
 const persistenceFeatureClaimKey = Symbol.for(
 	"form-please.persistence-feature-claim",
 )
+const hookRetainers = new WeakMap<PersistenceHandle, () => () => void>()
+
+/** Retains RHF observation for one mounted usePersistence hook. */
+export function retainPersistenceHook(
+	persistence: PersistenceHandle,
+): () => void {
+	const retain = hookRetainers.get(persistence)
+	if (retain === undefined) {
+		throw new TypeError("usePersistence requires a package persistence handle")
+	}
+	return retain()
+}
 
 /** Creates one optional persisted-form middleware feature. */
 export function createPersistenceMiddleware(
@@ -201,6 +213,7 @@ class PersistenceState<Input extends FieldValues, Context> {
 	#restorePromise: Promise<PersistenceRestoreResult> | undefined
 	#restoreResult: PersistenceRestoreResult | undefined
 	#activation: "none" | "restore" | "start" = "none"
+	#retainedHooks = 0
 
 	constructor(
 		capability: ValueCoordinatorCapability<Input, Context>,
@@ -217,6 +230,7 @@ class PersistenceState<Input extends FieldValues, Context> {
 			start: () => this.#start(),
 			subscribe: (listener) => this.#subscribe(listener),
 		})
+		hookRetainers.set(this.handle, () => this.#retainHook())
 	}
 
 	attach(form: FormBinding): void {
@@ -263,6 +277,21 @@ class PersistenceState<Input extends FieldValues, Context> {
 			callback: ({ values }) => this.#observeValues(values),
 			formState: { values: true },
 		})
+	}
+
+	#retainHook(): () => void {
+		this.#ensureSubscribed()
+		this.#retainedHooks++
+		let retained = true
+		return () => {
+			if (!retained) return
+			retained = false
+			this.#retainedHooks--
+			if (this.#retainedHooks > 0) return
+			this.#unsubscribe?.()
+			this.#unsubscribe = undefined
+			// A scheduled or in-flight save intentionally keeps the last observed edit.
+		}
 	}
 
 	#observeValues(values: Input): void {

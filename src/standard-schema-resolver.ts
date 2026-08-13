@@ -274,13 +274,17 @@ function pathDepth(path: string | undefined): number {
 
 /** Removes issues with duplicate path and message values. */
 function uniqueIssues(issues: readonly FormIssue[]): readonly FormIssue[] {
-	return issues.filter(
-		(issue, index) =>
-			issues.findIndex(
-				(candidate) =>
-					candidate.path === issue.path && candidate.message === issue.message,
-			) === index,
-	)
+	const messagesByPath = new Map<string | undefined, Set<string>>()
+	return issues.filter((issue) => {
+		const messages = messagesByPath.get(issue.path)
+		if (messages?.has(issue.message) === true) return false
+		if (messages === undefined) {
+			messagesByPath.set(issue.path, new Set([issue.message]))
+		} else {
+			messages.add(issue.message)
+		}
+		return true
+	})
 }
 
 /** Tests whether a value is a non-null object record. */

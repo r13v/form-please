@@ -5,10 +5,11 @@ import { useEffect, useMemo } from "react"
 import type { FormBinding } from "../create-form-kit.js"
 import type { StandardSchema } from "../types.js"
 import { useSnapshot } from "../use-snapshot.js"
-import type {
-	PersistenceFeature,
-	PersistenceHandle,
-	PersistenceSnapshot,
+import {
+	type PersistenceFeature,
+	type PersistenceHandle,
+	type PersistenceSnapshot,
+	retainPersistenceHook,
 } from "./persistence.js"
 
 /** A form-specific persistence handle with its current React snapshot. */
@@ -27,7 +28,9 @@ export function usePersistence<
 	const snapshot = useSnapshot(persistence)
 
 	useEffect(() => {
+		const release = retainPersistenceHook(persistence)
 		void persistence.restore().catch(() => undefined)
+		return release
 	}, [persistence])
 
 	return useMemo(

@@ -118,6 +118,7 @@ export function useFieldOptions(
 /** Creates deeply tracked readonly views for one resolver invocation. */
 function createTracker(): Tracker {
 	const dependencies: Dependency[] = []
+	const dependencyKeys = new Set<string>()
 	const proxies = new WeakMap<object, Map<string, object>>()
 	const proxyTargets = new WeakMap<object, object>()
 
@@ -135,19 +136,19 @@ function createTracker(): Tracker {
 			get(target, key, receiver) {
 				const nextPath = [...path, key]
 				const result = Reflect.get(target, key, receiver)
-				recordDependency(dependencies, root, nextPath, result)
+				recordDependency(dependencies, dependencyKeys, root, nextPath, result)
 				return trackValue(root, result, nextPath)
 			},
 			getOwnPropertyDescriptor(target, key) {
-				recordDependency(dependencies, root, path, target)
+				recordDependency(dependencies, dependencyKeys, root, path, target)
 				return Reflect.getOwnPropertyDescriptor(target, key)
 			},
 			has(target, key) {
-				recordDependency(dependencies, root, path, target)
+				recordDependency(dependencies, dependencyKeys, root, path, target)
 				return Reflect.has(target, key)
 			},
 			ownKeys(target) {
-				recordDependency(dependencies, root, path, target)
+				recordDependency(dependencies, dependencyKeys, root, path, target)
 				return Reflect.ownKeys(target)
 			},
 		})
@@ -163,7 +164,7 @@ function createTracker(): Tracker {
 		proxyTargets,
 		track: (root, value) => {
 			if (!isTrackable(value)) {
-				recordDependency(dependencies, root, [], value)
+				recordDependency(dependencies, dependencyKeys, root, [], value)
 				return value
 			}
 			return trackValue(root, value, [])
@@ -174,15 +175,15 @@ function createTracker(): Tracker {
 /** Records one property read once per resolver invocation. */
 function recordDependency(
 	dependencies: Dependency[],
+	keys: Set<string>,
 	root: DependencyRoot,
 	path: readonly PropertyKey[],
 	value: unknown,
 ) {
 	const key = dependencyKey(root, path)
-	const existing = dependencies.find(
-		(dependency) => dependencyKey(dependency.root, dependency.path) === key,
-	)
-	if (existing === undefined) dependencies.push({ path, root, value })
+	if (keys.has(key)) return
+	keys.add(key)
+	dependencies.push({ path, root, value })
 }
 
 /** Tests tracked values against the latest resolver inputs. */
