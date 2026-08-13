@@ -4,6 +4,7 @@ import { createDateCodec } from "./codecs.js"
 import {
 	decodePersistenceEnvelope,
 	encodePersistenceEnvelope,
+	type JsonValue,
 	normalizePersistenceCodecs,
 	type PersistenceCodec,
 } from "./encoding.js"
@@ -119,12 +120,81 @@ describe("persistence encoding", () => {
 		const applicationCodec = { ...dateCodec }
 		normalizePersistenceCodecs([applicationCodec])
 		expect(Object.isFrozen(applicationCodec)).toBe(false)
-		await expect(
-			encodePersistenceEnvelope(
+
+		class StatefulCodec implements PersistenceCodec<Date> {
+			readonly tag = "stateful"
+			readonly prefix = "saved:"
+			canEncode(value: unknown): value is Date {
+				return value instanceof Date && value.getUTCFullYear() === 2026
+			}
+			encode(value: Date): JsonValue {
+				return `${this.prefix}${value.toISOString()}`
+			}
+			decode(value: JsonValue): Date {
+				if (typeof value !== "string" || !value.startsWith(this.prefix)) {
+					throw new TypeError("expected tagged string")
+				}
+				return new Date(value.slice(this.prefix.length))
+			}
+		}
+		const stateful = normalizePersistenceCodecs([new StatefulCodec()])
+		const statefulDate = new Date("2026-08-13T00:00:00.000Z")
+		const statefulEnvelope = await encodePersistenceEnvelope(statefulDate, {
+			codecs: stateful,
+			version: 1,
+		})
+		expect(
+			(
+				await decodePersistenceEnvelope(statefulEnvelope, {
+					codecs: stateful,
+					version: 1,
+				})
+			).value,
+		).toEqual(statefulDate)
+		let invalidOutputFailure: unknown
+		try {
+			await encodePersistenceEnvelope(
 				{ date: new Date() },
 				{ codecs: [invalidCodec], version: 1 },
-			),
-		).rejects.toThrow('Persistence codec "invalid" output must be JSON')
+			)
+		} catch (error) {
+			invalidOutputFailure = error
+		}
+		expect(invalidOutputFailure).toMatchObject({
+			cause: expect.objectContaining({
+				message: 'Persistence codec "invalid" output must be JSON',
+			}),
+			message: 'Persistence codec "invalid" failed to encode value at "date"',
+		})
+
+		const canEncodeCause = new Error("claim failed")
+		const brokenCodec: PersistenceCodec<never> = {
+			canEncode(value): value is never {
+				if (value instanceof Date) throw canEncodeCause
+				return false
+			},
+			decode: () => {
+				throw new Error("not reached")
+			},
+			encode: () => {
+				throw new Error("not reached")
+			},
+			tag: "broken",
+		}
+		let canEncodeFailure: unknown
+		try {
+			await encodePersistenceEnvelope(
+				{ nested: new Date("2026-08-13T00:00:00.000Z") },
+				{ codecs: [brokenCodec], version: 1 },
+			)
+		} catch (error) {
+			canEncodeFailure = error
+		}
+		expect(canEncodeFailure).toMatchObject({
+			cause: canEncodeCause,
+			message:
+				'Persistence codec "broken" canEncode failed for value at "nested"',
+		})
 	})
 
 	it("rejects every envelope shape that cannot be trusted as protocol data", async () => {
@@ -231,8 +301,9 @@ describe("persistence encoding", () => {
 				{ __proto__: { polluted: true } },
 				{ codecs: [], version: 1 },
 			),
-			// The reported kind comes from the substituted prototype's constructor.
-		).rejects.toThrow('Unsupported persistence value at "<root>": Object')
+		).rejects.toThrow(
+			'Unsupported persistence value at "<root>": object prototype is not Object.prototype or null',
+		)
 	})
 
 	it("uses the first codec that claims a value and reports async codec failures", async () => {
@@ -252,8 +323,9 @@ describe("persistence encoding", () => {
 				entries: [["createdAt", { tag: "first", type: "codec" }]],
 			},
 		})
-		await expect(
-			decodePersistenceEnvelope(envelope, {
+		let decodeFailure: unknown
+		try {
+			await decodePersistenceEnvelope(envelope, {
 				codecs: [
 					{
 						...firstWins,
@@ -261,8 +333,15 @@ describe("persistence encoding", () => {
 					},
 				],
 				version: 1,
-			}),
-		).rejects.toThrow("no decode")
+			})
+		} catch (error) {
+			decodeFailure = error
+		}
+		expect(decodeFailure).toMatchObject({
+			cause: expect.objectContaining({ message: "no decode" }),
+			message:
+				'Persistence codec "first" failed to decode value at "createdAt"',
+		})
 	})
 
 	it("surfaces a failing migration instead of restoring the decoded value", async () => {

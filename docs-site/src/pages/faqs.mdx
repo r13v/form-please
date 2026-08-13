@@ -138,7 +138,8 @@ options: async ({ values, context, signal }) =>
 The built-in policy uses `[]` during loading and after an uncaught error. It
 does not provide caching, retries, loading UI, error UI, search, or pagination.
 Use application resource state and `fromResource` or `matchResource` when you
-need those policies. See [Resource state](/resources).
+need those policies. A successfully resolved non-array value is a contract error,
+not an empty collection. See [Resource state](/resources).
 
 ### Can a UI resolver return a promise?
 

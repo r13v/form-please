@@ -307,7 +307,8 @@ Changing `values.country` or `context.locale` aborts the previous request and
 runs the function again. Unrelated changes do not. The rendered list is empty
 during loading and after an uncaught error; catch inside the function when you
 want another fallback. The field value is preserved even when it is absent
-from the current list.
+from the current list. A successfully resolved value must be an array; any other
+value is a resolver contract error surfaced through React.
 
 Use an application resource or a custom control when you need loading or error
 UI, caching, retries, remote search, or pagination.

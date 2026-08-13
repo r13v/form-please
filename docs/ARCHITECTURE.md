@@ -161,7 +161,8 @@ including reads after `await`, become dependencies; the function runs again
 when one of those values changes. The previous signal is aborted, stale results
 are ignored, and the rendered collection is `[]` while the current request is
 pending or after it rejects. Form values, including a selected value absent
-from the current collection, are preserved.
+from the current collection, are preserved. A successfully resolved non-array
+value is a resolver contract error surfaced through React.
 
 This boundary owns only per-field execution, dependency tracking, cancellation,
 and latest-result ordering. It exposes no loading or error state and provides

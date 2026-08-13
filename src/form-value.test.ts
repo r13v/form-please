@@ -146,4 +146,23 @@ describe("form value clone and equality boundary", () => {
 			Object.prototype,
 		)
 	})
+
+	it("reports recursive cycles without rejecting shared acyclic values", () => {
+		const cyclic: { self?: unknown } = {}
+		cyclic.self = cyclic
+		const otherCycle: { self?: unknown } = {}
+		otherCycle.self = otherCycle
+
+		expect(() => cloneFormValue(cyclic)).toThrow("Form values must be acyclic")
+		expect(() => areFormValuesEqual(cyclic, otherCycle)).toThrow(
+			"Form values must be acyclic",
+		)
+
+		const shared = { name: "Ada" }
+		const source = { first: shared, second: shared }
+		const clone = cloneFormValue(source)
+		expect(clone).toEqual(source)
+		expect(clone.first).not.toBe(clone.second)
+		expect(areFormValuesEqual(source, clone)).toBe(true)
+	})
 })

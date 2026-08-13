@@ -45,3 +45,23 @@ Probing runtime hypotheses with `console.log` inside Vitest 4 tests → the outp
 never appeared, so the probes looked like silent passes. Vitest 4 intercepts test
 console output under the default reporter; `npx vitest run <file>
 --disable-console-intercept` shows it.
+
+## 2026-08-13 21:50 — GPT-5
+
+Running the first focused regression suite for the IDEAS cleanup → five tests
+failed because four assertions still expected the superseded diagnostics and the
+new static layout check accidentally treated `columns: null` as absent through
+`??`. Update error-contract assertions with their implementation and default only
+on `undefined` when `null` must remain invalid. The following typecheck also
+caught a missing `JsonValue` type import in the new class-codec fixture; keep
+focused runtime tests paired with TypeScript validation. The first Biome pass
+then formatted seven files but stopped on the restricted local name
+`constructor`; use a qualified name such as `prototypeConstructor` for reflected
+prototype metadata.
+
+## 2026-08-13 22:05 — GPT-5
+
+Auditing the working tree after the full verification run → the previously
+unstaged implementation appeared in a new concurrent commit while the check was
+running. Re-read `HEAD`, status, and the committed file contents before making
+follow-up edits so concurrent automation does not get mistaken for lost work.

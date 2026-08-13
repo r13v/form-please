@@ -288,6 +288,14 @@ describe("form kit", () => {
 		})
 	})
 
+	it("validates static fragment layout against its form kit grid", () => {
+		expect(() =>
+			kit.defineFragment(schema, {
+				ui: [{ control: "text", kind: "field", path: "name", span: 5 }],
+			} as never),
+		).toThrow("Layout span must use the kit grid")
+	})
+
 	it("rejects malformed schema-bound builder results", () => {
 		const arraySchema = z.object({
 			items: z.array(z.object({ name: z.string() })),

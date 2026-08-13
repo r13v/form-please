@@ -36,6 +36,8 @@ function even after `await`, and reruns it only when those dependencies change.
 Starting another run aborts the previous signal, and only the latest result may
 replace the rendered list. The list is `[]` during the initial load, reload, or
 after rejection. The selected field value is not cleared.
+A successfully resolved value must be an array; a non-array value violates the
+resolver contract and is surfaced through React.
 
 The function has no built-in cache, retry, loading UI, error UI, search, or
 pagination API. A developer can catch an error and return another array. More

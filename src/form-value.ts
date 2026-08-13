@@ -1,81 +1,127 @@
 /** Clones editable form data while preserving browser-owned leaf values. */
 export function cloneFormValue<Value>(value: Value): Value {
-	if (value instanceof Date) return new Date(value) as Value
-	if (value instanceof RegExp) {
-		const clone = new RegExp(value.source, value.flags)
-		clone.lastIndex = value.lastIndex
-		return clone as Value
+	const ancestors = new WeakSet<object>()
+	const clone = <Current>(current: Current): Current => {
+		if (current instanceof Date) return new Date(current) as Current
+		if (current instanceof RegExp) {
+			const result = new RegExp(current.source, current.flags)
+			result.lastIndex = current.lastIndex
+			return result as Current
+		}
+		if (typeof Blob !== "undefined" && current instanceof Blob) return current
+		if (typeof FileList !== "undefined" && current instanceof FileList) {
+			return current
+		}
+		if (
+			!(
+				current instanceof Set ||
+				current instanceof Map ||
+				Array.isArray(current) ||
+				isFormValueObject(current)
+			)
+		) {
+			return current
+		}
+
+		if (ancestors.has(current))
+			throw new TypeError("Form values must be acyclic")
+		ancestors.add(current)
+		try {
+			if (current instanceof Set) {
+				return new Set([...current].map(clone)) as Current
+			}
+			if (current instanceof Map) {
+				return new Map(
+					[...current].map(([key, item]) => [clone(key), clone(item)]),
+				) as Current
+			}
+			if (Array.isArray(current)) return current.map(clone) as Current
+			return Object.fromEntries(
+				Object.entries(current).map(([key, item]) => [key, clone(item)]),
+			) as Current
+		} finally {
+			ancestors.delete(current)
+		}
 	}
-	if (value instanceof Set) {
-		return new Set([...value].map((item) => cloneFormValue(item))) as Value
-	}
-	if (value instanceof Map) {
-		return new Map(
-			[...value].map(([key, item]) => [
-				cloneFormValue(key),
-				cloneFormValue(item),
-			]),
-		) as Value
-	}
-	if (typeof Blob !== "undefined" && value instanceof Blob) return value
-	if (typeof FileList !== "undefined" && value instanceof FileList) return value
-	if (Array.isArray(value)) {
-		return value.map((item) => cloneFormValue(item)) as Value
-	}
-	if (isFormValueObject(value)) {
-		return Object.fromEntries(
-			Object.entries(value).map(([key, item]) => [key, cloneFormValue(item)]),
-		) as Value
-	}
-	return value
+
+	return clone(value)
 }
 
 /** Compares editable form values using the same leaf boundaries as cloning. */
 export function areFormValuesEqual(left: unknown, right: unknown): boolean {
-	if (Object.is(left, right)) return true
-	if (left instanceof Date && right instanceof Date) {
-		return Object.is(left.getTime(), right.getTime())
+	const leftAncestors = new WeakSet<object>()
+	const rightAncestors = new WeakSet<object>()
+	const compareStructured = (
+		leftValue: object,
+		rightValue: object,
+		compare: () => boolean,
+	): boolean => {
+		if (leftAncestors.has(leftValue) || rightAncestors.has(rightValue)) {
+			throw new TypeError("Form values must be acyclic")
+		}
+		leftAncestors.add(leftValue)
+		rightAncestors.add(rightValue)
+		try {
+			return compare()
+		} finally {
+			leftAncestors.delete(leftValue)
+			rightAncestors.delete(rightValue)
+		}
 	}
-	if (left instanceof RegExp && right instanceof RegExp) {
-		return (
-			left.source === right.source &&
-			left.flags === right.flags &&
-			left.lastIndex === right.lastIndex
+	const compare = (leftValue: unknown, rightValue: unknown): boolean => {
+		if (Object.is(leftValue, rightValue)) return true
+		if (leftValue instanceof Date && rightValue instanceof Date) {
+			return Object.is(leftValue.getTime(), rightValue.getTime())
+		}
+		if (leftValue instanceof RegExp && rightValue instanceof RegExp) {
+			return (
+				leftValue.source === rightValue.source &&
+				leftValue.flags === rightValue.flags &&
+				leftValue.lastIndex === rightValue.lastIndex
+			)
+		}
+		if (leftValue instanceof Set && rightValue instanceof Set) {
+			if (leftValue.size !== rightValue.size) return false
+			return compareStructured(leftValue, rightValue, () => {
+				const rightItems = [...rightValue]
+				return [...leftValue].every((item, index) =>
+					compare(item, rightItems[index]),
+				)
+			})
+		}
+		if (leftValue instanceof Map && rightValue instanceof Map) {
+			if (leftValue.size !== rightValue.size) return false
+			return compareStructured(leftValue, rightValue, () => {
+				const rightEntries = [...rightValue]
+				return [...leftValue].every(
+					([key, item], index) =>
+						compare(key, rightEntries[index]?.[0]) &&
+						compare(item, rightEntries[index]?.[1]),
+				)
+			})
+		}
+		if (Array.isArray(leftValue) && Array.isArray(rightValue)) {
+			if (leftValue.length !== rightValue.length) return false
+			return compareStructured(leftValue, rightValue, () =>
+				leftValue.every((item, index) => compare(item, rightValue[index])),
+			)
+		}
+		if (!isFormValueObject(leftValue) || !isFormValueObject(rightValue)) {
+			return false
+		}
+		const leftKeys = Object.keys(leftValue)
+		const rightKeys = Object.keys(rightValue)
+		if (leftKeys.length !== rightKeys.length) return false
+		return compareStructured(leftValue, rightValue, () =>
+			leftKeys.every(
+				(key) =>
+					Object.hasOwn(rightValue, key) &&
+					compare(leftValue[key], rightValue[key]),
+			),
 		)
 	}
-	if (left instanceof Set && right instanceof Set) {
-		if (left.size !== right.size) return false
-		const leftItems = [...left]
-		const rightItems = [...right]
-		return leftItems.every((item, index) =>
-			areFormValuesEqual(item, rightItems[index]),
-		)
-	}
-	if (left instanceof Map && right instanceof Map) {
-		if (left.size !== right.size) return false
-		const rightEntries = [...right]
-		return [...left].every(
-			([key, item], index) =>
-				areFormValuesEqual(key, rightEntries[index]?.[0]) &&
-				areFormValuesEqual(item, rightEntries[index]?.[1]),
-		)
-	}
-	if (Array.isArray(left) && Array.isArray(right)) {
-		return (
-			left.length === right.length &&
-			left.every((item, index) => areFormValuesEqual(item, right[index]))
-		)
-	}
-	if (!isFormValueObject(left) || !isFormValueObject(right)) return false
-	const leftKeys = Object.keys(left)
-	const rightKeys = Object.keys(right)
-	return (
-		leftKeys.length === rightKeys.length &&
-		leftKeys.every(
-			(key) =>
-				Object.hasOwn(right, key) && areFormValuesEqual(left[key], right[key]),
-		)
-	)
+
+	return compare(left, right)
 }
 
 /** Tests whether a form value is an object that can be cloned by entries. */

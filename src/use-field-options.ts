@@ -20,6 +20,12 @@ type ActiveRun = {
 	stale: boolean
 }
 
+type ContractFailure = {
+	readonly active: ActiveRun
+	readonly error: unknown
+	readonly source: unknown
+}
+
 type Tracker = {
 	readonly dependencies: Dependency[]
 	readonly proxyTargets: WeakMap<object, object>
@@ -34,6 +40,9 @@ export function useFieldOptions(
 ): readonly unknown[] {
 	const [resolved, setResolved] = useState(emptyOptions)
 	const [revision, setRevision] = useState(0)
+	const [contractFailure, setContractFailure] = useState<
+		ContractFailure | undefined
+	>()
 	const activeRef = useRef<ActiveRun | undefined>(undefined)
 	const latestRef = useRef({ context, values })
 	latestRef.current = { context, values }
@@ -59,10 +68,12 @@ export function useFieldOptions(
 	useEffect(() => {
 		if (typeof source !== "function") {
 			activeRef.current = undefined
+			setContractFailure(undefined)
 			return
 		}
 
 		setResolved(emptyOptions)
+		setContractFailure(undefined)
 		const controller = new AbortController()
 		const tracker = createTracker()
 		const active: ActiveRun = {
@@ -86,22 +97,29 @@ export function useFieldOptions(
 			return true
 		}
 
-		const load = async () => {
+		const load = async (): Promise<void> => {
+			let result: unknown
 			try {
-				const result = await (
+				result = await (
 					source as FieldOptionsResolver<unknown, unknown, unknown>
 				)({
 					context: tracker.track("context", context),
 					signal: controller.signal,
 					values: tracker.track("values", values),
 				})
-				if (active.stale || controller.signal.aborted) return
-				if (reloadIfInputsChanged()) return
-				setResolved(readOptionArray(result, tracker.proxyTargets))
 			} catch {
 				if (active.stale || controller.signal.aborted) return
 				if (reloadIfInputsChanged()) return
 				setResolved(emptyOptions)
+				return
+			}
+			if (active.stale || controller.signal.aborted) return
+			if (reloadIfInputsChanged()) return
+			try {
+				setResolved(readOptionArray(result, tracker.proxyTargets))
+			} catch (error) {
+				setResolved(emptyOptions)
+				setContractFailure({ active, error, source })
 			}
 		}
 
@@ -112,6 +130,14 @@ export function useFieldOptions(
 		}
 	}, [revision, source])
 
+	if (
+		contractFailure !== undefined &&
+		contractFailure.source === source &&
+		!contractFailure.active.stale &&
+		!dependenciesChanged(contractFailure.active.dependencies, values, context)
+	) {
+		throw contractFailure.error
+	}
 	return Array.isArray(source) ? source : resolved
 }
 

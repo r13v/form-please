@@ -128,9 +128,9 @@ export function normalizePersistenceCodecs(
 			}
 			tags.add(codec.tag)
 			return Object.freeze({
-				canEncode: codec.canEncode,
-				decode: codec.decode,
-				encode: codec.encode,
+				canEncode: codec.canEncode.bind(codec),
+				decode: codec.decode.bind(codec),
+				encode: codec.encode.bind(codec),
 				tag: codec.tag,
 			})
 		}),
@@ -180,9 +180,20 @@ async function encodeNode(
 	}
 
 	for (const codec of codecs) {
-		if (!codec.canEncode(value)) continue
-		const encoded = await codec.encode(value)
-		assertJsonValue(encoded, `Persistence codec "${codec.tag}" output`)
+		let claimed: boolean
+		try {
+			claimed = codec.canEncode(value)
+		} catch (error) {
+			throw codecFailure(codec.tag, "canEncode", path, error)
+		}
+		if (!claimed) continue
+		let encoded: JsonValue
+		try {
+			encoded = await codec.encode(value)
+			assertJsonValue(encoded, `Persistence codec "${codec.tag}" output`)
+		} catch (error) {
+			throw codecFailure(codec.tag, "encode", path, error)
+		}
 		return { tag: codec.tag, type: "codec", value: encoded }
 	}
 
@@ -199,7 +210,15 @@ async function encodeNode(
 		}
 		const prototype = Object.getPrototypeOf(value)
 		if (prototype !== Object.prototype && prototype !== null) {
-			throw unsupported(path, value.constructor?.name ?? "opaque object")
+			const prototypeConstructor = Object.hasOwn(prototype, "constructor")
+				? (prototype as { readonly constructor?: unknown }).constructor
+				: undefined
+			const kind =
+				typeof prototypeConstructor === "function" &&
+				prototypeConstructor.name.length > 0
+					? prototypeConstructor.name
+					: "object prototype is not Object.prototype or null"
+			throw unsupported(path, kind)
 		}
 		if (
 			Object.getOwnPropertySymbols(value).some(
@@ -289,7 +308,11 @@ async function decodeNode(
 					`Unknown persistence codec tag "${node.tag}" at ${pathLabel(path)}`,
 				)
 			}
-			return codec.decode(node.value)
+			try {
+				return await codec.decode(node.value)
+			} catch (error) {
+				throw codecFailure(codec.tag, "decode", path, error)
+			}
 		}
 		default:
 			throw malformed(path)
@@ -348,6 +371,20 @@ function unsupported(path: readonly PathSegment[], kind: string): TypeError {
 	return new TypeError(
 		`Unsupported persistence value at ${pathLabel(path)}: ${kind}`,
 	)
+}
+
+/** Adds codec, operation, and value-path context to an application failure. */
+function codecFailure(
+	tag: string,
+	operation: "canEncode" | "decode" | "encode",
+	path: readonly PathSegment[],
+	cause: unknown,
+): TypeError {
+	const action =
+		operation === "canEncode"
+			? `canEncode failed for value at ${pathLabel(path)}`
+			: `failed to ${operation} value at ${pathLabel(path)}`
+	return new TypeError(`Persistence codec "${tag}" ${action}`, { cause })
 }
 
 function malformed(path: readonly PathSegment[]): TypeError {

@@ -68,6 +68,8 @@ type NormalizeOptions = {
 type NormalizeState = {
 	/** Controls available to field nodes. */
 	readonly controls: ControlDefinitionRegistry
+	/** Layout values accepted by this exact form kit. */
+	readonly grid: readonly number[]
 	/** Scoped IDs already claimed by normalized nodes. */
 	readonly ids: Set<string>
 	/** Tests exact runtime form-kit ownership for nested fragments. */
@@ -285,6 +287,7 @@ export function createFormFragment(
 	schema: StandardSchema,
 	source: unknown,
 	controls: ControlDefinitionRegistry,
+	grid: readonly number[],
 	ownsFragment: OwnsFragment,
 ): object {
 	assertStandardSchema(schema, "Fragment")
@@ -298,6 +301,7 @@ export function createFormFragment(
 		ui,
 		{
 			controls,
+			grid,
 			ids: new Set<string>(),
 			nodes: [],
 			ownsFragment,
@@ -344,6 +348,7 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 
 	const state = {
 		controls,
+		grid,
 		ids: new Set<string>(),
 		ownsFragment,
 		nodes: [] as RuntimeNode[],
@@ -432,9 +437,9 @@ function normalizeNodes(
 
 		const fallbackId =
 			path === undefined ? `${kind}:${state.nodes.length}` : `${kind}:${path}`
-		const localId = normalizeId(candidate.id ?? fallbackId)
-		const id =
-			candidate.id === undefined ? localId : joinId(options.idPrefix, localId)
+		const hasExplicitId = candidate.id !== undefined
+		const localId = normalizeId(hasExplicitId ? candidate.id : fallbackId)
+		const id = hasExplicitId ? joinId(options.idPrefix, localId) : localId
 		const scopedId = scopePath.length === 0 ? id : `${scopePath}:${id}`
 		if (state.ids.has(scopedId)) {
 			throw new TypeError(`Duplicate UI node id "${id}"`)
@@ -448,6 +453,7 @@ function normalizeNodes(
 		) {
 			throw new TypeError(`${kind} node "${id}" requires children`)
 		}
+		validateStaticLayout(candidate, kind, state.grid)
 		const childScope =
 			kind === "array" && path !== undefined
 				? joinPath(scopePath, path)
@@ -937,6 +943,23 @@ function normalizeId(value: unknown): string {
 		throw new TypeError("UI node ids must be non-empty strings")
 	}
 	return value
+}
+
+/** Rejects invalid static layout before the definition reaches React. */
+function validateStaticLayout(
+	candidate: Record<string, unknown>,
+	kind: NodeKind,
+	grid: readonly number[],
+): void {
+	if (typeof candidate.span !== "function") {
+		validateSpan(candidate.span, grid)
+	}
+	if (kind === "section" && typeof candidate.columns !== "function") {
+		validateColumns(
+			candidate.columns === undefined ? 1 : candidate.columns,
+			grid,
+		)
+	}
 }
 
 /** Joins a path scope and relative path. */

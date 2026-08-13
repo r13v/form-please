@@ -40,16 +40,27 @@ describe("date persistence codec", () => {
 		}
 	})
 
-	it("cannot encode an invalid Date held by the live form", async () => {
+	it("reports an invalid live Date with codec operation and path context", async () => {
 		const codec = createDateCodec()
 
-		expect(() => codec.encode(new Date(Number.NaN))).toThrow(RangeError)
-		await expect(
-			encodePersistenceEnvelope(
+		expect(() => codec.encode(new Date(Number.NaN))).toThrow(
+			"Date persistence value must be valid",
+		)
+		let failure: unknown
+		try {
+			await encodePersistenceEnvelope(
 				{ createdAt: new Date(Number.NaN) },
 				{ codecs: [codec], version: 1 },
-			),
-		).rejects.toThrow(RangeError)
+			)
+		} catch (error) {
+			failure = error
+		}
+		expect(failure).toMatchObject({
+			cause: expect.objectContaining({
+				message: "Date persistence value must be valid",
+			}),
+			message: 'Persistence codec "date" failed to encode value at "createdAt"',
+		})
 	})
 
 	it("supports several independently tagged date codecs in one envelope", async () => {

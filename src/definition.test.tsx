@@ -164,13 +164,11 @@ describe("form definition validation", () => {
 	})
 
 	it("rejects unusable and colliding node ids", () => {
-		for (const id of ["", 1, {}]) {
+		for (const id of ["", 1, {}, null]) {
 			expect(define([{ ...field, id }])).toThrow(
 				"UI node ids must be non-empty strings",
 			)
 		}
-		// A null id is nullish, so it falls back to the derived identifier.
-		expect(define([{ ...field, id: null }])).not.toThrow()
 		expect(define([field, { ...field }])).toThrow(
 			'Duplicate UI node id "field:name"',
 		)
@@ -185,11 +183,10 @@ describe("form definition validation", () => {
 		).not.toThrow()
 	})
 
-	it("checks resolvable layout values against the kit grid when resolving", () => {
+	it("checks static layout while defining and dynamic layout while resolving", () => {
 		for (const columns of [0, 5, 2.5, "2", null]) {
 			const node = { children: [field], columns, kind: "section" }
-			expect(define([node])).not.toThrow()
-			expect(resolve([node])).toThrow(
+			expect(define([node])).toThrow(
 				"Section layout columns must use the kit grid",
 			)
 			expect(resolve([{ ...node, columns: () => columns }])).toThrow(
@@ -197,10 +194,13 @@ describe("form definition validation", () => {
 			)
 		}
 		for (const span of [0, 5, 2.5, "2", null]) {
-			expect(resolve([{ ...field, span }])).toThrow(
+			expect(define([{ ...field, span }])).toThrow(
 				"Layout span must use the kit grid",
 			)
 		}
+		expect(resolve([{ ...field, span: () => 5 }])).toThrow(
+			"Layout span must use the kit grid",
+		)
 		expect(
 			resolve([
 				{ children: [{ ...field, span: 3 }], columns: 2, kind: "section" },

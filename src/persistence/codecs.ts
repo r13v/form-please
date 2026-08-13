@@ -14,7 +14,12 @@ export function createDateCodec(tag = "date"): PersistenceCodec<Date> {
 			}
 			return date
 		},
-		encode: (value) => value.toISOString(),
+		encode: (value) => {
+			if (Number.isNaN(value.getTime())) {
+				throw new TypeError("Date persistence value must be valid")
+			}
+			return value.toISOString()
+		},
 		tag,
 	})
 }

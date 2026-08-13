@@ -625,6 +625,32 @@ describe("value middleware coordinator", () => {
 		).toThrow("cannot change length or order")
 		expect(harness.commit).not.toHaveBeenCalled()
 	})
+
+	it("reports replacement of an active array parent precisely", () => {
+		const harness = createHarness(
+			[
+				() => (next) => () =>
+					next([
+						{
+							op: "replace",
+							path: [],
+							value: { items: [], quantity: 1, total: 2 },
+						},
+					]),
+			],
+			{ items: [{ name: "Ada" }], quantity: 1, total: 2 },
+		)
+
+		expect(() =>
+			harness.coordinator.dispatch(
+				(draft) => {
+					draft.items.splice(0, 1)
+				},
+				{ action: "remove", index: 0, path: "items", type: "array" },
+				{ arrayPath: ["items"] },
+			),
+		).toThrow("replace the active array or its parent")
+	})
 })
 
 type HarnessHooks = {

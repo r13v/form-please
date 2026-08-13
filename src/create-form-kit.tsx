@@ -530,7 +530,13 @@ function assembleKit(
 	const runtimeForms = new WeakMap<object, RuntimeForm>()
 	const ownsFragment = (fragment: object) => fragments.has(fragment)
 	const defineFragment = ((schema: StandardSchema, source: unknown) => {
-		const fragment = createFormFragment(schema, source, controls, ownsFragment)
+		const fragment = createFormFragment(
+			schema,
+			source,
+			controls,
+			grid,
+			ownsFragment,
+		)
 		fragments.add(fragment)
 		return fragment
 	}) as DefineFragment<

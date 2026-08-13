@@ -286,6 +286,9 @@ Form, Please resolves the complete tree after each value change. It throws when
 an ordinary resolver returns a promise. Field `options` may be an async
 `({ values, context, signal }) => options` function with tracked dependencies,
 cancellation, and `[]` fallback behavior.
+A request that rejects renders an empty collection. A resolver that successfully
+returns a non-array value violates its contract and throws a `TypeError` through
+React.
 
 Hidden fields keep their React Hook Form values. The `required` property changes
 the UI state only. Put every data rule in the schema.

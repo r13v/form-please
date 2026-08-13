@@ -1,6 +1,7 @@
 "use client"
 
 import { act, render, screen, waitFor } from "@testing-library/react"
+import { Component, type ReactNode } from "react"
 import { describe, expect, it } from "vitest"
 
 import type { FieldOptionsResolver } from "./types.js"
@@ -153,13 +154,15 @@ describe("useFieldOptions", () => {
 		expect(screen.getByTestId("options").textContent).toBe('["fr"]')
 	})
 
-	it("renders an empty collection for every result that is not an array", async () => {
+	it("throws a contract error for every resolver result that is not an array", async () => {
 		for (const result of [undefined, null, "DE", { 0: "DE", length: 1 }]) {
 			const view = render(
-				<Harness context={{}} source={() => result} values={{}} />,
+				<TestErrorBoundary>
+					<Harness context={{}} source={() => result} values={{}} />
+				</TestErrorBoundary>,
 			)
-			await waitFor(() =>
-				expect(screen.getByTestId("options").textContent).toBe("[]"),
+			expect((await screen.findByTestId("contract-error")).textContent).toBe(
+				"Field options resolvers must return an array",
 			)
 			view.unmount()
 		}
@@ -244,6 +247,25 @@ function Harness({
 }) {
 	const options = useFieldOptions(source, values, context)
 	return <output data-testid="options">{JSON.stringify(options)}</output>
+}
+
+class TestErrorBoundary extends Component<
+	Readonly<{ children: ReactNode }>,
+	Readonly<{ error?: Error }>
+> {
+	state: Readonly<{ error?: Error }> = {}
+
+	static getDerivedStateFromError(error: Error): Readonly<{ error: Error }> {
+		return { error }
+	}
+
+	render(): ReactNode {
+		return this.state.error === undefined ? (
+			this.props.children
+		) : (
+			<output data-testid="contract-error">{this.state.error.message}</output>
+		)
+	}
 }
 
 type Deferred<Value> = {

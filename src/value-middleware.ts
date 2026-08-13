@@ -626,7 +626,7 @@ function assertActiveArrayStructure<Input extends FieldValues, Context>(
 		actual.some((patch, index) => !samePatch(patch, expected[index]))
 	) {
 		throw new TypeError(
-			"Array middleware cannot change length or order beyond the source action",
+			"Array middleware cannot change length or order beyond the source action, or replace the active array or its parent",
 		)
 	}
 }
