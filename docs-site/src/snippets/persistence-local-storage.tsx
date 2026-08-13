@@ -3,9 +3,9 @@
 import {
 	createLocalStorageAdapter,
 	createPersistenceMiddleware,
+	usePersistence,
 } from "form-please/persistence"
 import { nativeFormKit } from "form-please/preset-native"
-import { useEffect } from "react"
 import { z } from "zod"
 
 const settingsSchema = z.object({ theme: z.string() })
@@ -17,6 +17,9 @@ const settingsDefinition = nativeFormKit.defineForm(settingsSchema, {
 const settingsPersistence = createPersistenceMiddleware({
 	adapter: createLocalStorageAdapter(() => localStorage),
 	key: "settings-draft",
+	onError: (error, { operation }) => {
+		console.error(`Settings persistence ${operation} failed`, error)
+	},
 	version: 1,
 })
 
@@ -25,13 +28,7 @@ export function SettingsDraftForm() {
 		defaultValues: { theme: "system" },
 		middleware: [settingsPersistence],
 	})
-	const persistence = settingsPersistence.handle(form)
-
-	useEffect(() => {
-		void persistence.restore().catch((error: unknown) => {
-			console.error("Could not restore the settings draft", error)
-		})
-	}, [persistence])
+	usePersistence(form, settingsPersistence)
 
 	return <nativeFormKit.AutoForm form={form} />
 }

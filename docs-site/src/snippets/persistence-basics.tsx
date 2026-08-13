@@ -1,11 +1,13 @@
 // @jsx: react-jsx
 "use client"
 
-import { useSnapshot } from "form-please"
-import { createPersistenceMiddleware } from "form-please/persistence"
+import {
+	createPersistenceMiddleware,
+	usePersistence,
+} from "form-please/persistence"
 import { nativeFormKit } from "form-please/preset-native"
 import { parseAsString, useQueryState } from "nuqs"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { z } from "zod"
 
 import { createNuqsPersistenceAdapter } from "./persistence-nuqs.js"
@@ -48,14 +50,10 @@ export function PersistencePreview() {
 		defaultValues: { name: "Ada Lovelace", role: "Programmer" },
 		middleware: [feature],
 	})
-	const persistence = feature.handle(form)
-	const snapshot = useSnapshot(persistence)
+	const persistence = usePersistence(form, feature)
+	const { snapshot } = persistence
 	const canKeepCurrent =
 		snapshot.phase === "conflict" || snapshot.phase === "failed"
-
-	useEffect(() => {
-		void persistence.restore().catch(() => undefined)
-	}, [persistence])
 
 	return (
 		<section

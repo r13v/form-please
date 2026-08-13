@@ -2,10 +2,10 @@
 "use client"
 
 import type { FormSubmitDetails } from "form-please"
-import { useSnapshot } from "form-please"
 import {
 	createLocalStorageAdapter,
 	createPersistenceMiddleware,
+	usePersistence,
 } from "form-please/persistence"
 import { nativeFormKit } from "form-please/preset-native"
 import { useEffect, useState } from "react"
@@ -80,16 +80,18 @@ export function ReleaseActions({ onClose }: { readonly onClose: () => void }) {
 			else setStatus("Published.")
 		},
 	})
-	const persistence = releasePersistence.handle(form)
-	const persistenceState = useSnapshot(persistence)
+	const persistence = usePersistence(form, releasePersistence)
+	const persistenceState = persistence.snapshot
 	const persistenceReady = persistenceState.phase === "active"
 
 	useEffect(() => {
-		void persistence.restore().then(
-			() => setStatus("Draft ready."),
-			() => setStatus("The draft could not be restored."),
-		)
-	}, [persistence])
+		if (persistenceState.phase === "active") setStatus("Draft ready.")
+		else if (persistenceState.phase === "failed") {
+			setStatus("The draft could not be restored.")
+		} else if (persistenceState.phase === "conflict") {
+			setStatus("The form changed before the draft could be restored.")
+		}
+	}, [persistenceState.phase])
 
 	async function saveDraft() {
 		setStatus("Saving draft…")

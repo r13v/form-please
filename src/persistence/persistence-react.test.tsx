@@ -1,8 +1,9 @@
 "use client"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { StrictMode } from "react"
 import { useFormState } from "react-hook-form"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
 import type { FormBinding } from "../create-form-kit.js"
@@ -19,6 +20,7 @@ import {
 	type FormPersistenceAdapter,
 	type PersistenceHandle,
 } from "./persistence.js"
+import { type UsePersistenceResult, usePersistence } from "./use-persistence.js"
 
 const schema = z.object({
 	items: z.array(z.object({ name: z.string() })),
@@ -34,6 +36,88 @@ const definition = kit.defineForm(schema, {
 })
 
 describe("persistence React Hook Form integration", () => {
+	it("restores once in Strict Mode and publishes the current snapshot", async () => {
+		const storage = createMemoryAdapter()
+		storage.value = await encodePersistenceEnvelope(
+			{ items: [], name: "Persisted" },
+			{ codecs: [], version: 1 },
+		)
+		const feature = createPersistenceMiddleware({
+			adapter: storage.adapter,
+			key: "profile",
+			version: 1,
+		})
+		let persistence!: UsePersistenceResult
+
+		function View() {
+			const form = kit.useForm(definition, {
+				defaultValues: { items: [], name: "Ada" },
+				middleware: [feature],
+			})
+			persistence = usePersistence(form, feature)
+			return (
+				<kit.AutoForm form={form}>
+					<output data-testid="persistence-phase">
+						{persistence.snapshot.phase}
+					</output>
+				</kit.AutoForm>
+			)
+		}
+
+		render(
+			<StrictMode>
+				<View />
+			</StrictMode>,
+		)
+
+		await waitFor(() =>
+			expect(screen.getByTestId("persistence-phase").textContent).toBe(
+				"active",
+			),
+		)
+		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+			"Persisted",
+		)
+		expect(storage.loadCalls).toBe(1)
+		expect(persistence.snapshot).toBe(persistence.getSnapshot())
+	})
+
+	it("reports an automatic restore failure through the hook snapshot", async () => {
+		const failure = new Error("load unavailable")
+		const onError = vi.fn()
+		const feature = createPersistenceMiddleware({
+			adapter: {
+				async load() {
+					throw failure
+				},
+				async remove() {},
+				async save() {},
+			},
+			key: "profile",
+			onError,
+			version: 1,
+		})
+		let persistence!: UsePersistenceResult
+
+		function View() {
+			const form = kit.useForm(definition, {
+				defaultValues: { items: [], name: "Ada" },
+				middleware: [feature],
+			})
+			persistence = usePersistence(form, feature)
+			return <output>{persistence.snapshot.phase}</output>
+		}
+
+		render(<View />)
+		await waitFor(() => expect(screen.getByText("failed")).toBeDefined())
+		expect(persistence.snapshot).toEqual({
+			error: failure,
+			phase: "failed",
+			save: { status: "idle" },
+		})
+		expect(onError).toHaveBeenCalledWith(failure, { operation: "restore" })
+	})
+
 	it("restores a draft while preserving defaults and clearing transient form state", async () => {
 		const storage = createMemoryAdapter()
 		storage.value = await encodePersistenceEnvelope(
@@ -150,9 +234,11 @@ describe("persistence React Hook Form integration", () => {
 
 function createMemoryAdapter() {
 	let storedValue: JsonValue | undefined
+	let loadCalls = 0
 	const saveCalls: JsonValue[] = []
 	const adapter: FormPersistenceAdapter = {
 		async load() {
+			loadCalls++
 			return storedValue
 		},
 		async remove() {
@@ -165,6 +251,9 @@ function createMemoryAdapter() {
 	}
 	return {
 		adapter,
+		get loadCalls() {
+			return loadCalls
+		},
 		saveCalls,
 		get value() {
 			return storedValue

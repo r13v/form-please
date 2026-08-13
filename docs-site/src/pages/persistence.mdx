@@ -12,16 +12,17 @@ form state. Persistence stores only the complete schema input.
 
 ## Configure and restore
 
-Create one feature, add that exact reference to `middleware`, and get its handle
-from the resulting form. Start `restore()` in an effect. It loads at most once
-after a successful or empty result.
+Create one feature, add that exact reference to `middleware`, and pass the form
+and feature to `usePersistence`. The hook subscribes to persistence state and
+starts `restore()` after mount. It loads at most once after a successful or
+empty result.
 
 ```tsx
 // [!include ~/snippets/persistence-local-storage.tsx:local-storage]
 ```
 
 The lazy storage getter keeps `localStorage` access out of module evaluation.
-This is safe for client modules that can also render on a server.
+The hook starts restore only after the client mounts.
 
 `restore()` returns one of these results:
 
@@ -44,9 +45,10 @@ handle enters the `conflict` phase and returns `"conflict"`. Call `start()` to
 keep the current form and save it. Remount the form if the user must discard the
 local input and try the load again.
 
-Call `start()` instead of `restore()` when the application does not want an
-initial load. A normal start does not write the unchanged initial values. A
-start after a conflict or restore failure immediately saves the current input.
+Use the lower-level `feature.handle(form)` and root `useSnapshot` helper when the
+application must call `start()` without an initial load. A normal start does not
+write the unchanged initial values. A start after a conflict or restore failure
+immediately saves the current input.
 
 ## Observe and control saves
 
@@ -55,12 +57,16 @@ includes generated controls, `form.update`, and direct `form.api` changes.
 Autosave uses a trailing 500 ms delay by default. Set `saveDelay` to another
 finite non-negative number.
 
-The handle provides these operations:
+The hook result includes a reactive `snapshot` and these handle operations:
 
 - `flush()` cancels the delay and waits for the latest active input to save;
 - `clear()` removes stored data without changing live input;
 - `getSnapshot()` returns the restore phase and save status;
 - `subscribe()` implements the external-store contract for `useSnapshot`.
+
+The hook handles the restore Promise rejection because the same error remains
+available through the `failed` snapshot and the feature's `onError` callback.
+Call the returned `restore()` operation to retry explicitly after a failure.
 
 Writes are sequential and coalesced. If input changes during a save, the latest
 input is saved afterward. Clearing an active draft suppresses an immediate

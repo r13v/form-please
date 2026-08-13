@@ -279,7 +279,8 @@ test("keeps the async multiselect example copyable and production-shaped", async
 	for (const phrase of [
 		"async-multiselect-request.ts",
 		"Pass the TanStack Query `AbortSignal` to `fetch`",
-		"Do not return a promise from the `options` resolver",
+		"The generic async field `options` API loads a complete list",
+		"Pass the asynchronous function through",
 		"The server must confirm",
 	]) {
 		assert.match(page, new RegExp(escapeRegExp(phrase)))
@@ -567,7 +568,7 @@ test("documents managed value history with a copyable live example", async () =>
 	}
 	assert.match(example, /<HistoryDemo \/>/)
 	assert.match(example, /history-guide\.tsx/)
-	assert.match(example, /useSnapshot\(history\)/)
+	assert.match(example, /useHistory\(form, feature\)/)
 })
 
 test("documents persistence with query string and storage adapters", async () => {
@@ -604,6 +605,7 @@ test("documents persistence with query string and storage adapters", async () =>
 	assert.match(middleware, /\| Persistence restore \| `persistence` \|/)
 	assert.match(example, /<PersistenceDemo \/>/)
 	assert.match(example, /persistence-basics\.tsx/)
+	assert.match(example, /usePersistence\(form, feature\)/)
 })
 
 test("does not present native FormData as the submission source", async () => {

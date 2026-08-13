@@ -1,3 +1,5 @@
+"use client"
+
 export { createDateCodec } from "./codecs.js"
 export type {
 	JsonValue,
@@ -15,3 +17,5 @@ export {
 	type PersistenceRestoreResult,
 	type PersistenceSnapshot,
 } from "./persistence.js"
+export type { UsePersistenceResult } from "./use-persistence.js"
+export { usePersistence } from "./use-persistence.js"

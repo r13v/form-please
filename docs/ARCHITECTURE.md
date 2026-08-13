@@ -29,8 +29,10 @@ flowchart TD
     Root --> Immer["immer"]
     History["form-please/history"] --> Coordinator["managed value coordinator"]
     History --> Immer
+    History --> React
     Persistence["form-please/persistence"] --> Coordinator
     Persistence --> Immer
+    Persistence --> React
     NativePreset["form-please/preset-native"] --> Root
     NativePreset --> NativeControls["form-please/native-controls"]
     NativePreset --> DefaultSlots["form-please/default-slots"]
@@ -49,11 +51,10 @@ Public JavaScript entries are limited to:
 - `form-please/preset-mui`.
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
-exports. React UI entries are client modules; the optional history and
-persistence entries have no React component or hook dependency. React Hook Form
-7.76.1 or newer within major version 7 is a required peer. Immer is a direct
-runtime dependency. Material UI and Emotion peers remain optional because only
-the Material UI preset uses them.
+exports. React UI, history, and persistence entries are client modules. React
+Hook Form 7.76.1 or newer within major version 7 is a required peer. Immer is a
+direct runtime dependency. Material UI and Emotion peers remain optional because
+only the Material UI preset uses them.
 
 ## Canonical modules
 
@@ -66,7 +67,9 @@ the Material UI preset uses them.
 | `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
 | `src/history/history.ts` | Retain managed input positions, navigate them through the coordinator, and import or export in-memory journals |
+| `src/history/use-history.ts` | Bind a configured history feature to React and expose its current snapshot |
 | `src/persistence/persistence.ts` | Restore and autosave complete editable input through the coordinator and an application adapter |
+| `src/persistence/use-persistence.ts` | Restore a configured persistence feature after mount and expose its current snapshot |
 | `src/persistence/encoding.ts` | Encode, decode, version, migrate, and validate the persistence envelope |
 | `src/resource.ts` | Pure `ResourceState`, `matchResource`, and `fromResource` helpers |
 | `src/use-snapshot.ts` | Adapt any external store with `subscribe` and `getSnapshot` to React |
@@ -244,8 +247,9 @@ feature and binding through a package-private coordinator capability; optional
 history does not add a field to `FormBinding`.
 
 The root React entry exports the generic `useSnapshot(store)` adapter. History
-handles satisfy its structural external-store contract without adding React to
-the optional `form-please/history` runtime.
+handles satisfy its structural external-store contract. The optional history
+entry also exports `useHistory(form, feature)`, which returns that exact handle
+with a reactive `snapshot`.
 
 Control transactions on one path can share a timed history group. Other
 managed sources create one group each. Retention compacts complete positions,
@@ -270,6 +274,8 @@ complete editable schema input in a package-owned JSON-safe envelope. It does
 not retain RHF metadata, runtime context, default values, or managed history.
 One feature can own separate state for several forms, but each form accepts one
 persistence feature. `feature.handle(form)` resolves the exact configured form.
+`usePersistence(form, feature)` returns that handle with a reactive `snapshot`
+and starts restore after the client mounts.
 
 `restore()` loads once through an application-owned keyed asynchronous adapter.
 The restore enters hooks and middleware with a `persistence` source and

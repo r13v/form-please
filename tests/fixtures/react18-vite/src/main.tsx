@@ -5,6 +5,8 @@ import {
 	type ResourceState,
 	type StandardSchema,
 } from "form-please"
+import { useHistory } from "form-please/history"
+import { usePersistence } from "form-please/persistence"
 import { createMuiFormKit } from "form-please/preset-mui"
 import { nativeFormKit } from "form-please/preset-native"
 import { StrictMode } from "react"
@@ -86,8 +88,13 @@ const definition = kit.defineForm(schema, {
 })
 
 const muiKit = createMuiFormKit()
-if (!muiKit.controls.autocomplete || muiKit.grid.at(-1) !== 12) {
-	throw new Error("Material UI preset did not initialize")
+if (
+	!muiKit.controls.autocomplete ||
+	muiKit.grid.at(-1) !== 12 ||
+	typeof useHistory !== "function" ||
+	typeof usePersistence !== "function"
+) {
+	throw new Error("React package entries did not initialize")
 }
 
 function App() {

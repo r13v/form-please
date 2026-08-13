@@ -14,19 +14,19 @@ form state.
 ## Configure one history feature
 
 Create the feature outside the component, put that exact reference in the
-form's fixed middleware list, and retrieve the handle for the resulting form:
+form's fixed middleware list, and pass both values to `useHistory`:
 
 ```tsx
 // [!include ~/snippets/history-guide.tsx:setup]
 ```
 
-`getSnapshot()` contains `canUndo`, `canRedo`, `index`, and `length`.
-`subscribe()` follows the external-store contract, so React can read it with
-the root `useSnapshot` helper.
+The returned handle includes a reactive `snapshot` with `canUndo`, `canRedo`,
+`index`, and `length`. It also keeps the underlying `getSnapshot()` and
+`subscribe()` external-store operations.
 
 One feature can serve several forms. Each form can configure only one history
-feature, and `feature.handle(form)` rejects any form that does not use that
-exact feature.
+feature. `useHistory(form, feature)` and the lower-level `feature.handle(form)`
+reject a form that does not use that exact feature.
 
 ## Know what history records
 

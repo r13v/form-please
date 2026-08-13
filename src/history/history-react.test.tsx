@@ -9,6 +9,7 @@ import { createFormKit } from "../create-form-kit.js"
 import { createDefaultSlots } from "../default-slots/index.js"
 import { createNativeControls } from "../native-controls/index.js"
 import { createHistoryMiddleware, type HistoryHandle } from "./history.js"
+import { type UseHistoryResult, useHistory } from "./use-history.js"
 
 const schema = z.object({
 	items: z.array(z.object({ name: z.string() })),
@@ -37,6 +38,45 @@ const definition = kit.defineForm(schema, {
 })
 
 describe("history React Hook Form integration", () => {
+	it("publishes navigation state through the React history hook", async () => {
+		const feature = createHistoryMiddleware({ groupWindow: 0 })
+		let history!: UseHistoryResult<Input>
+
+		function View() {
+			const form = kit.useForm(definition, {
+				defaultValues: { items: [], name: "Ada" },
+				middleware: [feature],
+			})
+			history = useHistory(form, feature)
+			return (
+				<kit.AutoForm form={form}>
+					<output data-testid="history-position">
+						{history.snapshot.index}:{history.snapshot.length}
+					</output>
+				</kit.AutoForm>
+			)
+		}
+
+		render(<View />)
+		expect(screen.getByTestId("history-position").textContent).toBe("0:0")
+
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Grace" },
+		})
+		await waitFor(() =>
+			expect(screen.getByTestId("history-position").textContent).toBe("1:1"),
+		)
+		expect(history.snapshot.canUndo).toBe(true)
+
+		await act(async () => {
+			expect(await history.undo()).toBe("applied")
+		})
+		await waitFor(() =>
+			expect(screen.getByTestId("history-position").textContent).toBe("0:1"),
+		)
+		expect(history.snapshot.canRedo).toBe(true)
+	})
+
 	it("restores optional top-level keys and generated array structure", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
 		let form!: FormBinding<typeof schema>

@@ -6,9 +6,10 @@ import {
 	createHistoryMiddleware,
 	type HistoryJournal,
 	type HistoryOperationResult,
+	type UseHistoryResult,
+	useHistory,
 } from "../../src/history/index.js"
 import type * as RootPublic from "../../src/index.js"
-import { useSnapshot } from "../../src/index.js"
 import { createNativeControls } from "../../src/native-controls/index.js"
 import type {
 	FormMiddleware,
@@ -44,8 +45,8 @@ function useHistoryForm() {
 		defaultValues: { items: [], name: "Ada" },
 		middleware: [feature],
 	})
-	const history = feature.handle(form)
-	const snapshot = useSnapshot(history)
+	const history: UseHistoryResult<Input> = useHistory(form, feature)
+	const snapshot = history.snapshot
 	const operation: Promise<HistoryOperationResult> = history.undo()
 	const journal: HistoryJournal<Input> = history.export()
 

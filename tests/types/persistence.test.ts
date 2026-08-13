@@ -3,7 +3,6 @@ import { z } from "zod"
 import { createFormKit } from "../../src/create-form-kit.js"
 import { createDefaultSlots } from "../../src/default-slots/index.js"
 import type * as RootPublic from "../../src/index.js"
-import { useSnapshot } from "../../src/index.js"
 import { createNativeControls } from "../../src/native-controls/index.js"
 import {
 	createDateCodec,
@@ -15,6 +14,8 @@ import {
 	type PersistenceErrorDetails,
 	type PersistenceMigration,
 	type PersistenceRestoreResult,
+	type UsePersistenceResult,
+	usePersistence,
 } from "../../src/persistence/index.js"
 import type {
 	FormMiddleware,
@@ -79,9 +80,9 @@ function usePersistenceForm() {
 		defaultValues: { createdAt: new Date(), name: "Ada" },
 		middleware: [feature],
 	})
-	const persistence = feature.handle(form)
-	const snapshot = useSnapshot(persistence)
-	const restore: Promise<PersistenceRestoreResult> = persistence.restore()
+	const persistence: UsePersistenceResult = usePersistence(form, feature)
+	const snapshot = persistence.snapshot
+	const restore: () => Promise<PersistenceRestoreResult> = persistence.restore
 
 	if (snapshot.phase === "failed") snapshot.error satisfies unknown
 	if (snapshot.save.status === "failed") {

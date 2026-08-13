@@ -1,12 +1,12 @@
 // @jsx: react-jsx
 "use client"
 
-import { useSnapshot } from "form-please"
 import {
 	createHistoryMiddleware,
 	type HistoryHandle,
 	type HistoryJournal,
 	type HistoryOperationResult,
+	useHistory,
 } from "form-please/history"
 import { nativeFormKit } from "form-please/preset-native"
 import { useState } from "react"
@@ -46,8 +46,8 @@ export function HistoryPreview() {
 		defaultValues: { name: "Ada Lovelace", projects: [] },
 		middleware: [historyFeature],
 	})
-	const history = historyFeature.handle(form)
-	const snapshot = useSnapshot(history)
+	const history = useHistory(form, historyFeature)
+	const { snapshot } = history
 	// [!endregion setup]
 	const [exported, setExported] = useState<HistoryJournal<HistoryInput>>()
 	const [message, setMessage] = useState("Edit the form to create history.")

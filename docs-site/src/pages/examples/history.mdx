@@ -27,8 +27,8 @@ active when no target is available or middleware cancels a restore.
 ## What this example shows
 
 - `createHistoryMiddleware` as an optional `form-please/history` feature.
-- `feature.handle(form)` for the exact configured form.
-- `useSnapshot(history)` for navigation state.
+- `useHistory(form, feature)` for the exact configured form.
+- The hook's reactive `snapshot` for navigation state.
 - Managed restore through hooks and ordered middleware.
 - Full input snapshots in `HistoryJournal` version 1.
 

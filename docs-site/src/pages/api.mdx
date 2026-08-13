@@ -36,15 +36,14 @@ import "form-please/layout.css"
 | --- | --- | --- |
 | `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource`, `useSnapshot` | Build kits, controls, definitions, resource resolvers, and external-store adapters. |
 | `form-please/default-slots` | `createDefaultSlots` | Create accessible, unstyled structural slots. |
-| `form-please/history` | `createHistoryMiddleware` | Add optional managed value history and journal transfer. |
+| `form-please/history` | `createHistoryMiddleware`, `useHistory` | Add optional managed value history and journal transfer. |
 | `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
-| `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec` | Restore and autosave editable drafts through application storage. |
+| `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec`, `usePersistence` | Restore and autosave editable drafts through application storage. |
 | `form-please/preset-native` | `nativeFormKit` | Use the ready-made native kit with English slots. |
 | `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
 
 `form-please/layout.css` and `form-please/package.json` are non-JavaScript
-exports. React UI entries are client modules. The optional history and
-persistence entries have no React component or hook dependency.
+exports. React UI, history, and persistence entries are client modules.
 
 ## `useSnapshot`
 
@@ -484,9 +483,10 @@ and `reValidateMode` after commit, but managed validation does not preserve
 
 ## Managed value history
 
-`createHistoryMiddleware(options?)` is exported only from
-`form-please/history`. Configure the returned feature in a form's middleware
-list, then call `feature.handle(form)` for the exact form-specific handle.
+`createHistoryMiddleware(options?)` and `useHistory(form, feature)` are exported
+only from `form-please/history`. Configure the returned feature in a form's
+middleware list, then pass it and the form to the hook. The hook result combines
+the exact form-specific handle with its reactive `snapshot`.
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -511,9 +511,10 @@ boundaries, restoration, and journal leaf behavior.
 
 ## Form persistence
 
-`createPersistenceMiddleware(options)` is exported only from
-`form-please/persistence`. Configure its feature in the fixed middleware list,
-then call `feature.handle(form)`.
+`createPersistenceMiddleware(options)` and `usePersistence(form, feature)` are
+exported only from `form-please/persistence`. Configure the feature in the fixed
+middleware list, then pass it and the form to the hook. The hook starts restore
+after mount and combines the exact handle with its reactive `snapshot`.
 
 | Option | Default | Effect |
 | --- | --- | --- |

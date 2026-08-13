@@ -29,9 +29,8 @@ a browser history entry for each edit and does not start a page navigation.
 
 - `createPersistenceMiddleware` as an optional `form-please/persistence`
   feature;
-- `feature.handle(form)` for the exact configured form;
-- restore in an effect before normal autosave;
-- `useSnapshot(persistence)` for restore and save state;
+- `usePersistence(form, feature)` for automatic restore after mount;
+- the hook's reactive `snapshot` for restore and save state;
 - a `nuqs` string state adapted to the keyed asynchronous transport.
 
 ## Copy the source

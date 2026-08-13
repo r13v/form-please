@@ -1,7 +1,13 @@
 "use client"
 
 import type { StandardSchema } from "form-please"
+import { useHistory } from "form-please/history"
+import { usePersistence } from "form-please/persistence"
 import { nativeFormKit as kit } from "form-please/preset-native"
+
+if (typeof useHistory !== "function" || typeof usePersistence !== "function") {
+	throw new Error("Optional React feature hooks did not initialize")
+}
 
 type Input = { readonly name?: string }
 const schema: StandardSchema<Input> = {

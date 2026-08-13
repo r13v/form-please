@@ -17,10 +17,12 @@ describe("built package entries", () => {
 			expect(modules.root.useSnapshot).toBeTypeOf("function")
 			expect(modules.defaultSlots.createDefaultSlots).toBeTypeOf("function")
 			expect(modules.history.createHistoryMiddleware).toBeTypeOf("function")
+			expect(modules.history.useHistory).toBeTypeOf("function")
 			expect(modules.nativeControls.createNativeControls).toBeTypeOf("function")
 			expect(modules.persistence.createPersistenceMiddleware).toBeTypeOf(
 				"function",
 			)
+			expect(modules.persistence.usePersistence).toBeTypeOf("function")
 			expect(modules.presetNative.nativeFormKit.useForm).toBeTypeOf("function")
 			expect(modules.presetMui.createMuiFormKit).toBeTypeOf("function")
 		}
@@ -73,6 +75,15 @@ describe("built package entries", () => {
 				"utf8",
 			)
 			expect(persistenceDeclaration).toContain("PersistenceErrorDetails")
+			expect(persistenceDeclaration).toContain("UsePersistenceResult")
+			expect(persistenceDeclaration).toContain("usePersistence")
+
+			const historyDeclaration = await readFile(
+				new URL(`../../dist/history.${extension}`, import.meta.url),
+				"utf8",
+			)
+			expect(historyDeclaration).toContain("UseHistoryResult")
+			expect(historyDeclaration).toContain("useHistory")
 
 			const nativeDeclaration = await readFile(
 				new URL(`../../dist/native-controls.${extension}`, import.meta.url),
