@@ -1165,6 +1165,7 @@ function GeneratedArray({
 	readonly node: ResolvedArrayNode
 }) {
 	const path = node.path
+	getMutableArrayValue(form.api.getValues(), path)
 	const arrayId = createDomId(useFormId(), path)
 	const Slot = slots.Array as ComponentType<ArraySlotProps<unknown>>
 	const Item = slots.ArrayItem
@@ -1432,7 +1433,7 @@ function dispatchArrayAction(
 function getMutableArrayValue(values: unknown, path: string): unknown[] {
 	const value = get(values, path)
 	if (!Array.isArray(value)) {
-		throw new TypeError(`Managed array path "${path}" must contain an array`)
+		throw new TypeError(`Generated array path "${path}" must contain an array`)
 	}
 	return value
 }

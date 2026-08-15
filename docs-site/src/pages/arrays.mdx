@@ -35,6 +35,11 @@ These four parts have different purposes:
 `itemDefault` does not add an initial row. Use `defaultValues` when the form
 must start with one or more rows.
 
+An array node requires a schema input path that always contains an object array.
+TypeScript rejects paths that can resolve to `null` or `undefined`. Use `[]`
+when the form starts with no rows. Use a custom control when `null` has a
+separate domain meaning.
+
 Child paths are relative to one item. In the example, `path: "email"` produces
 `contacts.0.email`, `contacts.1.email`, and later paths.
 

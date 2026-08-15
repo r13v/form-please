@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
 
 import {
+	type ArrayFieldPath,
 	createFormKit,
 	defineControl,
 	type FieldPath,
@@ -65,6 +66,51 @@ const schema: StandardSchemaV1<Input, Output> = {
 	},
 }
 
+type ArrayPathInput = {
+	readonly nullableGroup: {
+		readonly items: readonly { readonly name: string }[]
+	} | null
+	readonly items: readonly { readonly name: string }[]
+	readonly nullableItems: readonly { readonly name: string }[] | null
+	readonly optionalGroup?: {
+		readonly items: readonly { readonly name: string }[]
+	}
+	readonly optionalItems?: readonly { readonly name: string }[]
+}
+type UnionArrayInput =
+	| { readonly items: readonly { readonly name: string }[] }
+	| { readonly message: string }
+
+const arrayPathSchema: StandardSchemaV1<ArrayPathInput> = {
+	"~standard": {
+		version: 1,
+		vendor: "type-test",
+		validate(value) {
+			return { value: value as ArrayPathInput }
+		},
+	},
+}
+
+const arrayPath: ArrayFieldPath<ArrayPathInput> = "items"
+void arrayPath
+// @ts-expect-error Generated array paths cannot be nullable.
+const nullableArrayPath: ArrayFieldPath<ArrayPathInput> = "nullableItems"
+// @ts-expect-error Generated array paths cannot have a nullable parent.
+const nullableParentArrayPath: ArrayFieldPath<ArrayPathInput> =
+	"nullableGroup.items"
+// @ts-expect-error Generated array paths cannot be optional.
+const optionalArrayPath: ArrayFieldPath<ArrayPathInput> = "optionalItems"
+// @ts-expect-error Generated array paths cannot have an optional parent.
+const optionalParentArrayPath: ArrayFieldPath<ArrayPathInput> =
+	"optionalGroup.items"
+// @ts-expect-error Generated array paths must exist in every input branch.
+const unionArrayPath: ArrayFieldPath<UnionArrayInput> = "items"
+void nullableArrayPath
+void nullableParentArrayPath
+void optionalArrayPath
+void optionalParentArrayPath
+void unionArrayPath
+
 const handleSubmit = ({
 	value,
 	input,
@@ -95,6 +141,29 @@ const baseKit = createFormKit({
 	slots,
 })
 const kit = baseKit.forContext<Context>()
+
+kit.defineForm(arrayPathSchema, (ui) => [
+	ui.array("items", {
+		children: (item) => [item.field("name", { control: "text" })],
+		itemDefault: { name: "" },
+	}),
+])
+
+kit.defineForm(arrayPathSchema, (ui) => [
+	// @ts-expect-error Generated array nodes cannot bind to nullable arrays.
+	ui.array("nullableItems", {
+		children: (item) => [item.field("name", { control: "text" })],
+		itemDefault: { name: "" },
+	}),
+])
+
+kit.defineForm(arrayPathSchema, (ui) => [
+	// @ts-expect-error Generated array nodes cannot bind to optional arrays.
+	ui.array("optionalItems", {
+		children: (item) => [item.field("name", { control: "text" })],
+		itemDefault: { name: "" },
+	}),
+])
 
 type AddressInput = {
 	readonly city: string

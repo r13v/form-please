@@ -106,17 +106,19 @@ definition creation; they are not value resolvers and add no runtime node kind.
 
 - A field selects a schema input path and a compatible registered control.
 - A section groups nodes and supplies grid layout.
-- An array selects an array path, defines one typed item default, and contains
-  nodes relative to an item.
+- An array selects a non-nullable object-array path, defines one typed item
+  default, and contains nodes relative to an item.
 - A render node inserts a component that receives inherited `disabled` and
   `readOnly` state.
 - A fragment placement inserts one schema-owned UI template at a compatible
   object path or at the current scope.
 
 Sections and arrays can nest recursively. Paths use RHF dot notation, including
-numeric array segments such as `speakers.0.name`. `FieldPath`, `PathValue`, and
-`ArrayFieldPath` delegate to RHF path types. Generated arrays contain object
-items; primitive arrays can use an application-owned control.
+numeric array segments such as `speakers.0.name`. `FieldPath` and `PathValue`
+delegate to RHF path types. `ArrayFieldPath` filters RHF object-array paths to
+values that cannot be `null` or `undefined`. Generated arrays contain object
+items; primitive, nullable, or optional arrays can use an application-owned
+control.
 
 The type system aligns field paths with control values, control own props,
 selectable option values, control context, slot options, array item defaults,

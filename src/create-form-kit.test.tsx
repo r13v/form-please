@@ -357,47 +357,38 @@ describe("form kit", () => {
 		}
 	})
 
-	it("reports a generated array path whose value is not an array", () => {
-		let add: (() => void) | undefined
-		const capturingKit = createFormKit({
-			controls: kit.controls,
-			slots: {
-				...kit.slots,
-				Array: ({ children, add: addItem }: ArraySlotProps) => {
-					add = addItem
-					return <section>{children}</section>
-				},
-			},
-		})
-		const arraySchema = z.object({
-			speakers: z.array(z.object({ name: z.string() })),
-		})
-		const arrayDefinition = capturingKit.defineForm(arraySchema, {
-			ui: [
-				{
-					children: [
-						{ control: "text", kind: "field", label: "Name", path: "name" },
-					],
-					itemDefault: { name: "" },
-					kind: "array",
-					label: "Speakers",
-					path: "speakers",
-				},
-			],
-		})
-
-		function View() {
-			const form = capturingKit.useForm(arrayDefinition, {
-				defaultValues: { speakers: "not an array" as never },
+	it.each([undefined, null, "not an array"])(
+		"rejects generated array value %j before rendering its actions",
+		(speakers) => {
+			const arraySchema = z.object({
+				speakers: z.array(z.object({ name: z.string() })),
 			})
-			return <capturingKit.AutoForm form={form} />
-		}
+			const arrayDefinition = kit.defineForm(arraySchema, {
+				ui: [
+					{
+						children: [
+							{ control: "text", kind: "field", label: "Name", path: "name" },
+						],
+						itemDefault: { name: "" },
+						kind: "array",
+						label: "Speakers",
+						path: "speakers",
+					},
+				],
+			})
 
-		render(<View />)
-		expect(() => add?.()).toThrow(
-			'Managed array path "speakers" must contain an array',
-		)
-	})
+			function View() {
+				const form = kit.useForm(arrayDefinition, {
+					defaultValues: { speakers: speakers as never },
+				})
+				return <kit.AutoForm form={form} />
+			}
+
+			expect(() => render(<View />)).toThrow(
+				'Generated array path "speakers" must contain an array',
+			)
+		},
+	)
 
 	it("rejects generated components rendered outside a form context", () => {
 		const bare = createFormKit({ controls: kit.controls, slots: kit.slots })

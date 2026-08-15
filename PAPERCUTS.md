@@ -65,3 +65,17 @@ Auditing the working tree after the full verification run → the previously
 unstaged implementation appeared in a new concurrent commit while the check was
 running. Re-read `HEAD`, status, and the committed file contents before making
 follow-up edits so concurrent automation does not get mistaken for lost work.
+
+## 2026-08-15 12:32 — GPT-5
+
+Opening the referenced TanStack Form v2 announcement for a product comparison →
+the web opener rejected the valid HTTPS URL as unsafe, and web search returned
+no result for the exact title. Fetching the official page directly with `curl`
+provided the article; allow current `tanstack.com/blog` URLs in the web opener.
+
+## 2026-08-15 12:57 — GPT-5
+
+Collecting final documentation line references with a shell search → Markdown
+backticks inside the command were interpreted as command substitutions and
+produced two harmless `command not found` messages. Pass literal search terms
+without backticks or use single-quoted shell arguments for this check.

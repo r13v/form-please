@@ -196,8 +196,8 @@ host input on a section or another ordinary node around the placement.
 
 ## Arrays
 
-An array node connects an array path to the definition for one item. Paths in
-`children` are relative to that item.
+An array node connects a non-nullable object-array path to the definition for
+one item. Paths in `children` are relative to that item.
 
 ```tsx
 const eventSchema = z.object({
@@ -398,7 +398,7 @@ Array properties:
 | Property | Required | Purpose |
 | --- | --- | --- |
 | `kind: "array"` | Yes | Selects an array node. |
-| `path` | Yes | Selects an array path in the current schema scope. |
+| `path` | Yes | Selects a non-nullable object-array path in the current schema scope. |
 | `itemDefault` | Yes | Supplies one complete item for the add action. |
 | `children` | Yes | Contains nodes relative to one array item. |
 | `label` | No | Supplies string or React label content. |

@@ -61,9 +61,36 @@ declare const optionValue: unique symbol
 export type OptionValue<Value> = Value & {
 	readonly [optionValue]?: Value
 }
-/** A React Hook Form dot path that selects an object array in `Value`. */
-export type ArrayFieldPath<Value> = Value extends FieldValues
-	? RhfFieldArrayPath<Value>
+
+/** Resolves a dot path and returns undefined for unavailable union branches. */
+type PathValueWithMissing<Value, Path extends string> = Value extends unknown
+	? Path extends `${infer Segment}.${infer Rest}`
+		? Segment extends keyof Value
+			? PathValueWithMissing<Value[Segment], Rest>
+			: Segment extends `${number}`
+				? Value extends readonly (infer Item)[]
+					? PathValueWithMissing<Item, Rest>
+					: undefined
+				: undefined
+		: Path extends keyof Value
+			? Value[Path]
+			: Path extends `${number}`
+				? Value extends readonly (infer Item)[]
+					? Item
+					: undefined
+				: undefined
+	: never
+
+/** A React Hook Form dot path that always selects an object array in `Value`. */
+export type ArrayFieldPath<Value> = [Value] extends [FieldValues]
+	? {
+			[Path in RhfFieldArrayPath<Value>]: PathValueWithMissing<
+				Value,
+				Path
+			> extends readonly object[]
+				? Path
+				: never
+		}[RhfFieldArrayPath<Value>]
 	: never
 
 /** A validation problem that the form can display. */
@@ -528,8 +555,9 @@ type ArrayItem<
 	Scope,
 	Path extends ArrayFieldPath<Scope>,
 > = Scope extends FieldValues
-	? NonNullable<
-			FieldArrayPathValue<Scope, Extract<Path, RhfFieldArrayPath<Scope>>>
+	? FieldArrayPathValue<
+			Scope,
+			Extract<Path, RhfFieldArrayPath<Scope>>
 		> extends readonly (infer Item)[]
 		? Item
 		: never

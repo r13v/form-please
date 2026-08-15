@@ -74,7 +74,7 @@ indexes use dot segments, such as `contacts.0.email`.
 | --- | --- |
 | `FieldPath<Value>` | All valid string paths in `Value`. |
 | `PathValue<Value, Path>` | The value at one valid path. |
-| `ArrayFieldPath<Value>` | RHF field-array paths whose items are objects. |
+| `ArrayFieldPath<Value>` | RHF object-array paths that cannot be `null` or `undefined`. |
 
 Use `FieldPath` when a component or helper accepts any field. Add a second path
 generic when its value type must stay linked to the selected path. The
@@ -100,7 +100,7 @@ configuration, selectable options, and grid values through the complete tree.
 | `UiNode<Input, Controls, ...>` | Union of ordinary field, section, array, and render source nodes. |
 | `FieldNode<Input, Controls, ...>` | Field node with compatible paths, controls, props, and selectable options. |
 | `SectionNode<Input, Controls, ...>` | Section node with typed child nodes. |
-| `ArrayNode<Input, Controls, ...>` | Array node whose child paths are relative to one item. |
+| `ArrayNode<Input, Controls, ...>` | Array node for one non-nullable object-array path. |
 | `RenderNode<Input, Context>` | React component node with resolved interaction state. |
 | `FormFragment<Schema, Controls, ...>` | Schema-owned UI fragment created by `defineFragment`. |
 

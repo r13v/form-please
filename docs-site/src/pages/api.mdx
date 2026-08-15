@@ -270,7 +270,7 @@ node kinds:
 | --- | --- | --- |
 | `field` | `path`, `control` | Connect one schema input path to one registered control. |
 | `section` | `id`, `children` | Group nodes without changing their path scope. |
-| `array` | `path`, `itemDefault`, `children` | Repeat nodes in the scope of one array item. |
+| `array` | `path`, `itemDefault`, `children` | Repeat nodes for a non-nullable object-array path. |
 | `render` | `id`, `component` | Insert form-local React content. |
 
 Field, section, and array nodes support resolved labels or descriptions. They
