@@ -2,11 +2,13 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
 
 import type { FormBinding } from "../create-form-kit.js"
+import { getFormDiagnosticFeatures } from "../diagnostics.js"
 import { cloneFormValue } from "../form-value.js"
 import {
 	attachValueCoordinatorCapability,
 	createValueCoordinator,
 	type FormMiddleware,
+	getValueCoordinatorCapability,
 	type ValueTransaction,
 } from "../value-middleware.js"
 import {
@@ -39,6 +41,11 @@ describe("form persistence middleware", () => {
 
 		expect(feature.handle(first.form)).toBe(first.persistence)
 		expect(feature.handle(second.form)).toBe(second.persistence)
+		expect(
+			getFormDiagnosticFeatures(
+				getValueCoordinatorCapability(first.form) as object,
+			).map((diagnostic) => diagnostic.kind),
+		).toEqual(["persistence"])
 		expect(() =>
 			createPersistenceMiddleware({
 				adapter: storage.adapter,

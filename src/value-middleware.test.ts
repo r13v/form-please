@@ -2,6 +2,10 @@ import type { Draft } from "immer"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+	attachFormDiagnosticSink,
+	type FormDiagnosticEvent,
+} from "./diagnostics.js"
+import {
 	attachValueCoordinatorCapability,
 	type BeforeUpdateResult,
 	createValueCoordinator,
@@ -18,6 +22,56 @@ type Values = {
 }
 
 describe("value middleware coordinator", () => {
+	it("publishes the managed pipeline without changing its asynchronous result", async () => {
+		const release = deferred<void>()
+		const events: FormDiagnosticEvent[] = []
+		const harness = createHarness([
+			() => (next) => async (transaction) => {
+				const committed = next(transaction.patches)
+				await release.promise
+				return committed
+			},
+		])
+		const capability = getValueCoordinatorCapability(harness.coordinator)
+		const detach = attachFormDiagnosticSink(capability, {
+			publish: (event) => events.push(event),
+		})
+
+		const result = harness.coordinator.update((draft) => {
+			draft.quantity = 3
+		})
+
+		expect(result).toBeInstanceOf(Promise)
+		expect(harness.getValues().quantity).toBe(3)
+		expect(
+			events
+				.filter((event) => event.kind === "managed")
+				.map(
+					(event) =>
+						`${event.phase}:${"outcome" in event ? event.outcome : ""}`,
+				),
+		).toEqual([
+			"start:",
+			"before-update:unchanged",
+			"middleware-enter:",
+			"commit:start",
+			"commit:success",
+			"middleware-exit:forwarded",
+			"after-update:success",
+			"end:committed",
+		])
+
+		release.resolve()
+		await result
+		await Promise.resolve()
+		expect(events.at(-1)).toMatchObject({
+			kind: "managed",
+			outcome: "fulfilled",
+			phase: "settled",
+		})
+		detach()
+	})
+
 	it("commits dependent patches before code after next observes values", () => {
 		const order: string[] = []
 		const middleware: readonly FormMiddleware<Values>[] = [
@@ -683,4 +737,14 @@ function createHarness(
 		restore,
 	})
 	return { commit, coordinator, getValues: () => values, restore }
+}
+
+function deferred<Value>() {
+	let resolve!: (value: Value) => void
+	return {
+		promise: new Promise<Value>((next) => {
+			resolve = next
+		}),
+		resolve,
+	}
 }

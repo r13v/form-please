@@ -1,6 +1,7 @@
 import type { FieldValues } from "react-hook-form"
 
 import type { FormBinding } from "../create-form-kit.js"
+import { registerFormDiagnosticFeature } from "../diagnostics.js"
 import {
 	areFormValuesEqual,
 	cloneFormValue,
@@ -170,6 +171,28 @@ class HistoryState<Input extends FieldValues, Context> {
 			clear: () => this.#clear(),
 			export: () => this.#export(),
 			import: (journal) => this.#import(journal),
+		})
+		registerFormDiagnosticFeature(capability, {
+			getDetails: () => this.#diagnosticDetails(),
+			getSnapshot: () => this.#snapshot,
+			kind: "history",
+			subscribe: (listener) => this.#subscribe(listener),
+		})
+	}
+
+	#diagnosticDetails(): unknown {
+		const retained = this.#entries[this.#cursor]
+		return Object.freeze({
+			activeGroup:
+				this.#activeGroup === undefined
+					? undefined
+					: Object.freeze({ ...this.#activeGroup }),
+			diverged:
+				retained !== undefined &&
+				!areFormValuesEqual(retained, this.#capability.getValues()),
+			groupWindow: this.#groupWindow,
+			limit: this.#limit,
+			operationInFlight: this.#operationInFlight,
 		})
 	}
 

@@ -2,6 +2,11 @@
 
 import { useEffect, useRef, useState } from "react"
 
+import {
+	formDiagnosticNow,
+	hasFormDiagnosticSink,
+	publishFormDiagnosticEvent,
+} from "./diagnostics.js"
 import type { FieldOptionsResolver } from "./types.js"
 
 const emptyOptions: readonly unknown[] = Object.freeze([])
@@ -17,8 +22,20 @@ type Dependency = {
 type ActiveRun = {
 	readonly controller: AbortController
 	readonly dependencies: Dependency[]
+	readonly diagnostic?: {
+		finished: boolean
+		readonly path: string
+		readonly request: object
+		readonly startedAt: number
+		readonly target: object
+	}
 	stale: boolean
 }
+
+type FieldOptionsDiagnostics = Readonly<{
+	path: string
+	target: object
+}>
 
 type ContractFailure = {
 	readonly active: ActiveRun
@@ -37,7 +54,10 @@ export function useFieldOptions(
 	source: unknown,
 	values: unknown,
 	context: unknown,
+	diagnostics?: FieldOptionsDiagnostics,
 ): readonly unknown[] {
+	const diagnosticPath = diagnostics?.path
+	const diagnosticTarget = diagnostics?.target
 	const [resolved, setResolved] = useState(emptyOptions)
 	const [revision, setRevision] = useState(0)
 	const [contractFailure, setContractFailure] = useState<
@@ -59,6 +79,7 @@ export function useFieldOptions(
 		}
 
 		active.stale = true
+		finishOptionsDiagnostic(active, "stale")
 		active.controller.abort()
 		setResolved(emptyOptions)
 		setRevision((current) => current + 1)
@@ -79,9 +100,31 @@ export function useFieldOptions(
 		const active: ActiveRun = {
 			controller,
 			dependencies: tracker.dependencies,
+			...(diagnosticPath !== undefined &&
+			diagnosticTarget !== undefined &&
+			hasFormDiagnosticSink(diagnosticTarget)
+				? {
+						diagnostic: {
+							finished: false,
+							path: diagnosticPath,
+							request: {},
+							startedAt: formDiagnosticNow(),
+							target: diagnosticTarget,
+						},
+					}
+				: {}),
 			stale: false,
 		}
 		activeRef.current = active
+		if (active.diagnostic !== undefined) {
+			publishFormDiagnosticEvent(active.diagnostic.target, {
+				kind: "options",
+				path: active.diagnostic.path,
+				request: active.diagnostic.request,
+				status: "pending",
+				time: active.diagnostic.startedAt,
+			})
+		}
 
 		const reloadIfInputsChanged = (): boolean => {
 			const latest = latestRef.current
@@ -91,6 +134,7 @@ export function useFieldOptions(
 				return false
 			}
 			active.stale = true
+			finishOptionsDiagnostic(active, "stale")
 			controller.abort()
 			setResolved(emptyOptions)
 			setRevision((current) => current + 1)
@@ -107,28 +151,35 @@ export function useFieldOptions(
 					signal: controller.signal,
 					values: tracker.track("values", values),
 				})
-			} catch {
+			} catch (error) {
 				if (active.stale || controller.signal.aborted) return
 				if (reloadIfInputsChanged()) return
 				setResolved(emptyOptions)
+				finishOptionsDiagnostic(active, "rejected", { error })
 				return
 			}
 			if (active.stale || controller.signal.aborted) return
 			if (reloadIfInputsChanged()) return
 			try {
-				setResolved(readOptionArray(result, tracker.proxyTargets))
+				const options = readOptionArray(result, tracker.proxyTargets)
+				setResolved(options)
+				finishOptionsDiagnostic(active, "fulfilled", {
+					optionCount: options.length,
+				})
 			} catch (error) {
 				setResolved(emptyOptions)
 				setContractFailure({ active, error, source })
+				finishOptionsDiagnostic(active, "rejected", { error })
 			}
 		}
 
 		void load()
 		return () => {
 			active.stale = true
+			finishOptionsDiagnostic(active, "aborted")
 			controller.abort()
 		}
-	}, [revision, source])
+	}, [diagnosticPath, diagnosticTarget, revision, source])
 
 	if (
 		contractFailure !== undefined &&
@@ -139,6 +190,32 @@ export function useFieldOptions(
 		throw contractFailure.error
 	}
 	return Array.isArray(source) ? source : resolved
+}
+
+/** Completes one observable options request exactly once. */
+function finishOptionsDiagnostic(
+	active: ActiveRun,
+	status: "aborted" | "fulfilled" | "rejected" | "stale",
+	details: { readonly error?: unknown; readonly optionCount?: number } = {},
+): void {
+	const diagnostic = active.diagnostic
+	if (diagnostic === undefined || diagnostic.finished) return
+	diagnostic.finished = true
+	const time = formDiagnosticNow()
+	publishFormDiagnosticEvent(diagnostic.target, {
+		...details,
+		dependencies: active.dependencies.map(({ path, root, value }) => ({
+			path,
+			root,
+			value,
+		})),
+		duration: time - diagnostic.startedAt,
+		kind: "options",
+		path: diagnostic.path,
+		request: diagnostic.request,
+		status,
+		time,
+	})
 }
 
 /** Creates deeply tracked readonly views for one resolver invocation. */

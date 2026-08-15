@@ -21,6 +21,7 @@ const layoutCss = await readFile(
 const javaScriptEntrypoints = {
 	".": "index",
 	"./default-slots": "default-slots",
+	"./devtools": "devtools",
 	"./history": "history",
 	"./native-controls": "native-controls",
 	"./persistence": "persistence",
@@ -31,7 +32,10 @@ const javaScriptEntrypoints = {
 describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
-			dependencies: { immer: "11.1.15" },
+			dependencies: {
+				"@hookform/devtools": "4.4.0",
+				immer: "11.1.15",
+			},
 			engines: { node: ">=24" },
 			files: ["dist"],
 			license: "MIT",
@@ -48,6 +52,7 @@ describe("package metadata", () => {
 		expect(Object.keys(packageJson.exports)).toEqual([
 			".",
 			"./default-slots",
+			"./devtools",
 			"./history",
 			"./native-controls",
 			"./persistence",
@@ -73,7 +78,7 @@ describe("package metadata", () => {
 
 	it("lets release automation own the package version", () => {
 		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./history ./native-controls ./persistence ./preset-native ./preset-mui",
+			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui",
 		)
 		expect(packageJson.scripts).not.toHaveProperty("version")
 	})

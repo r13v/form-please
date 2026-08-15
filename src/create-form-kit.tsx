@@ -12,6 +12,7 @@ import {
 	type RefObject,
 	useContext,
 	useId,
+	useLayoutEffect,
 	useMemo,
 	useRef,
 } from "react"
@@ -31,7 +32,6 @@ import {
 	useForm as useReactHookForm,
 	useWatch,
 } from "react-hook-form"
-
 import {
 	createFormFragment,
 	normalizeDefinition,
@@ -42,6 +42,11 @@ import {
 	type ResolvedNode,
 	resolveDefinition,
 } from "./definition.js"
+import {
+	formDiagnosticNow,
+	hasFormDiagnosticSink,
+	publishFormDiagnosticEvent,
+} from "./diagnostics.js"
 import { cloneFormValue } from "./form-value.js"
 import {
 	createStandardSchemaResolver,
@@ -77,6 +82,7 @@ import {
 	createValueCoordinator,
 	type FormMiddleware,
 	type FormUpdateRecipe,
+	getValueCoordinatorCapability,
 	type ValueCoordinator,
 	type ValuePatch,
 	type ValueTransaction,
@@ -213,6 +219,8 @@ type RuntimeForm = {
 	readonly context: unknown
 	/** The normalized definition fixed for this form. */
 	readonly definition: FormDefinition
+	/** Canonical coordinator capability used by optional diagnostics. */
+	readonly diagnosticTarget: object
 	/** Dispatches a generated managed update through middleware. */
 	readonly dispatch: ValueCoordinator<FieldValues, unknown>["dispatch"]
 	/** Commits one terminal transaction to React Hook Form. */
@@ -225,10 +233,47 @@ type RuntimeForm = {
 	readonly inputRefs: Map<string, HTMLElement>
 	/** The first summary issue used as a focus fallback. */
 	readonly errorSummaryRef: RefObject<HTMLElement | null>
+	/** The mounted native form element, when one exists. */
+	formElement: HTMLFormElement | null
 	/** The configured successful-submit handler. */
 	readonly onSubmit?: (
 		details: FormSubmitDetails<AnyFormSchema>,
 	) => unknown | Promise<unknown>
+	/** The latest resolved UI already retained by the generated fields. */
+	resolved?: ResolvedDefinition
+}
+
+/** Package-private runtime data consumed by the optional devtools entry. */
+export type FormDiagnosticsRuntime = Readonly<
+	Pick<RuntimeForm, "diagnosticTarget" | "disabled" | "inputRefs" | "readOnly">
+> & {
+	readonly formElement: HTMLFormElement | null
+	readonly resolved?: ResolvedDefinition
+}
+
+const formDiagnosticsRuntimeKey = Symbol.for(
+	"form-please.form-diagnostics-runtime",
+)
+
+/** Reads private runtime data from an exact current Form Please binding. */
+export function getFormDiagnosticsRuntime(
+	target: object,
+): FormDiagnosticsRuntime {
+	const runtime = (target as Record<PropertyKey, unknown>)[
+		formDiagnosticsRuntimeKey
+	]
+	if (runtime === undefined) {
+		throw new TypeError("Devtools require a current Form Please form binding")
+	}
+	return runtime as FormDiagnosticsRuntime
+}
+
+/** Attaches private runtime data without extending the public form binding type. */
+function attachFormDiagnosticsRuntime(
+	target: object,
+	runtime: RuntimeForm,
+): void {
+	Object.defineProperty(target, formDiagnosticsRuntimeKey, { value: runtime })
 }
 /** Validation policy used after one managed value commit. */
 type ManagedValidationOptions = {
@@ -674,18 +719,23 @@ function assembleKit(
 				update: coordinator.update,
 			}
 			attachValueCoordinatorCapability(instance, coordinator)
+			const diagnosticTarget = getValueCoordinatorCapability(coordinator)
+			const runtime = {
+				...instance,
+				commit,
+				diagnosticTarget,
+				disabled: options.disabled === true,
+				dispatch: coordinator.dispatch,
+				errorSummaryRef,
+				formElement: null,
+				inputRefs: inputRefs.current,
+				onSubmit: options.onSubmit as RuntimeForm["onSubmit"],
+				readOnly: options.readOnly === true,
+			} as unknown as RuntimeForm
+			attachFormDiagnosticsRuntime(instance, runtime)
 			return {
 				instance,
-				runtime: {
-					...instance,
-					commit,
-					disabled: options.disabled === true,
-					dispatch: coordinator.dispatch,
-					errorSummaryRef,
-					inputRefs: inputRefs.current,
-					onSubmit: options.onSubmit as RuntimeForm["onSubmit"],
-					readOnly: options.readOnly === true,
-				} as unknown as RuntimeForm,
+				runtime,
 			}
 		}, [
 			api,
@@ -733,6 +783,9 @@ function assembleKit(
 							data-readonly={booleanData(runtimeForm.readOnly)}
 							id={formId}
 							noValidate
+							ref={(element) => {
+								runtimeForm.formElement = element
+							}}
 							onReset={(event) => {
 								event.preventDefault()
 								form.api.reset()
@@ -898,7 +951,10 @@ function ResolvedFields({
 	readonly children?: ReactNode
 }) {
 	const previous = useRef<ResolvedDefinition | undefined>(undefined)
+	const resolutionDuration = useRef<number | undefined>(undefined)
 	const resolved = useMemo(() => {
+		const observed = hasFormDiagnosticSink(form.diagnosticTarget)
+		const startedAt = observed ? formDiagnosticNow() : undefined
 		const next = resolveDefinition(
 			form.definition,
 			values as FormInput<StandardSchema>,
@@ -907,8 +963,22 @@ function ResolvedFields({
 			previous.current,
 		)
 		previous.current = next
+		form.resolved = next
+		resolutionDuration.current =
+			startedAt === undefined ? undefined : formDiagnosticNow() - startedAt
 		return next
 	}, [form, values])
+	useLayoutEffect(() => {
+		if (!hasFormDiagnosticSink(form.diagnosticTarget)) return
+		publishFormDiagnosticEvent(form.diagnosticTarget, {
+			...(resolutionDuration.current === undefined
+				? {}
+				: { duration: resolutionDuration.current }),
+			kind: "definition",
+			resolved,
+			time: formDiagnosticNow(),
+		})
+	}, [form, resolved])
 	return (
 		<>
 			{resolved.ui.map((node) => (
@@ -1044,6 +1114,7 @@ function GeneratedField({
 		node.options,
 		node.optionValues,
 		form.context,
+		{ path, target: form.diagnosticTarget },
 	)
 	const control = controls[String(node.control)]
 	if (control === undefined || typeof control.component !== "function") {
@@ -1581,14 +1652,42 @@ function focusErrorSummaryFallback(
 				(activeElement === input || input.contains(activeElement)) &&
 				hasFieldError(errors, path)
 			) {
+				publishFocusDiagnostic(form, "field", path)
 				return
 			}
 		}
 		const fieldName = activeElement.getAttribute("name")
-		if (fieldName !== null && hasFieldError(errors, fieldName)) return
-		if (activeElement === form.errorSummaryRef.current) return
+		if (fieldName !== null && hasFieldError(errors, fieldName)) {
+			publishFocusDiagnostic(form, "field", fieldName)
+			return
+		}
+		if (activeElement === form.errorSummaryRef.current) {
+			publishFocusDiagnostic(form, "summary")
+			return
+		}
 	}
-	form.errorSummaryRef.current?.focus()
+	const summary = form.errorSummaryRef.current
+	if (summary === null) {
+		publishFocusDiagnostic(form, "unavailable")
+		return
+	}
+	summary.focus()
+	publishFocusDiagnostic(form, "summary")
+}
+
+/** Publishes the observed invalid-submit focus destination when requested. */
+function publishFocusDiagnostic(
+	form: RuntimeForm,
+	target: "field" | "summary" | "unavailable",
+	path?: string,
+): void {
+	if (!hasFormDiagnosticSink(form.diagnosticTarget)) return
+	publishFormDiagnosticEvent(form.diagnosticTarget, {
+		kind: "focus",
+		...(path === undefined ? {} : { path }),
+		target,
+		time: formDiagnosticNow(),
+	})
 }
 
 /** Tests whether a value can serve as React Hook Form field values. */

@@ -7,6 +7,12 @@ import {
 } from "immer"
 import type { FieldValues } from "react-hook-form"
 
+import {
+	formDiagnosticNow,
+	hasFormDiagnosticSink,
+	type ManagedDiagnosticToken,
+	publishFormDiagnosticEvent,
+} from "./diagnostics.js"
 import type { ArrayFieldPath, DeepReadonly, FieldPath } from "./types.js"
 
 enableMapSet()
@@ -207,6 +213,9 @@ type ActiveDispatch<Input extends FieldValues, Context> = {
 	readonly allowTopLevelRemoval: boolean
 	readonly commit: ValueTransactionCommit<Input, Context>
 	committed?: ValueTransaction<Input, Context>
+	diagnosticEnded?: boolean
+	readonly diagnosticStartedAt?: number
+	readonly diagnosticToken?: ManagedDiagnosticToken
 	readonly arrayStructure?: {
 		readonly path: readonly (string | number)[]
 		readonly patches: readonly ValuePatch[]
@@ -249,8 +258,44 @@ export function createValueCoordinator<
 		if (activeDispatch === undefined) {
 			throw new TypeError("Value middleware next called outside a transaction")
 		}
-		activeDispatch.commit(transaction)
-		activeDispatch.committed = transaction
+		const { diagnosticToken } = activeDispatch
+		if (diagnosticToken !== undefined) {
+			publishFormDiagnosticEvent(capability, {
+				kind: "managed",
+				outcome: "start",
+				phase: "commit",
+				time: formDiagnosticNow(),
+				token: diagnosticToken,
+				transaction,
+			})
+		}
+		try {
+			activeDispatch.commit(transaction)
+			activeDispatch.committed = transaction
+		} catch (error) {
+			if (diagnosticToken !== undefined) {
+				publishFormDiagnosticEvent(capability, {
+					error,
+					kind: "managed",
+					outcome: "failed",
+					phase: "commit",
+					time: formDiagnosticNow(),
+					token: diagnosticToken,
+					transaction,
+				})
+			}
+			throw error
+		}
+		if (diagnosticToken !== undefined) {
+			publishFormDiagnosticEvent(capability, {
+				kind: "managed",
+				outcome: "success",
+				phase: "commit",
+				time: formDiagnosticNow(),
+				token: diagnosticToken,
+				transaction,
+			})
+		}
 		return transaction
 	}
 
@@ -260,6 +305,7 @@ export function createValueCoordinator<
 		let frame:
 			| {
 					called: boolean
+					forwardedPatches?: readonly ValuePatch[]
 					open: boolean
 					readonly transaction: ValueTransaction<Input, Context>
 			  }
@@ -277,6 +323,7 @@ export function createValueCoordinator<
 				)
 			}
 			frame.called = true
+			frame.forwardedPatches = patches
 			const replacement = createTransaction(
 				frame.transaction.previousValues as Input,
 				patches,
@@ -294,8 +341,53 @@ export function createValueCoordinator<
 				)
 			}
 			frame = { called: false, open: true, transaction }
+			const diagnosticToken = activeDispatch?.diagnosticToken
+			if (diagnosticToken !== undefined) {
+				publishFormDiagnosticEvent(capability, {
+					index,
+					kind: "managed",
+					...(middleware.name.length === 0 ? {} : { name: middleware.name }),
+					phase: "middleware-enter",
+					time: formDiagnosticNow(),
+					token: diagnosticToken,
+					transaction,
+				})
+			}
 			try {
-				return handle(transaction)
+				const result = handle(transaction)
+				if (diagnosticToken !== undefined) {
+					publishFormDiagnosticEvent(capability, {
+						...(frame.forwardedPatches === undefined
+							? {}
+							: { forwardedPatches: frame.forwardedPatches }),
+						index,
+						kind: "managed",
+						...(middleware.name.length === 0 ? {} : { name: middleware.name }),
+						outcome: frame.called ? "forwarded" : "cancelled",
+						phase: "middleware-exit",
+						result,
+						time: formDiagnosticNow(),
+						token: diagnosticToken,
+					})
+				}
+				return result
+			} catch (error) {
+				if (diagnosticToken !== undefined) {
+					publishFormDiagnosticEvent(capability, {
+						error,
+						...(frame.forwardedPatches === undefined
+							? {}
+							: { forwardedPatches: frame.forwardedPatches }),
+						index,
+						kind: "managed",
+						...(middleware.name.length === 0 ? {} : { name: middleware.name }),
+						outcome: "failed",
+						phase: "middleware-exit",
+						time: formDiagnosticNow(),
+						token: diagnosticToken,
+					})
+				}
+				throw error
 			} finally {
 				frame.open = false
 				frame = undefined
@@ -345,15 +437,69 @@ export function createValueCoordinator<
 		activeDispatch = {
 			allowTopLevelRemoval: dispatchOptions.allowTopLevelRemoval === true,
 			commit: dispatchOptions.commit ?? options.commit,
+			...(hasFormDiagnosticSink(capability)
+				? {
+						diagnosticStartedAt: formDiagnosticNow(),
+						diagnosticToken: {},
+					}
+				: {}),
 			...(arrayStructure === undefined ? {} : { arrayStructure }),
 		}
-		try {
-			const effectiveTransaction = applyBeforeUpdate(
+		const diagnosticToken = activeDispatch.diagnosticToken
+		if (diagnosticToken !== undefined) {
+			publishFormDiagnosticEvent(capability, {
+				kind: "managed",
+				phase: "start",
+				time: activeDispatch.diagnosticStartedAt ?? formDiagnosticNow(),
+				token: diagnosticToken,
 				transaction,
-				options.getBeforeUpdate?.(),
-				activeDispatch.allowTopLevelRemoval,
-			)
-			if (effectiveTransaction === undefined) return undefined
+			})
+		}
+		try {
+			let effectiveTransaction: ValueTransaction<Input, Context> | undefined
+			try {
+				effectiveTransaction = applyBeforeUpdate(
+					transaction,
+					options.getBeforeUpdate?.(),
+					activeDispatch.allowTopLevelRemoval,
+				)
+			} catch (error) {
+				if (diagnosticToken !== undefined) {
+					publishFormDiagnosticEvent(capability, {
+						error,
+						kind: "managed",
+						outcome: "failed",
+						phase: "before-update",
+						time: formDiagnosticNow(),
+						token: diagnosticToken,
+					})
+				}
+				throw error
+			}
+			if (effectiveTransaction === undefined) {
+				if (diagnosticToken !== undefined) {
+					publishFormDiagnosticEvent(capability, {
+						kind: "managed",
+						outcome: "cancelled",
+						phase: "before-update",
+						time: formDiagnosticNow(),
+						token: diagnosticToken,
+					})
+					publishManagedEnd(capability, activeDispatch, "cancelled")
+				}
+				return undefined
+			}
+			if (diagnosticToken !== undefined) {
+				publishFormDiagnosticEvent(capability, {
+					kind: "managed",
+					outcome:
+						effectiveTransaction === transaction ? "unchanged" : "adjusted",
+					phase: "before-update",
+					time: formDiagnosticNow(),
+					token: diagnosticToken,
+					transaction: effectiveTransaction,
+				})
+			}
 			assertActiveArrayStructure(effectiveTransaction.patches, activeDispatch)
 
 			let result: unknown
@@ -373,19 +519,73 @@ export function createValueCoordinator<
 				try {
 					const afterResult = options.getAfterUpdate?.()?.(committed)
 					assertSynchronousHookResult(afterResult, "afterUpdate")
+					if (diagnosticToken !== undefined) {
+						publishFormDiagnosticEvent(capability, {
+							kind: "managed",
+							outcome: "success",
+							phase: "after-update",
+							time: formDiagnosticNow(),
+							token: diagnosticToken,
+							transaction: committed,
+						})
+					}
 				} catch (error) {
 					afterError = error
 					afterFailed = true
+					if (diagnosticToken !== undefined) {
+						publishFormDiagnosticEvent(capability, {
+							error,
+							kind: "managed",
+							outcome: "failed",
+							phase: "after-update",
+							time: formDiagnosticNow(),
+							token: diagnosticToken,
+							transaction: committed,
+						})
+					}
 				}
+			} else if (diagnosticToken !== undefined) {
+				publishFormDiagnosticEvent(capability, {
+					kind: "managed",
+					outcome: "skipped",
+					phase: "after-update",
+					time: formDiagnosticNow(),
+					token: diagnosticToken,
+				})
 			}
 
 			if (pipelineFailed) {
-				if (afterFailed) throw updateAggregateError(pipelineError, afterError)
-				throw pipelineError
+				const error = afterFailed
+					? updateAggregateError(pipelineError, afterError)
+					: pipelineError
+				if (diagnosticToken !== undefined) {
+					publishManagedEnd(capability, activeDispatch, "failed", {
+						error,
+					})
+				}
+				throw error
 			}
-			if (!afterFailed) return result
-			if (!isPromiseLike(result)) throw afterError
-			return Promise.resolve(result).then(
+			if (!afterFailed) {
+				if (diagnosticToken !== undefined) {
+					publishManagedEnd(
+						capability,
+						activeDispatch,
+						committed === undefined ? "cancelled" : "committed",
+						{ result },
+					)
+					observeManagedSettlement(capability, activeDispatch, result)
+				}
+				return result
+			}
+			if (!isPromiseLike(result)) {
+				if (diagnosticToken !== undefined) {
+					publishManagedEnd(capability, activeDispatch, "failed", {
+						error: afterError,
+					})
+				}
+				throw afterError
+			}
+			const combined = Promise.resolve(result).then(
 				() => {
 					throw afterError
 				},
@@ -393,6 +593,19 @@ export function createValueCoordinator<
 					throw updateAggregateError(error, afterError)
 				},
 			)
+			if (diagnosticToken !== undefined) {
+				publishManagedEnd(capability, activeDispatch, "failed", {
+					error: afterError,
+					result: combined,
+				})
+				observeManagedSettlement(capability, activeDispatch, combined)
+			}
+			return combined
+		} catch (error) {
+			if (diagnosticToken !== undefined && !activeDispatch.diagnosticEnded) {
+				publishManagedEnd(capability, activeDispatch, "failed", { error })
+			}
+			throw error
 		} finally {
 			activeDispatch = undefined
 		}
@@ -406,6 +619,64 @@ export function createValueCoordinator<
 		value: capability,
 	})
 	return coordinator
+}
+
+/** Publishes the final synchronous outcome for one observed transaction. */
+function publishManagedEnd<Input extends FieldValues, Context>(
+	capability: object,
+	dispatch: ActiveDispatch<Input, Context>,
+	outcome: "cancelled" | "committed" | "failed",
+	details: { readonly error?: unknown; readonly result?: unknown } = {},
+): void {
+	const token = dispatch.diagnosticToken
+	if (token === undefined || dispatch.diagnosticEnded) return
+	dispatch.diagnosticEnded = true
+	const time = formDiagnosticNow()
+	publishFormDiagnosticEvent(capability, {
+		...details,
+		duration: time - (dispatch.diagnosticStartedAt ?? time),
+		kind: "managed",
+		outcome,
+		phase: "end",
+		time,
+		token,
+	})
+}
+
+/** Observes asynchronous middleware work without changing its returned Promise. */
+function observeManagedSettlement<Input extends FieldValues, Context>(
+	capability: object,
+	dispatch: ActiveDispatch<Input, Context>,
+	result: unknown,
+): void {
+	const token = dispatch.diagnosticToken
+	if (token === undefined || !isPromiseLike(result)) return
+	const startedAt = dispatch.diagnosticStartedAt ?? formDiagnosticNow()
+	void Promise.resolve(result).then(
+		() => {
+			const time = formDiagnosticNow()
+			publishFormDiagnosticEvent(capability, {
+				duration: time - startedAt,
+				kind: "managed",
+				outcome: "fulfilled",
+				phase: "settled",
+				time,
+				token,
+			})
+		},
+		(error: unknown) => {
+			const time = formDiagnosticNow()
+			publishFormDiagnosticEvent(capability, {
+				duration: time - startedAt,
+				error,
+				kind: "managed",
+				outcome: "rejected",
+				phase: "settled",
+				time,
+				token,
+			})
+		},
+	)
 }
 
 /** Applies the current before-update hook and rebuilds its effective patches. */

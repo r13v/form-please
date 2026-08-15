@@ -16,6 +16,7 @@ describe("built package entries", () => {
 			expect(modules.root.fromResource).toBeTypeOf("function")
 			expect(modules.root.useSnapshot).toBeTypeOf("function")
 			expect(modules.defaultSlots.createDefaultSlots).toBeTypeOf("function")
+			expect(modules.devtools.FormPleaseDevtools).toBeTypeOf("function")
 			expect(modules.history.createHistoryMiddleware).toBeTypeOf("function")
 			expect(modules.history.useHistory).toBeTypeOf("function")
 			expect(modules.nativeControls.createNativeControls).toBeTypeOf("function")
@@ -85,6 +86,15 @@ describe("built package entries", () => {
 			expect(historyDeclaration).toContain("UseHistoryResult")
 			expect(historyDeclaration).toContain("useHistory")
 
+			const devtoolsDeclaration = await readFile(
+				new URL(`../../dist/devtools.${extension}`, import.meta.url),
+				"utf8",
+			)
+			expect(devtoolsDeclaration).toContain("FormPleaseDevtoolsProps")
+			expect(devtoolsDeclaration).toContain("FormPleaseDevtools")
+			expect(devtoolsDeclaration).not.toContain("createDevtoolsMiddleware")
+			expect(devtoolsDeclaration).not.toMatch(/\bid\?:/)
+
 			const nativeDeclaration = await readFile(
 				new URL(`../../dist/native-controls.${extension}`, import.meta.url),
 				"utf8",
@@ -105,6 +115,7 @@ describe("built package entries", () => {
 type Modules = {
 	readonly root: Record<string, unknown>
 	readonly defaultSlots: Record<string, unknown>
+	readonly devtools: Record<string, unknown>
 	readonly history: Record<string, unknown>
 	readonly nativeControls: Record<string, unknown>
 	readonly persistence: Record<string, unknown>
@@ -118,6 +129,7 @@ async function loadEsm(): Promise<Modules> {
 	return {
 		root: await import("../../dist/index.js"),
 		defaultSlots: await import("../../dist/default-slots.js"),
+		devtools: await import("../../dist/devtools.js"),
 		history: await import("../../dist/history.js"),
 		nativeControls: await import("../../dist/native-controls.js"),
 		persistence: await import("../../dist/persistence.js"),
@@ -130,6 +142,7 @@ function loadCommonJs(): Modules {
 	return {
 		root: require("../../dist/index.cjs"),
 		defaultSlots: require("../../dist/default-slots.cjs"),
+		devtools: require("../../dist/devtools.cjs"),
 		history: require("../../dist/history.cjs"),
 		nativeControls: require("../../dist/native-controls.cjs"),
 		persistence: require("../../dist/persistence.cjs"),

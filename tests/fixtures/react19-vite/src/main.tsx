@@ -1,6 +1,7 @@
 import "form-please/layout.css"
 
 import type { StandardSchema } from "form-please"
+import { FormPleaseDevtools } from "form-please/devtools"
 import { useHistory } from "form-please/history"
 import { usePersistence } from "form-please/persistence"
 import { createMuiFormKit } from "form-please/preset-mui"
@@ -61,6 +62,7 @@ function App() {
 	return (
 		<kit.AutoForm form={form}>
 			<kit.Submit>Save</kit.Submit>
+			<FormPleaseDevtools form={form} name="Profile" />
 		</kit.AutoForm>
 	)
 }

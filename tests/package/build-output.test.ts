@@ -8,6 +8,7 @@ const rootDirectory = fileURLToPath(new URL("../..", import.meta.url))
 const entrypoints = [
 	"index",
 	"default-slots",
+	"devtools",
 	"history",
 	"native-controls",
 	"persistence",
@@ -39,13 +40,7 @@ describe("build output", () => {
 	})
 
 	it("removes every retired JavaScript entry", async () => {
-		for (const entrypoint of [
-			"core",
-			"devtools",
-			"react19",
-			"server",
-			"tanstack",
-		]) {
+		for (const entrypoint of ["core", "react19", "server", "tanstack"]) {
 			await expect(
 				stat(resolve(rootDirectory, `dist/${entrypoint}.js`)),
 			).rejects.toMatchObject({ code: "ENOENT" })
@@ -86,6 +81,16 @@ describe("build output", () => {
 		expect(persistenceGraph).toContain("usePersistence")
 		expect(persistenceGraph).toContain('from "react"')
 		expect(persistenceGraph).not.toContain('from "react-hook-form"')
+	})
+
+	it("keeps devtools outside the root runtime graph", async () => {
+		const rootGraph = await readEsmGraph("dist/index.js")
+		const devtoolsGraph = await readEsmGraph("dist/devtools.js")
+
+		expect(rootGraph).not.toContain("@hookform/devtools")
+		expect(rootGraph).not.toContain("FormPleaseDevtools")
+		expect(devtoolsGraph).toContain("@hookform/devtools")
+		expect(devtoolsGraph).toContain("FormPleaseDevtools")
 	})
 })
 

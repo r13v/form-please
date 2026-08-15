@@ -26,6 +26,12 @@ _Avoid_: Form binding, inferred schema UI
 `form.api`, `form.update`, the fixed definition, and runtime context.
 _Avoid_: Form store, Form Please runtime instance
 
+**Form Please Devtools**: An optional read-only development instrument that
+combines React Hook Form inspection with Form Please views of resolved UI,
+issue routing, updates, asynchronous options, history, and persistence. React
+Hook Form remains the sole owner of live form state.
+_Avoid_: Form store, Redux DevTools
+
 **React Hook Form API**: The state-owning React Hook Form API exposed unchanged
 as `form.api`. Its direct mutations bypass Form Please middleware.
 _Avoid_: Form Please command API

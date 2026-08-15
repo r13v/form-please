@@ -1,6 +1,7 @@
 "use client"
 
 import type { StandardSchema } from "form-please"
+import { FormPleaseDevtools } from "form-please/devtools"
 import { useHistory } from "form-please/history"
 import { usePersistence } from "form-please/persistence"
 import { nativeFormKit as kit } from "form-please/preset-native"
@@ -28,6 +29,7 @@ export function ClientForm() {
 	return (
 		<kit.AutoForm form={form}>
 			<kit.Submit>Save</kit.Submit>
+			<FormPleaseDevtools form={form} name="Profile" />
 		</kit.AutoForm>
 	)
 }

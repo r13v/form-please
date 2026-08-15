@@ -5,25 +5,6 @@ not a release commitment or an implementation plan. Any change to public entry
 points, form state, submission, serialization, or module boundaries must first
 be reconciled with [ARCHITECTURE.md](ARCHITECTURE.md).
 
-
-## Form Please Devtools
-
-**Status:** Planned for discovery.
-
-Create development-only diagnostics for Form Please behavior that React Hook
-Form tooling cannot explain:
-
-- [ ] Inspect the resolved UI tree and current visibility, disabled, read-only,
-      layout, and control selection.
-- [ ] Show schema issues together with rendered and hidden field paths.
-- [ ] Trace managed updates, middleware changes or cancellation, and dependent
-      patches.
-- [ ] Inspect managed history and persistence phase, conflicts, and failures.
-
-Do not duplicate generic React Hook Form value, dirty, touched, or subscription
-inspection. Devtools must remain absent from production bundles unless an
-application imports them explicitly.
-
 ## Visual form builder
 
 **Status:** Discovery candidate, not committed.

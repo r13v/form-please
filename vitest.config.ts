@@ -10,6 +10,7 @@ export default defineConfig({
 					include: [
 						"src/*.test.{ts,tsx}",
 						"src/default-slots/**/*.test.{ts,tsx}",
+						"src/devtools/**/*.test.{ts,tsx}",
 						"src/history/**/*.test.{ts,tsx}",
 						"src/native-controls/**/*.test.{ts,tsx}",
 						"src/persistence/**/*.test.{ts,tsx}",

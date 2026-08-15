@@ -56,6 +56,7 @@ export default defineConfig({
 				{ text: "Middleware", link: "/middleware" },
 				{ text: "Persistence", link: "/persistence" },
 				{ text: "History", link: "/history" },
+				{ text: "Devtools", link: "/devtools" },
 			],
 		},
 		{

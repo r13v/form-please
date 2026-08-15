@@ -25,6 +25,7 @@ export default {
 			entry: [
 				"src/index.ts",
 				"src/default-slots/index.ts",
+				"src/devtools/index.ts",
 				"src/native-controls/index.ts",
 				"src/preset-native/index.ts",
 				"src/preset-mui/index.ts",

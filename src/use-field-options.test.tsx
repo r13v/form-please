@@ -4,10 +4,54 @@ import { act, render, screen, waitFor } from "@testing-library/react"
 import { Component, type ReactNode } from "react"
 import { describe, expect, it } from "vitest"
 
+import {
+	attachFormDiagnosticSink,
+	type FormDiagnosticEvent,
+} from "./diagnostics.js"
 import type { FieldOptionsResolver } from "./types.js"
 import { useFieldOptions } from "./use-field-options.js"
 
 describe("useFieldOptions", () => {
+	it("reports the dependencies that explain an asynchronous options result", async () => {
+		const target = {}
+		const events: FormDiagnosticEvent[] = []
+		const detach = attachFormDiagnosticSink(target, {
+			publish: (event) => events.push(event),
+		})
+		const source: FieldOptionsResolver<
+			string,
+			{ readonly country: string },
+			{ readonly locale: string }
+		> = async ({ values, context }) => [`${values.country}:${context.locale}`]
+
+		render(
+			<Harness
+				context={{ locale: "en" }}
+				diagnostics={{ path: "city", target }}
+				source={source}
+				values={{ country: "DE" }}
+			/>,
+		)
+
+		await waitFor(() =>
+			expect(screen.getByTestId("options").textContent).toBe('["DE:en"]'),
+		)
+		const optionEvents = events.filter((event) => event.kind === "options")
+		expect(optionEvents.map((event) => event.status)).toEqual([
+			"pending",
+			"fulfilled",
+		])
+		expect(optionEvents[1]).toMatchObject({
+			dependencies: [
+				{ path: ["country"], root: "values", value: "DE" },
+				{ path: ["locale"], root: "context", value: "en" },
+			],
+			optionCount: 1,
+			path: "city",
+		})
+		detach()
+	})
+
 	it("returns static options without waiting for an effect", () => {
 		render(<Harness context={{}} source={["DE", "FR"]} values={{}} />)
 		expect(screen.getByTestId("options").textContent).toBe('["DE","FR"]')
@@ -240,12 +284,14 @@ function Harness({
 	source,
 	values,
 	context,
+	diagnostics,
 }: {
 	readonly source: unknown
 	readonly values: unknown
 	readonly context: unknown
+	readonly diagnostics?: Readonly<{ path: string; target: object }>
 }) {
-	const options = useFieldOptions(source, values, context)
+	const options = useFieldOptions(source, values, context, diagnostics)
 	return <output data-testid="options">{JSON.stringify(options)}</output>
 }
 

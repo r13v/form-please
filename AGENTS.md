@@ -23,23 +23,6 @@ This lens is always active, but it never overrides explicit instructions, factua
 
 Do not explain this interpretation back to the user unless asked. Let it show in the work.
 
-## Log papercuts
-
-When you encounter small friction while working—a failed tool call, confusing
-setup, flaky command, stale cache, misleading error, missing helper, or
-non-obvious gotcha—record it in `PAPERCUTS.md`.
-
-Create the file if it does not exist. Append one entry in this format:
-
-## YYYY-MM-DD HH:MM — <model>
-
-<What you were doing> → <what got in the way>. Include a possible cause or fix
-when useful.
-
-Log papercuts proactively when they occur, but do not interrupt the main task.
-Do not add duplicate entries. Papercuts are minor workflow friction, distinct
-from completed-work logs and real bugs or tracked issues.
-
 ## Rules
 
 Do not edit CHANGELOG.md, it is managed by automation.

@@ -27,6 +27,8 @@ Neither feature becomes the live form store.
 flowchart TD
     Root["form-please"] --> RHF["react-hook-form"]
     Root --> Immer["immer"]
+    Devtools["form-please/devtools"] --> Root
+    Devtools --> RhfDevtools["@hookform/devtools"]
     History["form-please/history"] --> Coordinator["managed value coordinator"]
     History --> Immer
     History --> React
@@ -44,6 +46,7 @@ Public JavaScript entries are limited to:
 
 - `form-please`;
 - `form-please/default-slots`;
+- `form-please/devtools`;
 - `form-please/history`;
 - `form-please/native-controls`;
 - `form-please/persistence`;
@@ -51,10 +54,11 @@ Public JavaScript entries are limited to:
 - `form-please/preset-mui`.
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
-exports. React UI, history, and persistence entries are client modules. React
+exports. React UI, devtools, history, and persistence entries are client modules. React
 Hook Form 7.76.1 or newer within major version 7 is a required peer. Immer is a
-direct runtime dependency. Material UI and Emotion peers remain optional because
-only the Material UI preset uses them.
+direct runtime dependency. React Hook Form DevTools is a direct dependency that
+is reachable only through `form-please/devtools`. Material UI and Emotion peers
+remain optional because only the Material UI preset uses them.
 
 ## Canonical modules
 
@@ -65,6 +69,9 @@ only the Material UI preset uses them.
 | `src/definition.ts` | Materialize authoring builders, validate, normalize, and synchronously resolve UI definitions |
 | `src/standard-schema-resolver.ts` | Validate through Standard Schema once and translate all issues to and from RHF errors |
 | `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
+| `src/diagnostics.ts` | Provide the dormant package-private observer bridge and optional-feature registry |
+| `src/devtools/devtools.tsx` | Bind RHF DevTools and render the Form Please diagnostic drawer |
+| `src/devtools/store.ts` | Aggregate bounded form-local diagnostic snapshots for the optional UI |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
 | `src/history/history.ts` | Retain managed input positions, navigate them through the coordinator, and import or export in-memory journals |
 | `src/history/use-history.ts` | Bind a configured history feature to React and expose its current snapshot |
@@ -189,6 +196,10 @@ rejects it before rendering.
 Disabled and read-only state, generated-control references, the submit wrapper,
 and the error-summary reference remain private runtime data.
 
+`form-please/devtools` can read a package-private runtime capability from the
+exact binding. This does not add diagnostic state to the public binding or make
+the resolved definition a stable public API.
+
 The definition and ordered middleware snapshot are fixed for the hook lifetime.
 Passing another definition or middleware list does not replace either one. A
 caller must change a React `key` to remount the component and create another
@@ -201,6 +212,25 @@ the fixed middleware configuration.
 `kit.Form` provides the same API through RHF `FormProvider`. Manual composition
 uses ordinary RHF APIs such as `register`, `Controller`, `useController`,
 `useWatch`, `useFormState`, `useFieldArray`, and `useFormContext`.
+
+## Development diagnostics
+
+`FormPleaseDevtools` is the only public diagnostic integration. It receives the
+current form binding and mounts the public React Hook Form `DevTool` with that
+binding's control. Its Form Please drawer observes the private runtime bridge,
+an RHF values subscription, and configured feature adapters. It does not add
+middleware and does not become a form store.
+
+Core diagnostic publications are guarded by an attached-sink check. Without a
+mounted devtools component, the runtime retains no event journal and performs
+no definition timing or option dependency copying for diagnostics. History and
+persistence register small read-only adapters only when those features already
+exist.
+
+The optional store retains 100 managed or raw updates and 20 transitions for
+each configured feature. It displays local raw values and errors without JSON
+serialization. It provides no export, remote transport, state-editing command,
+or production monitoring contract.
 
 ## Managed value updates
 

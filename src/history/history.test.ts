@@ -2,11 +2,13 @@ import type { StandardSchemaV1 } from "@standard-schema/spec"
 import { describe, expect, it, vi } from "vitest"
 
 import type { FormBinding } from "../create-form-kit.js"
+import { getFormDiagnosticFeatures } from "../diagnostics.js"
 import { cloneFormValue } from "../form-value.js"
 import {
 	attachValueCoordinatorCapability,
 	createValueCoordinator,
 	type FormMiddleware,
+	getValueCoordinatorCapability,
 	type ValueTransaction,
 } from "../value-middleware.js"
 import {
@@ -30,6 +32,11 @@ describe("managed value history", () => {
 
 		expect(feature.handle(first.form)).toBe(first.history)
 		expect(feature.handle(second.form)).toBe(second.history)
+		expect(
+			getFormDiagnosticFeatures(
+				getValueCoordinatorCapability(first.form) as object,
+			).map((diagnostic) => diagnostic.kind),
+		).toEqual(["history"])
 		expect(() => createHistoryMiddleware().handle(first.form)).toThrow(
 			"not configured for the supplied form",
 		)

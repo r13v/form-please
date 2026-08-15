@@ -1,6 +1,7 @@
 import type { FieldValues } from "react-hook-form"
 
 import type { FormBinding } from "../create-form-kit.js"
+import { registerFormDiagnosticFeature } from "../diagnostics.js"
 import {
 	areFormValuesEqual,
 	cloneFormValue,
@@ -231,6 +232,27 @@ class PersistenceState<Input extends FieldValues, Context> {
 			subscribe: (listener) => this.#subscribe(listener),
 		})
 		hookRetainers.set(this.handle, () => this.#retainHook())
+		registerFormDiagnosticFeature(capability, {
+			getDetails: () => this.#diagnosticDetails(),
+			getSnapshot: () => this.#snapshot,
+			kind: "persistence",
+			subscribe: (listener) => this.#subscribe(listener),
+		})
+	}
+
+	#diagnosticDetails(): unknown {
+		return Object.freeze({
+			activation: this.#activation,
+			highestQueuedRevision: this.#highestQueuedRevision,
+			key: this.#options.key,
+			observing: this.#unsubscribe !== undefined,
+			queued: this.#highestQueuedRevision > this.#savedRevision,
+			restoredAs: this.#restoreResult,
+			revision: this.#revision,
+			saveDelay: this.#options.saveDelay,
+			savedRevision: this.#savedRevision,
+			version: this.#options.version,
+		})
 	}
 
 	attach(form: FormBinding): void {

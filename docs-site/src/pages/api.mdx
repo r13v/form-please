@@ -36,6 +36,7 @@ import "form-please/layout.css"
 | --- | --- | --- |
 | `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource`, `useSnapshot` | Build kits, controls, definitions, resource resolvers, and external-store adapters. |
 | `form-please/default-slots` | `createDefaultSlots` | Create accessible, unstyled structural slots. |
+| `form-please/devtools` | `FormPleaseDevtools` | Mount RHF DevTools and inspect Form Please UI, updates, options, and optional features. |
 | `form-please/history` | `createHistoryMiddleware`, `useHistory` | Add optional managed value history and journal transfer. |
 | `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
 | `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec`, `usePersistence` | Restore and autosave editable drafts through application storage. |
@@ -43,7 +44,10 @@ import "form-please/layout.css"
 | `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
 
 `form-please/layout.css` and `form-please/package.json` are non-JavaScript
-exports. React UI, history, and persistence entries are client modules.
+exports. React UI, devtools, history, and persistence entries are client modules.
+
+Mount `FormPleaseDevtools` only in development. See the [Devtools guide](/devtools)
+for its one-component integration and raw-data boundary.
 
 ## `useSnapshot`
 

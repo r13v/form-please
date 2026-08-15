@@ -16,6 +16,7 @@ const pages = [
 	["src/pages/middleware.mdx", "Value middleware"],
 	["src/pages/history.mdx", "Managed value history"],
 	["src/pages/persistence.mdx", "Form persistence"],
+	["src/pages/devtools.mdx", "Devtools"],
 	["src/pages/form-kits.mdx", "Form kits"],
 	["src/pages/resources.mdx", "Resource state"],
 	["src/pages/styling.mdx", "Styling"],
@@ -55,6 +56,7 @@ const exampleSnippets = [
 	"src/snippets/persistence-local-storage.tsx",
 	"src/snippets/persistence-nuqs.ts",
 	"src/snippets/persistence-tanstack-query.ts",
+	"src/snippets/devtools-guide.tsx",
 ]
 
 const referenceSnippets = [
@@ -228,7 +230,6 @@ test("does not teach retired runtime entries or APIs", async () => {
 		"form-please/tanstack",
 		"form-please/react19",
 		"form-please/server",
-		"form-please/devtools",
 		"useCreateForm",
 		"useBindForm",
 		"form.api.Field",
@@ -248,6 +249,7 @@ test("keeps the supported live documentation demos", async () => {
 		["src/pages/index.mdx", "<OverviewDemo />"],
 		["src/pages/get-started.mdx", "<InteractiveLab />"],
 		["src/pages/styling.mdx", "<TailwindProfileDemo />"],
+		["src/pages/devtools.mdx", "<DevtoolsDemo />"],
 		["src/pages/examples/async-multiselect.mdx", "<AsyncMultiSelectDemo />"],
 		["src/pages/validation.mdx", "~/snippets/zod-error-messages.ts"],
 		["src/pages/examples/persistence.mdx", "<PersistenceDemo />"],
@@ -255,6 +257,25 @@ test("keeps the supported live documentation demos", async () => {
 		const source = await readFile(new URL(path, siteRoot), "utf8")
 		assert.match(source, new RegExp(escapeRegExp(expected)))
 	}
+})
+
+test("documents devtools with a live, form-bound example", async () => {
+	const page = await readFile(
+		new URL("src/pages/devtools.mdx", siteRoot),
+		"utf8",
+	)
+	const demo = await readFile(
+		new URL("src/components/devtools-demo.client.tsx", siteRoot),
+		"utf8",
+	)
+
+	assert.match(page, /<DevtoolsDemo \/>/)
+	assert.match(
+		demo,
+		/<FormPleaseDevtools form=\{form\} name="Docs profile" \/>/,
+	)
+	assert.match(demo, /middleware: \[historyFeature, persistenceFeature\]/)
+	assert.match(demo, /options: \(\{ values \}\) =>/)
 })
 
 test("keeps the async multiselect example copyable and production-shaped", async () => {
