@@ -14,7 +14,8 @@ form state.
 ## Configure one history feature
 
 Create the feature outside the component, put that exact reference in the
-form's fixed middleware list, and pass both values to `useHistory`:
+definition's fixed middleware list, and pass the form and feature to
+`useHistory`:
 
 ```tsx
 // [!include ~/snippets/history-guide.tsx:setup]

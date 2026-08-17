@@ -88,6 +88,24 @@ describe("form definition validation", () => {
 		)
 	})
 
+	it("validates managed-update policy while defining the form", () => {
+		for (const [options, message] of [
+			[null, "update options must be an object"],
+			[[], "update options must be an object"],
+			[{ beforeUpdate: "no" }, "beforeUpdate must be a function"],
+			[{ afterUpdate: {} }, "afterUpdate must be a function"],
+			[{ middleware: {} }, "middleware must be an array"],
+			[
+				{ middleware: [() => undefined, null] },
+				"middleware must contain functions",
+			],
+		] as const) {
+			expect(() =>
+				kit.defineForm(schema, { ui: [] }, options as never),
+			).toThrow(message)
+		}
+	})
+
 	it("rejects node shapes the renderer cannot interpret", () => {
 		for (const node of [null, undefined, "field", 1, [], () => null]) {
 			expect(define([node])).toThrow("UI nodes must be objects")

@@ -16,6 +16,7 @@ export default defineConfig({
 						"src/persistence/**/*.test.{ts,tsx}",
 						"src/preset-native/**/*.test.{ts,tsx}",
 						"src/preset-mui/**/*.test.{ts,tsx}",
+						"src/testing/**/*.test.{ts,tsx}",
 					],
 					setupFiles: ["tests/setup.ts"],
 				},

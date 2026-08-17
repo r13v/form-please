@@ -185,6 +185,29 @@ describe("form kit", () => {
 		>()
 	})
 
+	it("stores one immutable managed-update policy on the definition", () => {
+		const beforeUpdate = vi.fn()
+		const afterUpdate = vi.fn()
+		const first: FormMiddleware<{ name: string }> =
+			() => (next) => (transaction) =>
+				next(transaction.patches)
+		const second: FormMiddleware<{ name: string }> =
+			() => (next) => (transaction) =>
+				next(transaction.patches)
+		const middleware = [first]
+		const configured = kit.defineForm(
+			schema,
+			{ ui: [] },
+			{ afterUpdate, beforeUpdate, middleware },
+		)
+		middleware[0] = second
+
+		expect(configured.beforeUpdate).toBe(beforeUpdate)
+		expect(configured.afterUpdate).toBe(afterUpdate)
+		expect(configured.middleware).toEqual([first])
+		expect(Object.isFrozen(configured.middleware)).toBe(true)
+	})
+
 	it("normalizes schema-bound builders through the ordinary definition path", () => {
 		const authorSchema = z.object({
 			name: z.string(),
@@ -742,32 +765,22 @@ describe("form kit", () => {
 			city: z.string(),
 			country: z.string(),
 		})
-		const locationDefinition = kit.defineForm(locationSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "country",
-					control: "select",
-					label: "Country",
-					options: ["US", "FR", "blocked"],
-				},
-				{ kind: "field", path: "city", control: "text", label: "City" },
-			],
-		})
 		const afterNext = vi.fn()
-		const publications: { city: string; country: string }[] = []
-		let readValues = () => ({ city: "", country: "" })
-		let subscribe = (): (() => void) => () => undefined
-		let updateLocation = (_country: string, _city: string): unknown => undefined
-
-		function LocationState() {
-			const values = useWatch<{ city: string; country: string }>()
-			return <output aria-label="Location">{JSON.stringify(values)}</output>
-		}
-
-		function View() {
-			const form = kit.useForm(locationDefinition, {
-				defaultValues: { city: "New York", country: "US" },
+		const locationDefinition = kit.defineForm(
+			locationSchema,
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "country",
+						control: "select",
+						label: "Country",
+						options: ["US", "FR", "blocked"],
+					},
+					{ kind: "field", path: "city", control: "text", label: "City" },
+				],
+			},
+			{
 				middleware: [
 					(api) => (next) => (transaction) => {
 						if (
@@ -787,6 +800,21 @@ describe("form kit", () => {
 						return next(transaction.patches)
 					},
 				],
+			},
+		)
+		const publications: { city: string; country: string }[] = []
+		let readValues = () => ({ city: "", country: "" })
+		let subscribe = (): (() => void) => () => undefined
+		let updateLocation = (_country: string, _city: string): unknown => undefined
+
+		function LocationState() {
+			const values = useWatch<{ city: string; country: string }>()
+			return <output aria-label="Location">{JSON.stringify(values)}</output>
+		}
+
+		function View() {
+			const form = kit.useForm(locationDefinition, {
+				defaultValues: { city: "New York", country: "US" },
 			})
 			readValues = form.api.getValues
 			subscribe = () =>
@@ -912,14 +940,14 @@ describe("form kit", () => {
 			fields: z.record(z.string(), z.string()),
 		})
 		type LargeInput = z.input<typeof largeSchema>
-		const largeDefinition = kit.defineForm(largeSchema, {
+		const largeDefinitionSource = {
 			ui: Array.from({ length: fieldCount }, (_, index) => ({
 				kind: "field" as const,
 				path: `fields.field${index}` as `fields.${string}`,
 				control: "text" as const,
 				label: `Performance field ${index + 1}`,
 			})),
-		})
+		}
 		const editValues = Array.from(
 			{ length: 20 },
 			(_, index) => `Edit ${index + 1}`,
@@ -935,6 +963,11 @@ describe("form kit", () => {
 			middleware?: readonly FormMiddleware<LargeInput>[],
 		): number {
 			let updateCommits = 0
+			const largeDefinition = kit.defineForm(
+				largeSchema,
+				largeDefinitionSource,
+				{ middleware },
+			)
 
 			function View() {
 				const form = kit.useForm(largeDefinition, {
@@ -946,7 +979,6 @@ describe("form kit", () => {
 							]),
 						),
 					},
-					...(middleware === undefined ? {} : { middleware }),
 				})
 
 				return (
@@ -1694,16 +1726,20 @@ describe("form kit", () => {
 				},
 			},
 		}
-		const touchedDefinition = kit.defineForm(touchedSchema, {
-			ui: [
-				{ kind: "field", path: "name", control: "text", label: "Touched name" },
-				{ kind: "field", path: "mirror", control: "text", label: "Mirror" },
-			],
-		})
-
-		function View() {
-			const form = kit.useForm(touchedDefinition, {
-				defaultValues: { mirror: "before", name: "Ada" },
+		const touchedDefinition = kit.defineForm(
+			touchedSchema,
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						label: "Touched name",
+					},
+					{ kind: "field", path: "mirror", control: "text", label: "Mirror" },
+				],
+			},
+			{
 				middleware: [
 					() => (next) => (transaction) =>
 						transaction.source.type === "control" &&
@@ -1711,6 +1747,12 @@ describe("form kit", () => {
 							? next([{ op: "replace", path: ["mirror"], value: "after" }])
 							: next(transaction.patches),
 				],
+			},
+		)
+
+		function View() {
+			const form = kit.useForm(touchedDefinition, {
+				defaultValues: { mirror: "before", name: "Ada" },
 				mode: "onTouched",
 			})
 			return <kit.AutoForm form={form} />
@@ -1925,38 +1967,58 @@ describe("form kit", () => {
 				}),
 			),
 		})
-		const complexDefinition = kit.defineForm(complexSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "format",
-					control: "select",
-					label: "Format",
-					options: ["remote", "in-person"],
-				},
-				{
-					kind: "field",
-					path: "room",
-					control: "text",
-					label: "Room",
-					visible: (values) => values.format === "in-person",
-				},
-				{
-					kind: "array",
-					path: "speakers",
-					label: "Speakers",
-					itemDefault: { name: "" },
-					children: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-							label: "Speaker name",
-						},
-					],
-				},
-			],
-		})
+		const complexDefinition = kit.defineForm(
+			complexSchema,
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "format",
+						control: "select",
+						label: "Format",
+						options: ["remote", "in-person"],
+					},
+					{
+						kind: "field",
+						path: "room",
+						control: "text",
+						label: "Room",
+						visible: (values) => values.format === "in-person",
+					},
+					{
+						kind: "array",
+						path: "speakers",
+						label: "Speakers",
+						itemDefault: { name: "" },
+						children: [
+							{
+								kind: "field",
+								path: "name",
+								control: "text",
+								label: "Speaker name",
+							},
+						],
+					},
+				],
+			},
+			{
+				middleware: [
+					() => (next) => (transaction) => {
+						if (transaction.source.type !== "array") {
+							return next(transaction.patches)
+						}
+						if (transaction.source.action === "remove") return "cancelled"
+						if (transaction.source.action === "append") {
+							return next([
+								...transaction.patches,
+								{ op: "replace", path: ["room"], value: "B-20" },
+							])
+						}
+						return next(transaction.patches)
+					},
+				],
+			},
+		)
 		type ComplexInput = z.input<typeof complexSchema>
 
 		function ComplexState() {
@@ -1979,21 +2041,6 @@ describe("form kit", () => {
 					room: "A-12",
 					speakers: [{ name: "Ada" }, { name: "Grace" }],
 				},
-				middleware: [
-					() => (next) => (transaction) => {
-						if (transaction.source.type !== "array") {
-							return next(transaction.patches)
-						}
-						if (transaction.source.action === "remove") return "cancelled"
-						if (transaction.source.action === "append") {
-							return next([
-								...transaction.patches,
-								{ op: "replace", path: ["room"], value: "B-20" },
-							])
-						}
-						return next(transaction.patches)
-					},
-				],
 			})
 			return (
 				<kit.Form form={form}>
@@ -2482,23 +2529,10 @@ describe("form kit", () => {
 		expect(screen.queryByLabelText("Second")).toBeNull()
 	})
 
-	it("keeps the first middleware list and supplies current context", () => {
+	it("snapshots definition middleware and supplies current context", () => {
 		type Context = { readonly label: string }
 		type Input = { readonly name: string }
 		const contextualKit = kit.forContext<Context>()
-		const contextualDefinition = contextualKit.defineForm(
-			z.object({ name: z.string() }),
-			{
-				ui: [
-					{
-						kind: "field",
-						path: "name",
-						control: "text",
-						label: (_values, { context }) => context.label,
-					},
-				],
-			},
-		)
 		const first = vi.fn()
 		const second = vi.fn()
 		const firstMiddleware: FormMiddleware<Input, Context> =
@@ -2511,35 +2545,34 @@ describe("form kit", () => {
 				second(transaction.context.label)
 				return next(transaction.patches)
 			}
+		const middleware = [firstMiddleware]
+		const contextualDefinition = contextualKit.defineForm(
+			z.object({ name: z.string() }),
+			{
+				ui: [
+					{
+						kind: "field",
+						path: "name",
+						control: "text",
+						label: (_values, { context }) => context.label,
+					},
+				],
+			},
+			{ middleware },
+		)
+		middleware[0] = secondMiddleware
 
-		function View({
-			context,
-			middleware,
-		}: {
-			readonly context: Context
-			readonly middleware: FormMiddleware<Input, Context>
-		}) {
+		function View({ context }: { readonly context: Context }) {
 			const form = contextualKit.useForm(contextualDefinition, {
 				context,
 				defaultValues: { name: "Ada" },
-				middleware: [middleware],
 			})
 			return <contextualKit.AutoForm form={form} />
 		}
 
-		const view = render(
-			<View
-				context={{ label: "first context" }}
-				middleware={firstMiddleware}
-			/>,
-		)
+		const view = render(<View context={{ label: "first context" }} />)
 		expect(screen.getByLabelText("first context")).toBeTruthy()
-		view.rerender(
-			<View
-				context={{ label: "current context" }}
-				middleware={secondMiddleware}
-			/>,
-		)
+		view.rerender(<View context={{ label: "current context" }} />)
 		expect(screen.getByLabelText("current context")).toBeTruthy()
 		fireEvent.change(screen.getByLabelText("current context"), {
 			target: { value: "Grace" },
@@ -2549,28 +2582,40 @@ describe("form kit", () => {
 		expect(second).not.toHaveBeenCalled()
 	})
 
-	it("uses the latest update hooks only for managed value changes", () => {
-		const definition = kit.defineForm(schema, {
-			ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
-		})
+	it("uses definition update hooks with current context for managed changes", () => {
+		type Context = { readonly label: string }
+		const contextualKit = kit.forContext<Context>()
 		const observed: string[] = []
+		const definition = contextualKit.defineForm(
+			schema,
+			{
+				ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+			},
+			{
+				afterUpdate(transaction) {
+					observed.push(
+						`${transaction.context.label}:after:${transaction.nextValues.name}`,
+					)
+				},
+				beforeUpdate(draft, transaction) {
+					observed.push(
+						`${transaction.context.label}:before:${transaction.source.type}`,
+					)
+					draft.name = draft.name.toUpperCase()
+				},
+			},
+		)
 		let setRawName: (name: string) => void = () => undefined
 		let resetRawValues: () => void = () => undefined
 
 		function View({ label }: { readonly label: string }) {
-			const form = kit.useForm(definition, {
-				afterUpdate(transaction) {
-					observed.push(`${label}:after:${transaction.nextValues.name}`)
-				},
-				beforeUpdate(draft, transaction) {
-					observed.push(`${label}:before:${transaction.source.type}`)
-					draft.name = draft.name.toUpperCase()
-				},
+			const form = contextualKit.useForm(definition, {
+				context: { label },
 				defaultValues: { name: "Ada" },
 			})
 			setRawName = (name) => form.api.setValue("name", name)
 			resetRawValues = () => form.api.reset({ name: "Reset" })
-			return <kit.AutoForm form={form} />
+			return <contextualKit.AutoForm form={form} />
 		}
 
 		const view = render(<View label="first" />)

@@ -82,9 +82,9 @@ generic when its value type must stay linked to the selected path. The
 
 ## Definition and UI types
 
-`kit.defineForm()` accepts a UI tree and returns a normalized
-`FormDefinition`. Let the call infer the type for a definition that stays in
-one file.
+`kit.defineForm()` accepts a UI tree plus an optional managed-update policy and
+returns a normalized `FormDefinition`. Let the call infer the type for a
+definition that stays in one file.
 
 Use `UiNode` when the UI tree is declared separately:
 
@@ -196,7 +196,9 @@ component-local form instance.
 | --- | --- |
 | `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
 | `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
-| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, managed update hooks, value middleware, and submit handler. |
+| `DefineFormOptions<Schema, Context>` | Definition-owned `beforeUpdate`, ordered middleware, and `afterUpdate`. |
+| `FormDefinitionUpdatePolicy<Schema, Context>` | Normalized readonly managed-update policy stored by a definition. |
+| `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, validation modes, and submit handler. |
 | `FormSubmitDetails<Schema, Context>` | Parsed output, editable input, form binding, and submitter snapshot passed to a submit handler. |
 | `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
@@ -262,6 +264,28 @@ Import persistence types from `form-please/persistence`:
 | `PersistenceRestoreResult` | `applied`, `empty`, `cancelled`, `transformed`, or `conflict`. |
 
 Read [Form persistence](/persistence) for the complete runtime contract.
+
+### Definition testing types
+
+Import definition testing types from `form-please/testing`:
+
+| Type | Purpose |
+| --- | --- |
+| `DefinitionTester<Definition>` | Stateful selectors and production-backed definition operations. |
+| `DefinitionTesterOptions<Definition>` | Initial values, context, and interaction flags. |
+| `DefinitionInspection<Definition>` | Readonly values and stable public node projections for one resolution. |
+| `DefinitionTransition<Definition>` | Before, after, and exact public node changes. |
+| `ManagedDefinitionTransition<Definition>` | A definition transition plus commit status, final transaction, and middleware result. |
+| `DefinitionNodeSnapshot<Definition>` | Discriminated field, section, array, or render projection. |
+| `DefinitionChange<Definition>` | Added, removed, or property-level changed node. |
+| `DefinitionTestValues<Definition>` | Editable input inferred from the definition schema. |
+| `DefinitionTestContext<Definition>` | Runtime context inferred from the definition's kit. |
+
+`DefinitionFieldSnapshot`, `DefinitionSectionSnapshot`,
+`DefinitionArraySnapshot`, `DefinitionRenderSnapshot`,
+`DefinitionPropertyChange`, `DefinitionTestOption`, and
+`DefinitionTesterRerenderOptions` provide the narrower public contracts. Read
+[Test definitions](/testing) for runtime behavior.
 
 ## Slot and structure types
 

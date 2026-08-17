@@ -23,7 +23,7 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
-const definition = kit.defineForm(schema, {
+const definitionSource = {
 	ui: [
 		{ control: "text", kind: "field", label: "Name", path: "name" },
 		{
@@ -36,17 +36,19 @@ const definition = kit.defineForm(schema, {
 			path: "items",
 		},
 	],
-})
+} as const
 
 describe("history React Hook Form integration", () => {
 	it("publishes navigation state through the React history hook", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
+		const definition = kit.defineForm(schema, definitionSource, {
+			middleware: [feature],
+		})
 		let history!: UseHistoryResult<Input>
 
 		function View() {
 			const form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 			})
 			history = useHistory(form, feature)
 			return (
@@ -80,6 +82,9 @@ describe("history React Hook Form integration", () => {
 
 	it("keeps one hook result identity until navigation state changes", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
+		const definition = kit.defineForm(schema, definitionSource, {
+			middleware: [feature],
+		})
 		const results: UseHistoryResult<Input>[] = []
 		let rerender!: () => void
 
@@ -88,7 +93,6 @@ describe("history React Hook Form integration", () => {
 			rerender = () => setTick(tick + 1)
 			const form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 			})
 			results.push(useHistory(form, feature))
 			return <kit.AutoForm form={form} />
@@ -115,13 +119,15 @@ describe("history React Hook Form integration", () => {
 
 	it("restores optional top-level keys and generated array structure", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
+		const definition = kit.defineForm(schema, definitionSource, {
+			middleware: [feature],
+		})
 		let form!: FormBinding<typeof schema>
 		let history!: HistoryHandle<Input>
 
 		function View() {
 			form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 			})
 			history = feature.handle(form)
 			return <kit.AutoForm form={form} />
@@ -164,18 +170,20 @@ describe("history React Hook Form integration", () => {
 
 	it("preserves touched and errors while recalculating dirty from defaults", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
+		const definition = kit.defineForm(schema, definitionSource, {
+			beforeUpdate(_draft, transaction) {
+				if (transaction.source.type === "history") {
+					expect(transaction.source.action).toBe("undo")
+				}
+			},
+			middleware: [feature],
+		})
 		let form!: FormBinding<typeof schema>
 		let history!: HistoryHandle<Input>
 
 		function View() {
 			form = kit.useForm(definition, {
-				beforeUpdate(_draft, transaction) {
-					if (transaction.source.type === "history") {
-						expect(transaction.source.action).toBe("undo")
-					}
-				},
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 			})
 			history = feature.handle(form)
 			const state = useFormState({ control: form.api.control })

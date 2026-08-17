@@ -36,6 +36,10 @@ const complexEditingSchema = z.object({
 
 type ComplexEditingInput = z.input<typeof complexEditingSchema>
 
+const passThroughEditing: FormMiddleware<ComplexEditingInput> =
+	() => (next) => (transaction) =>
+		next(transaction.patches)
+
 const complexEditingDefinition = nativeFormKit.defineForm(
 	complexEditingSchema,
 	{
@@ -174,6 +178,7 @@ const complexEditingDefinition = nativeFormKit.defineForm(
 			},
 		],
 	},
+	{ middleware: [passThroughEditing] },
 )
 
 const initialComplexEditingValues = {
@@ -203,14 +208,9 @@ const initialComplexEditingValues = {
 	},
 } satisfies ComplexEditingInput
 
-const passThroughEditing: FormMiddleware<ComplexEditingInput> =
-	() => (next) => (transaction) =>
-		next(transaction.patches)
-
 export function ComplexMiddlewareEditingPreview() {
 	const form = nativeFormKit.useForm(complexEditingDefinition, {
 		defaultValues: initialComplexEditingValues,
-		middleware: [passThroughEditing],
 	})
 
 	return (
@@ -238,39 +238,6 @@ const orderSchema = z.object({
 
 type OrderInput = z.input<typeof orderSchema>
 
-const orderDefinition = nativeFormKit.defineForm(orderSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "quantity",
-			control: "number",
-			label: "Quantity",
-			props: { min: 1, step: 1 },
-		},
-		{
-			kind: "field",
-			path: "unitPrice",
-			control: "number",
-			label: "Unit price",
-			props: { min: 0, step: 0.01 },
-		},
-		{
-			kind: "field",
-			path: "total",
-			control: "number",
-			label: "Total",
-			readOnly: true,
-			props: { min: 0, step: 0.01 },
-		},
-	],
-})
-
-const initialOrder = {
-	quantity: 2,
-	total: 30,
-	unitPrice: 15,
-} satisfies OrderInput
-
 // [!region derived-value]
 const keepOrderTotalCurrent: FormMiddleware<OrderInput> =
 	() => (next) => (transaction) => {
@@ -288,11 +255,47 @@ const keepOrderTotalCurrent: FormMiddleware<OrderInput> =
 	}
 // [!endregion derived-value]
 
+const orderDefinition = nativeFormKit.defineForm(
+	orderSchema,
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "quantity",
+				control: "number",
+				label: "Quantity",
+				props: { min: 1, step: 1 },
+			},
+			{
+				kind: "field",
+				path: "unitPrice",
+				control: "number",
+				label: "Unit price",
+				props: { min: 0, step: 0.01 },
+			},
+			{
+				kind: "field",
+				path: "total",
+				control: "number",
+				label: "Total",
+				readOnly: true,
+				props: { min: 0, step: 0.01 },
+			},
+		],
+	},
+	{ middleware: [keepOrderTotalCurrent] },
+)
+
+const initialOrder = {
+	quantity: 2,
+	total: 30,
+	unitPrice: 15,
+} satisfies OrderInput
+
 // [!region derived-value-form]
 export function DerivedTotalMiddlewarePreview() {
 	const form = nativeFormKit.useForm(orderDefinition, {
 		defaultValues: initialOrder,
-		middleware: [keepOrderTotalCurrent],
 	})
 	const total = useWatch({ control: form.api.control, name: "total" })
 
@@ -336,36 +339,46 @@ const discountSchema = z.object({
 
 type DiscountInput = z.input<typeof discountSchema>
 
-const discountDefinition = nativeFormKit.defineForm(discountSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "discount",
-			control: "number",
-			label: "Discount percentage",
-			props: { min: 0, max: 100, step: 1 },
-		},
-	],
-})
+type DiscountContext = {
+	readonly maximum: number
+	readonly report: (message: string) => void
+}
+
+const discountKit = nativeFormKit.forContext<DiscountContext>()
+const guardDiscount: FormMiddleware<DiscountInput, DiscountContext> =
+	() => (next) => (transaction) => {
+		const discount = transaction.nextValues.discount
+		if (discount > transaction.context.maximum) {
+			transaction.context.report(`Cancelled ${discount}% discount.`)
+			return
+		}
+
+		const result = next(transaction.patches)
+		transaction.context.report(`Committed ${discount}% discount.`)
+		return result
+	}
+const discountDefinition = discountKit.defineForm(
+	discountSchema,
+	{
+		ui: [
+			{
+				kind: "field",
+				path: "discount",
+				control: "number",
+				label: "Discount percentage",
+				props: { min: 0, max: 100, step: 1 },
+			},
+		],
+	},
+	{ middleware: [guardDiscount] },
+)
 
 // [!region cancellation]
 export function CancellationMiddlewarePreview() {
 	const [decision, setDecision] = useState("No managed change yet.")
-	const maximumDiscount = 30
-	const guardDiscount: FormMiddleware<DiscountInput> =
-		() => (next) => (transaction) => {
-			if (transaction.nextValues.discount > maximumDiscount) {
-				setDecision(`Cancelled ${transaction.nextValues.discount}% discount.`)
-				return
-			}
-
-			const result = next(transaction.patches)
-			setDecision(`Committed ${transaction.nextValues.discount}% discount.`)
-			return result
-		}
-	const form = nativeFormKit.useForm(discountDefinition, {
+	const form = discountKit.useForm(discountDefinition, {
+		context: { maximum: 30, report: setDecision },
 		defaultValues: { discount: 10 },
-		middleware: [guardDiscount],
 	})
 	const discount = useWatch({
 		control: form.api.control,
@@ -382,8 +395,8 @@ export function CancellationMiddlewarePreview() {
 				Managed changes above 30% are cancelled. A raw RHF update bypasses the
 				guard.
 			</p>
-			<nativeFormKit.Form className="form-please-complex__form" form={form}>
-				<nativeFormKit.Fields />
+			<discountKit.Form className="form-please-complex__form" form={form}>
+				<discountKit.Fields />
 				<div className="form-please-complex__actions">
 					<button
 						onClick={() =>
@@ -408,7 +421,7 @@ export function CancellationMiddlewarePreview() {
 				<output aria-live="polite">
 					Current value: {discount}%. {decision}
 				</output>
-			</nativeFormKit.Form>
+			</discountKit.Form>
 		</section>
 	)
 }

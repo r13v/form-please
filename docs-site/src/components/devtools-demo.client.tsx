@@ -36,53 +36,57 @@ const profileSchema = z.object({
 	teamName: z.string().optional(),
 })
 
-const profileDefinition = kit.defineForm(profileSchema, {
-	ui: [
-		{
-			control: "text",
-			kind: "field",
-			label: "Name",
-			path: "name",
-			required: true,
-		},
-		{
-			control: "select",
-			kind: "field",
-			label: "Profile type",
-			options: [
-				{ label: "Individual", value: "individual" },
-				{ label: "Team", value: "team" },
-			],
-			path: "profileType",
-		},
-		{
-			control: "select",
-			kind: "field",
-			label: "Role",
-			options: ({ values }) => {
-				if (values.profileType === "team") {
+const profileDefinition = kit.defineForm(
+	profileSchema,
+	{
+		ui: [
+			{
+				control: "text",
+				kind: "field",
+				label: "Name",
+				path: "name",
+				required: true,
+			},
+			{
+				control: "select",
+				kind: "field",
+				label: "Profile type",
+				options: [
+					{ label: "Individual", value: "individual" },
+					{ label: "Team", value: "team" },
+				],
+				path: "profileType",
+			},
+			{
+				control: "select",
+				kind: "field",
+				label: "Role",
+				options: ({ values }) => {
+					if (values.profileType === "team") {
+						return [
+							{ label: "Designer", value: "designer" },
+							{ label: "Engineer", value: "engineer" },
+							{ label: "Team lead", value: "lead" },
+						]
+					}
 					return [
 						{ label: "Designer", value: "designer" },
 						{ label: "Engineer", value: "engineer" },
-						{ label: "Team lead", value: "lead" },
 					]
-				}
-				return [
-					{ label: "Designer", value: "designer" },
-					{ label: "Engineer", value: "engineer" },
-				]
+				},
+				path: "role",
 			},
-			path: "role",
-		},
-		{
-			control: "text",
-			kind: "field",
-			label: "Team name",
-			path: "teamName",
-			visible: ({ profileType }) => profileType === "team",
-		},
-	],
-})
+			{
+				control: "text",
+				kind: "field",
+				label: "Team name",
+				path: "teamName",
+				visible: ({ profileType }) => profileType === "team",
+			},
+		],
+	},
+	{ middleware: [historyFeature, persistenceFeature] },
+)
 
 export function DevtoolsDemoClient() {
 	const form = kit.useForm(profileDefinition, {
@@ -92,7 +96,6 @@ export function DevtoolsDemoClient() {
 			role: "engineer",
 			teamName: "Analytical Engines",
 		},
-		middleware: [historyFeature, persistenceFeature],
 	})
 	const history = useHistory(form, historyFeature)
 	const persistence = usePersistence(form, persistenceFeature)

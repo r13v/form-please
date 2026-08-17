@@ -1,6 +1,5 @@
 "use client"
 
-import type { Draft } from "immer"
 import {
 	type ComponentPropsWithoutRef,
 	type ComponentType,
@@ -22,7 +21,6 @@ import {
 	type FieldErrors,
 	type FieldValues,
 	FormProvider,
-	get,
 	type Mode,
 	set,
 	type UseFormReturn,
@@ -49,6 +47,11 @@ import {
 } from "./diagnostics.js"
 import { cloneFormValue } from "./form-value.js"
 import {
+	cloneItemDefault,
+	fieldPathSegments,
+	getMutableArrayValue,
+} from "./generated-array.js"
+import {
 	createStandardSchemaResolver,
 	fieldErrorsToIssues,
 	fieldErrorToIssues,
@@ -63,6 +66,7 @@ import type {
 	FormDefinition,
 	FormDefinitionBuilder,
 	FormDefinitionSource,
+	FormDefinitionUpdatePolicy,
 	FormFragment,
 	FormInput,
 	FormIssue,
@@ -78,7 +82,6 @@ import type {
 import { useFieldOptions } from "./use-field-options.js"
 import {
 	attachValueCoordinatorCapability,
-	type BeforeUpdateResult,
 	createValueCoordinator,
 	type FormMiddleware,
 	type FormUpdateRecipe,
@@ -141,15 +144,6 @@ export type UseFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = ContextOption<Context> & {
-	/** Adjusts or cancels a proposed managed value update before middleware. */
-	readonly beforeUpdate?: (
-		draft: Draft<FormValues<Schema>>,
-		transaction: ValueTransaction<FormValues<Schema>, Context>,
-	) => BeforeUpdateResult
-	/** Observes the final transaction after commit and middleware unwind. */
-	readonly afterUpdate?: (
-		transaction: ValueTransaction<FormValues<Schema>, Context>,
-	) => void
 	/** Initial editable values, fixed for the hook lifetime. */
 	readonly defaultValues: FormInput<Schema>
 	/** Milliseconds to delay the display of validation errors. */
@@ -158,8 +152,6 @@ export type UseFormOptions<
 	readonly disabled?: boolean
 	/** The React Hook Form validation mode. */
 	readonly mode?: Mode
-	/** Ordered value middleware, fixed for the hook lifetime. */
-	readonly middleware?: readonly FormMiddleware<FormValues<Schema>, Context>[]
 	/** Whether all generated controls prevent value changes. */
 	readonly readOnly?: boolean
 	/** The validation mode used after the first submit attempt. */
@@ -170,6 +162,15 @@ export type UseFormOptions<
 	) => unknown | Promise<unknown>
 }
 
+/** Optional managed-update policy supplied while defining one form. */
+export type DefineFormOptions<
+	Schema extends StandardSchema,
+	Context = unknown,
+> = Omit<FormDefinitionUpdatePolicy<Schema, Context>, "middleware"> & {
+	/** Ordered value middleware initialized separately for each form binding. */
+	readonly middleware?: readonly FormMiddleware<FormValues<Schema>, Context>[]
+}
+
 /** A form definition bound to a React Hook Form instance and runtime context. */
 export type FormBinding<
 	Schema extends StandardSchema = AnyFormSchema,
@@ -178,7 +179,12 @@ export type FormBinding<
 	/** The unchanged typed React Hook Form API. */
 	readonly api: NativeApi<Schema, Context>
 	/** The normalized definition fixed for this binding. */
-	readonly definition: FormDefinition<Schema>
+	readonly definition: FormDefinition<
+		Schema,
+		ControlDefinitionRegistry,
+		Context
+	> &
+		FormDefinitionUpdatePolicy<Schema, Context>
 	/** Application data available to resolvers and controls. */
 	readonly context: Context
 	/** Atomically applies one managed value recipe through middleware. */
@@ -367,6 +373,7 @@ type DefineForm<
 		Context,
 		Grid
 	>,
+	options?: DefineFormOptions<Schema, Context>,
 ) => FormDefinition<
 	Schema,
 	Controls,
@@ -374,7 +381,8 @@ type DefineForm<
 	FieldOptions,
 	SectionOptions,
 	ArrayOptions,
-	Grid
+	Grid,
+	FormDefinitionUpdatePolicy<Schema, Context>
 >
 
 /** The typed `useForm` hook exposed by a form kit. */
@@ -393,7 +401,8 @@ type UseForm<
 		FieldOptions,
 		SectionOptions,
 		ArrayOptions,
-		Grid
+		Grid,
+		FormDefinitionUpdatePolicy<Schema, Context>
 	>,
 	options: UseFormOptions<Schema, Context>,
 ) => FormBinding<Schema, Context>
@@ -592,13 +601,18 @@ function assembleKit(
 		unknown,
 		number
 	>
-	const defineForm = ((schema: StandardSchema, source: unknown) => {
+	const defineForm = ((
+		schema: StandardSchema,
+		source: unknown,
+		options?: DefineFormOptions<StandardSchema, unknown>,
+	) => {
 		const definition = normalizeDefinition(
 			schema,
 			source,
 			controls,
 			grid,
 			ownsFragment,
+			options,
 		)
 		definitions.add(definition)
 		return definition
@@ -612,7 +626,8 @@ function assembleKit(
 	>
 
 	const useForm = (<Schema extends StandardSchema>(
-		definition: FormDefinition<Schema>,
+		definition: FormDefinition<Schema> &
+			FormDefinitionUpdatePolicy<Schema, unknown>,
 		options: UseFormOptions<Schema, unknown>,
 	) => {
 		const fixedDefinition = useRef(definition).current
@@ -625,19 +640,6 @@ function assembleKit(
 		if (!isFieldValues(fixedDefaultValues)) {
 			throw new TypeError("Form defaultValues must be an object")
 		}
-		const fixedMiddlewareRef = useRef<
-			readonly FormMiddleware<FormValues<Schema>, unknown>[] | undefined
-		>(undefined)
-		if (fixedMiddlewareRef.current === undefined) {
-			fixedMiddlewareRef.current = Object.freeze([
-				...(options.middleware ?? []),
-			])
-		}
-		const beforeUpdateRef = useRef(options.beforeUpdate)
-		beforeUpdateRef.current = options.beforeUpdate
-		const afterUpdateRef = useRef(options.afterUpdate)
-		afterUpdateRef.current = options.afterUpdate
-
 		const inputRefs = useRef(new Map<string, HTMLElement>())
 		const errorSummaryRef = useRef<HTMLElement | null>(null)
 		const api = useReactHookForm<
@@ -699,12 +701,12 @@ function assembleKit(
 		>(undefined)
 		if (coordinatorRef.current === undefined) {
 			coordinatorRef.current = createValueCoordinator({
+				afterUpdate: fixedDefinition.afterUpdate,
+				beforeUpdate: fixedDefinition.beforeUpdate,
 				commit: commitRef.current,
-				getAfterUpdate: () => afterUpdateRef.current,
-				getBeforeUpdate: () => beforeUpdateRef.current,
 				getContext: () => contextRef.current,
 				getValues: () => apiRef.current.getValues(),
-				middleware: fixedMiddlewareRef.current,
+				middleware: fixedDefinition.middleware,
 				restore: restoreRef.current,
 			})
 		}
@@ -1472,12 +1474,6 @@ function renderErrors(
 	))
 }
 
-/** Creates an independent value from an array node item default. */
-function cloneItemDefault(value: unknown): unknown {
-	const candidate = typeof value === "function" ? value() : value
-	return cloneFormValue(candidate)
-}
-
 /** Runs a generated array proposal before preserving its native row operation. */
 function dispatchArrayAction(
 	form: RuntimeForm,
@@ -1498,34 +1494,6 @@ function dispatchArrayAction(
 			},
 		},
 	)
-}
-
-/** Reads an array value at an RHF path or reports a malformed form value. */
-function getMutableArrayValue(values: unknown, path: string): unknown[] {
-	const value = get(values, path)
-	if (!Array.isArray(value)) {
-		throw new TypeError(`Generated array path "${path}" must contain an array`)
-	}
-	return value
-}
-
-/** Converts an RHF dot path to Immer segments using numeric array indices. */
-function fieldPathSegments(
-	values: unknown,
-	path: string,
-): readonly (string | number)[] {
-	let current = values
-	return path.split(".").map((segment) => {
-		const key =
-			Array.isArray(current) && /^(0|[1-9]\d*)$/.test(segment)
-				? Number(segment)
-				: segment
-		current =
-			current !== null && typeof current === "object"
-				? (current as Record<string | number, unknown>)[key]
-				: undefined
-		return key
-	})
 }
 
 /** Publishes one managed value transaction and schedules change validation. */

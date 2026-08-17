@@ -339,12 +339,14 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 	controls: ControlDefinitionRegistry,
 	grid: readonly number[],
 	ownsFragment: OwnsFragment = () => false,
+	updates?: unknown,
 ): FormDefinition<Schema> {
 	assertStandardSchema(schema, "Form")
 	const materializedSource = materializeDefinitionSource(source, "Form")
 	if (!isRecord(materializedSource) || !Array.isArray(materializedSource.ui)) {
 		throw new TypeError("Form definition must contain a ui array")
 	}
+	const normalizedUpdates = normalizeDefinitionUpdates(updates)
 
 	const state = {
 		controls,
@@ -359,11 +361,44 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 	})
 
 	return Object.freeze({
+		...normalizedUpdates,
 		schema,
 		grid,
 		ui,
 		nodes: Object.freeze([...state.nodes]),
 	}) as FormDefinition<Schema>
+}
+
+/** Validates and snapshots managed-update policy owned by one definition. */
+function normalizeDefinitionUpdates(updates: unknown): Readonly<{
+	beforeUpdate?: unknown
+	afterUpdate?: unknown
+	middleware: readonly unknown[]
+}> {
+	if (updates !== undefined && !isRecord(updates)) {
+		throw new TypeError("Form definition update options must be an object")
+	}
+	const beforeUpdate = updates?.beforeUpdate
+	if (beforeUpdate !== undefined && typeof beforeUpdate !== "function") {
+		throw new TypeError("Form definition beforeUpdate must be a function")
+	}
+	const afterUpdate = updates?.afterUpdate
+	if (afterUpdate !== undefined && typeof afterUpdate !== "function") {
+		throw new TypeError("Form definition afterUpdate must be a function")
+	}
+	const middleware = updates?.middleware
+	if (middleware !== undefined && !Array.isArray(middleware)) {
+		throw new TypeError("Form definition middleware must be an array")
+	}
+	if (middleware?.some((candidate) => typeof candidate !== "function")) {
+		throw new TypeError("Form definition middleware must contain functions")
+	}
+
+	return Object.freeze({
+		...(beforeUpdate === undefined ? {} : { beforeUpdate }),
+		...(afterUpdate === undefined ? {} : { afterUpdate }),
+		middleware: Object.freeze([...(middleware ?? [])]),
+	})
 }
 
 /** Validates and normalizes one nested list of UI nodes. */

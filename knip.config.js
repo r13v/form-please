@@ -29,6 +29,7 @@ export default {
 				"src/native-controls/index.ts",
 				"src/preset-native/index.ts",
 				"src/preset-mui/index.ts",
+				"src/testing/index.ts",
 			],
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 		},

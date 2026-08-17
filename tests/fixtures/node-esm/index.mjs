@@ -2,6 +2,7 @@ import { createFormKit, fromResource, matchResource } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { nativeFormKit } from "form-please/preset-native"
+import { createDefinitionTester } from "form-please/testing"
 
 const schema = {
 	"~standard": {
@@ -32,6 +33,10 @@ if (typeof createNativeControls().text.component !== "function") {
 }
 if (typeof nativeFormKit.AutoForm !== "function") {
 	throw new Error("ESM native preset did not initialize")
+}
+const tester = createDefinitionTester(definition, { values: { name: "Ada" } })
+if (tester.field("name").visible !== true) {
+	throw new Error("ESM testing entry did not resolve the definition")
 }
 
 const label = fromResource((values) => values.organization, {

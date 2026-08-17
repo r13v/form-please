@@ -18,33 +18,35 @@ const historySchema = z.object({
 })
 type HistoryInput = z.input<typeof historySchema>
 
-const historyDefinition = nativeFormKit.defineForm(historySchema, {
-	ui: [
-		{ control: "text", kind: "field", label: "Name", path: "name" },
-		{
-			children: [
-				{
-					control: "text",
-					kind: "field",
-					label: "Project title",
-					path: "title",
-				},
-			],
-			itemDefault: { title: "" },
-			kind: "array",
-			label: "Projects",
-			path: "projects",
-		},
-	],
-})
-
 // [!region setup]
 const historyFeature = createHistoryMiddleware({ limit: 50 })
+const historyDefinition = nativeFormKit.defineForm(
+	historySchema,
+	{
+		ui: [
+			{ control: "text", kind: "field", label: "Name", path: "name" },
+			{
+				children: [
+					{
+						control: "text",
+						kind: "field",
+						label: "Project title",
+						path: "title",
+					},
+				],
+				itemDefault: { title: "" },
+				kind: "array",
+				label: "Projects",
+				path: "projects",
+			},
+		],
+	},
+	{ middleware: [historyFeature] },
+)
 
 export function HistoryPreview() {
 	const form = nativeFormKit.useForm(historyDefinition, {
 		defaultValues: { name: "Ada Lovelace", projects: [] },
-		middleware: [historyFeature],
 	})
 	const history = useHistory(form, historyFeature)
 	const { snapshot } = history

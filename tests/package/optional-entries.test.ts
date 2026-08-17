@@ -26,6 +26,7 @@ describe("built package entries", () => {
 			expect(modules.persistence.usePersistence).toBeTypeOf("function")
 			expect(modules.presetNative.nativeFormKit.useForm).toBeTypeOf("function")
 			expect(modules.presetMui.createMuiFormKit).toBeTypeOf("function")
+			expect(modules.testing.createDefinitionTester).toBeTypeOf("function")
 		}
 	})
 
@@ -58,9 +59,11 @@ describe("built package entries", () => {
 			}
 			for (const name of [
 				"ControlOwnPropsOf",
+				"DefineFormOptions",
 				"OptionValue",
 				"FormBinding",
 				"FormDefinition",
+				"FormDefinitionUpdatePolicy",
 				"FormKit",
 				"FormMiddleware",
 				"FormSubmitDetails",
@@ -108,6 +111,15 @@ describe("built package entries", () => {
 			)
 			expect(muiDeclaration).toContain("MuiSelectProps")
 			expect(muiDeclaration).not.toContain("MuiSelectConfig")
+
+			const testingDeclaration = await readFile(
+				new URL(`../../dist/testing.${extension}`, import.meta.url),
+				"utf8",
+			)
+			expect(testingDeclaration).toContain("createDefinitionTester")
+			expect(testingDeclaration).toContain("DefinitionTesterOptions")
+			expect(testingDeclaration).toContain("ManagedDefinitionTransition")
+			expect(testingDeclaration).not.toContain("ResolvedDefinition")
 		}
 	})
 })
@@ -123,6 +135,7 @@ type Modules = {
 		readonly nativeFormKit: { readonly useForm: unknown }
 	}
 	readonly presetMui: Record<string, unknown>
+	readonly testing: Record<string, unknown>
 }
 
 async function loadEsm(): Promise<Modules> {
@@ -135,6 +148,7 @@ async function loadEsm(): Promise<Modules> {
 		persistence: await import("../../dist/persistence.js"),
 		presetNative: await import("../../dist/preset-native.js"),
 		presetMui: await import("../../dist/preset-mui.js"),
+		testing: await import("../../dist/testing.js"),
 	}
 }
 
@@ -148,5 +162,6 @@ function loadCommonJs(): Modules {
 		persistence: require("../../dist/persistence.cjs"),
 		presetNative: require("../../dist/preset-native.cjs"),
 		presetMui: require("../../dist/preset-mui.cjs"),
+		testing: require("../../dist/testing.cjs"),
 	}
 }

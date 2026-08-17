@@ -18,8 +18,8 @@ _Avoid_: Registered path, every schema path
 `createFormKit`.
 _Avoid_: Mutable kit, extension chain
 
-**Form definition**: A Standard Schema and recursive typed UI tree normalized
-by one exact form kit.
+**Form definition**: A Standard Schema, recursive typed UI tree, and fixed
+managed-update policy normalized by one exact form kit.
 _Avoid_: Form binding, inferred schema UI
 
 **Form binding**: The thin integration returned by `kit.useForm` that contains
@@ -83,17 +83,18 @@ forwarded to `next`; React Hook Form dot paths remain the public field-path
 format elsewhere.
 _Avoid_: JSON Patch pointer, React Hook Form dot path, custom diff record
 
-**Form middleware**: A synchronous Redux-shaped function configured for one
-form binding that forwards value patches with `next`, replaces or cancels a
-value transaction, and controls the dispatch return value. The ordered
-middleware list is fixed for the `kit.useForm` lifetime. A middleware can call
+**Form middleware**: A synchronous Redux-shaped function configured by one form
+definition that forwards value patches with `next`, replaces or cancels a value
+transaction, and controls the dispatch return value. The ordered middleware
+list is copied and fixed by `kit.defineForm`; every binding initializes an
+independent chain. A middleware can call
 `next` synchronously at most once; returning without calling `next` cancels the
 transaction. It may return a Promise after a synchronous commit. An exception
 after `next` does not roll back the committed values.
 _Avoid_: React Hook Form subscription, UI resolver, global middleware
 
 **Form persistence middleware**: An optional form middleware configured in a
-form binding's fixed middleware list to coordinate durable form drafts.
+definition's fixed middleware list to coordinate durable form drafts.
 _Avoid_: Persistence hook, `useForm` persistence option
 
 **Persisted form draft**: A durable representation of the current editable
@@ -131,9 +132,10 @@ untrusted persisted value at an older application version to the current input
 shape.
 _Avoid_: Protocol migration, schema validation
 
-**Managed update hooks**: The form-local `beforeUpdate` and `afterUpdate`
+**Managed update hooks**: The definition-owned `beforeUpdate` and `afterUpdate`
 callbacks for one managed value-update lifecycle. `beforeUpdate` can adjust or
 cancel proposed values, while `afterUpdate` observes the committed transaction.
+Both receive the binding's current context through the transaction.
 _Avoid_: React Hook Form lifecycle hooks, raw update hooks
 
 **Form middleware API**: The form-local `getValues` and `update` operations

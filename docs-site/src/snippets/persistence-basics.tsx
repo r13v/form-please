@@ -17,12 +17,12 @@ const profileSchema = z.object({
 	role: z.string(),
 })
 
-const profileDefinition = nativeFormKit.defineForm(profileSchema, {
+const profileDefinitionSource = {
 	ui: [
 		{ control: "text", kind: "field", label: "Name", path: "name" },
 		{ control: "text", kind: "field", label: "Role", path: "role" },
 	],
-})
+} as const
 
 const draftParser = parseAsString.withOptions({
 	history: "replace",
@@ -35,8 +35,8 @@ export function PersistencePreview() {
 	const setQueryDraftRef = useRef(setQueryDraft)
 	setQueryDraftRef.current = setQueryDraft
 
-	const [feature] = useState(() =>
-		createPersistenceMiddleware({
+	const [{ definition, feature }] = useState(() => {
+		const feature = createPersistenceMiddleware({
 			adapter: createNuqsPersistenceAdapter({
 				read: () => new URLSearchParams(window.location.search).get("draft"),
 				write: (value) => setQueryDraftRef.current(value),
@@ -44,11 +44,16 @@ export function PersistencePreview() {
 			key: "profile",
 			saveDelay: 250,
 			version: 1,
-		}),
-	)
-	const form = nativeFormKit.useForm(profileDefinition, {
+		})
+		const definition = nativeFormKit.defineForm(
+			profileSchema,
+			profileDefinitionSource,
+			{ middleware: [feature] },
+		)
+		return { definition, feature }
+	})
+	const form = nativeFormKit.useForm(definition, {
 		defaultValues: { name: "Ada Lovelace", role: "Programmer" },
-		middleware: [feature],
 	})
 	const persistence = usePersistence(form, feature)
 	const { snapshot } = persistence

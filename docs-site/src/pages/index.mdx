@@ -44,7 +44,7 @@ transforms the input once, then "Form, Please" displays the typed output.
 ## What stays explicit
 
 - Your Standard Schema owns validation and transformed submit output.
-- Your definition owns fields, sections, arrays, labels, and conditional UI.
+- Your definition owns generated UI and its managed-update policy.
 - Your controls and slots own the rendered design system.
 - React Hook Form owns editable state and its low-level API.
 
@@ -53,10 +53,11 @@ definition is not enough. `kit.Form` supplies `FormProvider`.
 
 ## Supported package entries
 
-The package has eight JavaScript entries: `form-please`,
+The package has nine JavaScript entries: `form-please`,
 `form-please/default-slots`, `form-please/devtools`, `form-please/history`,
 `form-please/native-controls`, `form-please/persistence`,
-`form-please/preset-native`, and `form-please/preset-mui`.
+`form-please/preset-native`, `form-please/preset-mui`, and
+`form-please/testing`.
 
 Release automation controls the exact version. Breaking public behavior starts
 a new major release line.

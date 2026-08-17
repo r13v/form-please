@@ -95,13 +95,13 @@ export type ValueTransaction<Input extends FieldValues, Context = unknown> = {
 export type BeforeUpdateResult = false | void
 
 /** Adjusts or cancels one proposed managed value update. */
-type BeforeUpdate<Input extends FieldValues, Context> = (
+export type BeforeUpdate<Input extends FieldValues, Context = unknown> = (
 	draft: Draft<Input>,
 	transaction: ValueTransaction<Input, Context>,
 ) => BeforeUpdateResult
 
 /** Observes one final managed value transaction after commit. */
-type AfterUpdate<Input extends FieldValues, Context> = (
+export type AfterUpdate<Input extends FieldValues, Context = unknown> = (
 	transaction: ValueTransaction<Input, Context>,
 ) => void
 
@@ -132,8 +132,8 @@ type CoordinatorOptions<Input extends FieldValues, Context> = {
 	readonly middleware: readonly FormMiddleware<Input, Context>[]
 	readonly getValues: () => Input
 	readonly getContext: () => Context
-	readonly getBeforeUpdate?: () => BeforeUpdate<Input, Context> | undefined
-	readonly getAfterUpdate?: () => AfterUpdate<Input, Context> | undefined
+	readonly beforeUpdate?: BeforeUpdate<Input, Context>
+	readonly afterUpdate?: AfterUpdate<Input, Context>
 	readonly commit: ValueTransactionCommit<Input, Context>
 	readonly restore?: ValueTransactionCommit<Input, Context>
 }
@@ -460,7 +460,7 @@ export function createValueCoordinator<
 			try {
 				effectiveTransaction = applyBeforeUpdate(
 					transaction,
-					options.getBeforeUpdate?.(),
+					options.beforeUpdate,
 					activeDispatch.allowTopLevelRemoval,
 				)
 			} catch (error) {
@@ -517,7 +517,7 @@ export function createValueCoordinator<
 			let afterFailed = false
 			if (committed !== undefined) {
 				try {
-					const afterResult = options.getAfterUpdate?.()?.(committed)
+					const afterResult = options.afterUpdate?.(committed)
 					assertSynchronousHookResult(afterResult, "afterUpdate")
 					if (diagnosticToken !== undefined) {
 						publishFormDiagnosticEvent(capability, {

@@ -6,10 +6,11 @@ showAskAi: false
 
 # Definitions
 
-A definition connects one Standard Schema to the UI that edits its input. Call
-`kit.defineForm(schema, (ui) => [...])` outside the component that uses the
-form. The schema-bound helpers keep paths, controls, options, and resolver
-values connected while hiding the runtime node discriminator.
+A definition connects one Standard Schema to the UI and managed-update policy
+that govern its input. Call `kit.defineForm(schema, source, options?)` outside
+the component that uses the form. The schema-bound helpers keep paths,
+controls, options, and resolver values connected while hiding the runtime node
+discriminator.
 
 ```tsx
 import { nativeFormKit } from "form-please/preset-native"
@@ -63,6 +64,11 @@ invalid path syntax, duplicate IDs, missing children, and invalid grid values.
 The object form `defineForm(schema, { ui: [...] })` remains supported for
 generated definitions and direct node composition. Both authoring styles
 produce the same normalized tree.
+
+The optional third argument configures `beforeUpdate`, ordered `middleware`,
+and `afterUpdate`. These callbacks and a frozen middleware snapshot become
+readonly properties of the definition. See [Value middleware](/middleware) for
+their managed-update boundary and ordering.
 
 ## Fields
 

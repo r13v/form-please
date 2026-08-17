@@ -16,8 +16,9 @@ Value middleware intercepts managed value proposals before Form, Please
 commits them to React Hook Form. Use it to derive dependent values, cancel a
 proposal, or run ordered work after a commit.
 
-Middleware is form-local. It does not create another form store. React Hook
-Form remains the owner of editable values and form state.
+Middleware policy belongs to a definition and initializes separately for every
+form binding. It does not create another form store. React Hook Form remains the
+owner of editable values and form state.
 
 | Need | Use |
 | --- | --- |
@@ -45,9 +46,10 @@ The order is `beforeUpdate`, middleware before `next`, commit, middleware after
 when middleware throws after a commit, because the committed change remains
 observable. If both fail after commit, dispatch throws an `AggregateError`.
 
-The callbacks use their latest React render versions. Their transactions are
-readonly views rather than archival snapshots. Copy retained audit or save data.
-Use middleware when several rules must compose in a declared order.
+The callbacks are fixed with the definition. Their transactions are readonly
+views rather than archival snapshots. Read current binding data from
+`transaction.context`, and copy retained audit or save data. Use middleware
+when several rules must compose in a declared order.
 
 Generated array constraints still apply. Return `false` to cancel the proposed
 structural action; do not rewrite its length or order through the draft.
@@ -77,7 +79,7 @@ patches for the source change.
 // [!include ~/snippets/middleware-guide.tsx:derived-value]
 ```
 
-Pass the ordered middleware list to `kit.useForm`. Use `form.update` when an
+Pass the ordered middleware list to `kit.defineForm`. Use `form.update` when an
 application action must enter the same managed boundary.
 
 ```tsx
@@ -175,8 +177,8 @@ a new patch array to `next` when middleware changes a proposal.
 
 ## Use the middleware API
 
-The first function receives one `FormMiddlewareApi` when the form creates its
-fixed middleware chain.
+The first function receives one `FormMiddlewareApi` when a form binding or
+definition tester creates its middleware chain.
 
 | Method | Result |
 | --- | --- |
@@ -269,8 +271,9 @@ Assign `undefined` instead of removing a top-level key when the schema permits
 it. Nested removal is supported because Form, Please commits the complete
 affected root.
 
-The middleware list is fixed for the `useForm` hook lifetime. Change the React
-`key` to create a form with another list. The current `transaction.context`
-still follows the latest form context.
+The middleware list is copied and fixed when `defineForm` creates the
+definition. Create another definition to use another policy. Each binding gets
+independent middleware instances, while `transaction.context` follows that
+binding's current context.
 
 See the [API reference](/api#managed-value-middleware) for the exported types.

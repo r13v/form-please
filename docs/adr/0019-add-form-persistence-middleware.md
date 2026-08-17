@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-08-06
 - Amends: [ADR 0016](0016-coordinate-managed-value-updates-before-react-hook-form.md)
-- Amended by: [ADR 0023](0023-add-react-feature-hooks.md)
+- Amended by: [ADR 0023](0023-add-react-feature-hooks.md), [ADR 0025](0025-move-managed-update-policy-to-form-definitions.md)
 
 ## Context
 

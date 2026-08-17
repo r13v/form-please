@@ -470,12 +470,10 @@ const middleware: FormMiddleware<Input, Context> =
 		return next(transaction.patches)
 	}
 
-const replaceName: FormUpdateRecipe<Input> = (draft): void => {
-	draft.name = "Grace"
-}
-
-function useTypedBinding() {
-	const form = kit.useForm(definition, {
+const managedDefinition = kit.defineForm(
+	schema,
+	{ ui: [] },
+	{
 		beforeUpdate(draft, transaction) {
 			draft.profile.country = "FR"
 			transaction.nextValues.profile.country satisfies string
@@ -490,6 +488,16 @@ function useTypedBinding() {
 			// @ts-expect-error The committed transaction remains readonly.
 			transaction.context.permissions.push("admin")
 		},
+		middleware: [middleware],
+	},
+)
+
+const replaceName: FormUpdateRecipe<Input> = (draft): void => {
+	draft.name = "Grace"
+}
+
+function useTypedBinding() {
+	const form = kit.useForm(managedDefinition, {
 		context: { locale: "en", permissions: [] },
 		defaultValues: {
 			name: "Ada",
@@ -505,7 +513,6 @@ function useTypedBinding() {
 			// @ts-expect-error Submit metadata is separate from the parsed value.
 			value.meta
 		},
-		middleware: [middleware],
 	})
 	form.api.subscribe satisfies object
 	form.update(replaceName)

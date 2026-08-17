@@ -10,6 +10,7 @@ export default defineConfig({
 		persistence: "src/persistence/index.ts",
 		"preset-native": "src/preset-native/index.ts",
 		"preset-mui": "src/preset-mui/index.ts",
+		testing: "src/testing/index.ts",
 	},
 	format: ["esm", "cjs"],
 	platform: "neutral",

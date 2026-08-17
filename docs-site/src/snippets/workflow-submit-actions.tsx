@@ -15,24 +15,27 @@ const releaseSchema = z.object({
 	title: z.string().min(1, "Enter a title"),
 	description: z.string().min(20, "Write at least 20 characters"),
 })
-const releaseDefinition = nativeFormKit.defineForm(releaseSchema, {
-	ui: [
-		{ kind: "field", path: "title", control: "text", label: "Title" },
-		{
-			kind: "field",
-			path: "description",
-			control: "textarea",
-			label: "Description",
-			props: { rows: 5 },
-		},
-	],
-})
-
 const releasePersistence = createPersistenceMiddleware({
 	adapter: createLocalStorageAdapter(() => localStorage),
 	key: "release-draft",
 	version: 1,
 })
+const releaseDefinition = nativeFormKit.defineForm(
+	releaseSchema,
+	{
+		ui: [
+			{ kind: "field", path: "title", control: "text", label: "Title" },
+			{
+				kind: "field",
+				path: "description",
+				control: "textarea",
+				label: "Description",
+				props: { rows: 5 },
+			},
+		],
+	},
+	{ middleware: [releasePersistence] },
+)
 
 type ValidatedIntent = "publish" | "save-and-close"
 type ReleaseSubmitter = FormSubmitDetails<typeof releaseSchema>["submitter"]
@@ -68,7 +71,6 @@ export function ReleaseActions({ onClose }: { readonly onClose: () => void }) {
 	const [status, setStatus] = useState("Restoring the draft…")
 	const form = nativeFormKit.useForm(releaseDefinition, {
 		defaultValues: { title: "", description: "" },
-		middleware: [releasePersistence],
 		onSubmit: async ({ form, input, submitter, value }) => {
 			const intent = readValidatedIntent(submitter)
 			if (intent === "publish") setStatus("Publishing…")

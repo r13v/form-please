@@ -226,39 +226,31 @@ describe("value middleware coordinator", () => {
 		expect(harness.getValues().quantity).toBe(1)
 	})
 
-	it("uses the latest hooks and rejects nested updates from either hook", () => {
-		const first = vi.fn()
+	it("rejects nested updates from either definition hook", () => {
 		const second = vi.fn()
-		let beforeUpdate: HarnessHooks["beforeUpdate"] = () => first()
-		let afterUpdate: HarnessHooks["afterUpdate"] = () => first()
 		let coordinator: ReturnType<typeof createHarness>["coordinator"]
+		const beforeUpdate = () => {
+			second()
+			expect(() => coordinator.update(() => undefined)).toThrow(
+				"cannot start a nested value transaction",
+			)
+		}
+		const afterUpdate = () => {
+			second()
+			expect(() => coordinator.update(() => undefined)).toThrow(
+				"cannot start a nested value transaction",
+			)
+		}
 		const harness = createHarness([], undefined, {
-			get afterUpdate() {
-				return afterUpdate
-			},
-			get beforeUpdate() {
-				return beforeUpdate
-			},
+			afterUpdate,
+			beforeUpdate,
 		})
 		coordinator = harness.coordinator
-		beforeUpdate = () => {
-			second()
-			expect(() => coordinator.update(() => undefined)).toThrow(
-				"cannot start a nested value transaction",
-			)
-		}
-		afterUpdate = () => {
-			second()
-			expect(() => coordinator.update(() => undefined)).toThrow(
-				"cannot start a nested value transaction",
-			)
-		}
 
 		harness.coordinator.update((draft) => {
 			draft.quantity = 2
 		})
 
-		expect(first).not.toHaveBeenCalled()
 		expect(second).toHaveBeenCalledTimes(2)
 	})
 
@@ -728,9 +720,9 @@ function createHarness(
 		values = transaction.nextValues as Values
 	})
 	const coordinator = createValueCoordinator({
+		afterUpdate: hooks.afterUpdate,
+		beforeUpdate: hooks.beforeUpdate,
 		commit,
-		getAfterUpdate: () => hooks.afterUpdate,
-		getBeforeUpdate: () => hooks.beforeUpdate,
 		getContext: () => undefined,
 		getValues: () => values,
 		middleware,

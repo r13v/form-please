@@ -32,9 +32,9 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
-const definition = kit.defineForm(schema, {
+const definitionSource = {
 	ui: [{ control: "text", kind: "field", label: "Name", path: "name" }],
-})
+} as const
 
 describe("persistence React Hook Form integration", () => {
 	it("restores once in Strict Mode and publishes the current snapshot", async () => {
@@ -48,12 +48,14 @@ describe("persistence React Hook Form integration", () => {
 			key: "profile",
 			version: 1,
 		})
+		const definition = kit.defineForm(schema, definitionSource, {
+			middleware: [feature],
+		})
 		let persistence!: UsePersistenceResult
 
 		function View() {
 			const form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 			})
 			persistence = usePersistence(form, feature)
 			return (
@@ -98,12 +100,14 @@ describe("persistence React Hook Form integration", () => {
 			onError,
 			version: 1,
 		})
+		const definition = kit.defineForm(schema, definitionSource, {
+			middleware: [feature],
+		})
 		let persistence!: UsePersistenceResult
 
 		function View() {
 			const form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 			})
 			persistence = usePersistence(form, feature)
 			return <output>{persistence.snapshot.phase}</output>
@@ -130,13 +134,15 @@ describe("persistence React Hook Form integration", () => {
 			key: "profile",
 			version: 1,
 		})
+		const definition = kit.defineForm(schema, definitionSource, {
+			middleware: [feature],
+		})
 		let form!: FormBinding<typeof schema>
 		let persistence!: PersistenceHandle
 
 		function View() {
 			form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 				mode: "onChange",
 			})
 			persistence = feature.handle(form)
@@ -203,12 +209,14 @@ describe("persistence React Hook Form integration", () => {
 			saveDelay: 10_000,
 			version: 1,
 		})
+		const definition = kit.defineForm(schema, definitionSource, {
+			middleware: [feature],
+		})
 		let persistence!: PersistenceHandle
 
 		function View() {
 			const form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
-				middleware: [feature],
 			})
 			persistence = feature.handle(form)
 			return <kit.AutoForm form={form} />
@@ -242,13 +250,15 @@ describe("persistence React Hook Form integration", () => {
 				saveDelay: 50,
 				version: 1,
 			})
+			const definition = kit.defineForm(schema, definitionSource, {
+				middleware: [feature],
+			})
 			let activeSubscriptions = 0
 			let persistence!: UsePersistenceResult
 
 			function View() {
 				const form = kit.useForm(definition, {
 					defaultValues: { items: [], name: "Ada" },
-					middleware: [feature],
 				})
 				const observedForm = useMemo(() => {
 					const api = Object.create(form.api) as typeof form.api

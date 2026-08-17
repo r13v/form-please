@@ -72,13 +72,12 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 }).forContext<Context>()
-const definition = kit.defineForm(schema, { ui: [] })
+const definition = kit.defineForm(schema, { ui: [] }, { middleware: [feature] })
 
 function usePersistenceForm() {
 	const form = kit.useForm(definition, {
 		context: { locale: "en" },
 		defaultValues: { createdAt: new Date(), name: "Ada" },
-		middleware: [feature],
 	})
 	const persistence: UsePersistenceResult = usePersistence(form, feature)
 	const snapshot = persistence.snapshot

@@ -1099,7 +1099,43 @@ export type NormalizedNode = Readonly<Record<string, unknown>> & {
 
 /** A private key that carries definition type information without runtime data. */
 declare const definitionTypes: unique symbol
-/** A schema and normalized UI tree owned by one form kit. */
+
+/** Managed-update policy fixed when one form definition is created. */
+export type FormDefinitionUpdatePolicy<
+	Schema extends StandardSchema,
+	Context = unknown,
+> = {
+	/** Adjusts or cancels a proposed managed value update before middleware. */
+	readonly beforeUpdate?: import("./value-middleware.js").BeforeUpdate<
+		Extract<FormInput<Schema>, FieldValues>,
+		Context
+	>
+	/** Observes the final transaction after commit and middleware unwind. */
+	readonly afterUpdate?: import("./value-middleware.js").AfterUpdate<
+		Extract<FormInput<Schema>, FieldValues>,
+		Context
+	>
+	/** Ordered value middleware initialized separately for each form binding. */
+	readonly middleware: readonly import("./value-middleware.js").FormMiddleware<
+		Extract<FormInput<Schema>, FieldValues>,
+		Context
+	>[]
+}
+
+type AnyFormDefinitionUpdatePolicy = {
+	readonly beforeUpdate?: unknown
+	readonly afterUpdate?: unknown
+	readonly middleware: readonly unknown[]
+}
+
+type DefaultFormDefinitionUpdatePolicy<
+	Schema extends StandardSchema,
+	Context,
+> = StandardSchema extends Schema
+	? AnyFormDefinitionUpdatePolicy
+	: FormDefinitionUpdatePolicy<Schema, Context>
+
+/** A schema, normalized UI tree, and managed-update policy owned by one form kit. */
 export type FormDefinition<
 	Schema extends StandardSchema = StandardSchema,
 	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
@@ -1108,6 +1144,11 @@ export type FormDefinition<
 	SectionOptions = unknown,
 	ArrayOptions = unknown,
 	Grid extends number = number,
+	Updates extends
+		AnyFormDefinitionUpdatePolicy = DefaultFormDefinitionUpdatePolicy<
+		Schema,
+		Context
+	>,
 > = {
 	/** The Standard Schema validator for form input and submit output. */
 	readonly schema: Schema
@@ -1130,7 +1171,7 @@ export type FormDefinition<
 		/** The array slot configuration type. */
 		readonly arrayOptions: ArrayOptions
 	}
-}
+} & Updates
 
 /** A structural element that receives Form Please data attributes. */
 export type StructuralNodeName =

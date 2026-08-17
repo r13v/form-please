@@ -1,0 +1,100 @@
+---
+title: Test definitions
+description: Inspect resolved definitions and exercise production value hooks, middleware, arrays, context, and async options without rendering React.
+showAskAi: false
+---
+
+# Test definitions
+
+Import `createDefinitionTester` from `form-please/testing` when a test needs to
+answer two questions directly: what does this definition resolve to, and what
+exactly changes after a realistic form operation?
+
+The tester is headless. It does not require Testing Library, a DOM, or React
+rendering. It calls the same definition resolver, field-options executor, and
+managed value coordinator as generated forms.
+
+## Inspect and change a definition
+
+Supply complete schema input and the same context used by `kit.useForm`:
+
+```ts
+// [!include ~/snippets/testing-guide.ts:inspect-and-transition]
+```
+
+`field(path)`, `array(path)`, and `node(id)` are strict selectors. A missing or
+ambiguous match throws an error that lists the available paths or IDs. Hidden
+nodes remain selectable with `visible: false`, matching definition resolution.
+
+The tester is stateful, like one mounted form. Each operation advances
+`tester.current` and returns immutable `before` and `after` inspections.
+`changes` contains every added, removed, or changed public node property. Use an
+exact equality assertion when a rule must not affect anything else.
+
+Snapshots expose resolved rendering inputs such as labels, props, slot options,
+layout, visibility, and interaction flags. They deliberately omit resolver
+callbacks, context objects, render components, option trackers, and private
+resolved nodes.
+
+## Include the definition's managed-update policy
+
+Configure hooks and middleware once in `kit.defineForm`. The tester uses that
+same policy automatically:
+
+```ts
+// [!include ~/snippets/testing-guide.ts:managed-lifecycle]
+```
+
+`setValue(path, value)` proposes a generated control transaction.
+`update(recipe)` proposes the same `update` transaction as `form.update`.
+Both execute `beforeUpdate`, the fixed middleware chain, the terminal commit,
+and `afterUpdate` through the production coordinator.
+
+A managed result includes:
+
+- `committed`, which is false for a no-op or cancelled proposal;
+- the final committed `transaction`, including effective patches and values;
+- the middleware `result`;
+- the definition `before`, `after`, and exact `changes`.
+
+The tester creates one independent middleware chain from the definition and
+preserves its state across operations. A mounted form using the same definition
+creates another independent chain. A thrown hook or middleware error follows
+the same commit and propagation semantics in both runtimes.
+
+## Test context and generated arrays
+
+Context and form interaction flags are rerender inputs, not value proposals.
+They re-resolve the definition without calling update hooks or middleware:
+
+```ts
+// [!include ~/snippets/testing-guide.ts:context-and-arrays]
+```
+
+Use `setContext`, `setDisabled`, `setReadOnly`, or one `rerender` call. Verify a
+context change through its resolved effects in `after` and `changes`. The fixed
+definition callbacks receive the new context on the next managed proposal.
+
+`append`, `remove`, and `move` use the current generated array, its real
+`itemDefault`, an `array` transaction source, and the production structural
+patch constraints. Disabled or read-only generated arrays do not commit an
+action. Invalid paths and indexes fail with a precise error.
+
+## Resolve field options
+
+`await tester.resolveOptions(path)` returns static options or invokes the same
+tracked executor used by generated controls. It supplies the correct fragment
+value scope, current context, and an `AbortSignal`.
+
+Resolver rejection is surfaced to the test instead of being hidden as an empty
+list. A non-array result throws the same contract error as the rendered field.
+The mounted UI still applies its existing failure policy and diagnostics around
+that shared executor.
+
+## Know the boundary
+
+The tester owns definition resolution and managed value proposals. It does not
+reimplement React Hook Form validation, dirty or touched state, submission,
+focus, or DOM accessibility. Use component tests for those behaviors. This
+keeps definition tests fast without creating a second form runtime that can
+drift from production.

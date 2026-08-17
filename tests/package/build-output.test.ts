@@ -14,7 +14,12 @@ const entrypoints = [
 	"persistence",
 	"preset-native",
 	"preset-mui",
+	"testing",
 ] as const
+
+const clientEntrypoints = entrypoints.filter(
+	(entrypoint) => entrypoint !== "testing",
+)
 
 describe("build output", () => {
 	it("emits both module formats and their declarations", async () => {
@@ -27,8 +32,21 @@ describe("build output", () => {
 		}
 	})
 
+	it("keeps the testing entry server-compatible", async () => {
+		for (const extension of ["js", "cjs"]) {
+			const source = await readFile(
+				resolve(rootDirectory, `dist/testing.${extension}`),
+				"utf8",
+			)
+			expect(source.trimStart().startsWith('"use client";')).toBe(false)
+		}
+		const graph = await readEsmGraph("dist/testing.js")
+		expect(graph).not.toContain('from "react"')
+		expect(graph).not.toContain('from "react-dom"')
+	})
+
 	it("marks every React entry as a client module", async () => {
-		for (const entrypoint of entrypoints) {
+		for (const entrypoint of clientEntrypoints) {
 			for (const extension of ["js", "cjs"]) {
 				const source = await readFile(
 					resolve(rootDirectory, `dist/${entrypoint}.${extension}`),

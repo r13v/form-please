@@ -40,6 +40,8 @@ flowchart TD
     NativePreset --> DefaultSlots["form-please/default-slots"]
     MuiPreset["form-please/preset-mui"] --> Root
     MuiPreset --> Mui["Material UI peers"]
+    Testing["form-please/testing"] --> DefinitionResolver["definition resolver"]
+    Testing --> Coordinator
 ```
 
 Public JavaScript entries are limited to:
@@ -51,11 +53,13 @@ Public JavaScript entries are limited to:
 - `form-please/native-controls`;
 - `form-please/persistence`;
 - `form-please/preset-native`;
-- `form-please/preset-mui`.
+- `form-please/preset-mui`;
+- `form-please/testing`.
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
-exports. React UI, devtools, history, and persistence entries are client modules. React
-Hook Form 7.76.1 or newer within major version 7 is a required peer. Immer is a
+exports. React UI, devtools, history, and persistence entries are client modules.
+The testing entry is a server-compatible headless module. React Hook Form 7.76.1
+or newer within major version 7 is a required peer. Immer is a
 direct runtime dependency. React Hook Form DevTools is a direct dependency that
 is reachable only through `form-please/devtools`. Material UI and Emotion peers
 remain optional because only the Material UI preset uses them.
@@ -73,6 +77,9 @@ remain optional because only the Material UI preset uses them.
 | `src/devtools/devtools.tsx` | Bind RHF DevTools and render the Form Please diagnostic drawer |
 | `src/devtools/store.ts` | Aggregate bounded form-local diagnostic snapshots for the optional UI |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
+| `src/field-options.ts` | Execute tracked field-options resolvers for both React and headless testing |
+| `src/generated-array.ts` | Share generated array defaults, paths, and value guards between React and headless testing |
+| `src/testing/definition-tester.ts` | Inspect production definition resolution and exercise managed control, array, context, and middleware transitions |
 | `src/history/history.ts` | Retain managed input positions, navigate them through the coordinator, and import or export in-memory journals |
 | `src/history/use-history.ts` | Bind a configured history feature to React and expose its current snapshot |
 | `src/persistence/persistence.ts` | Restore and autosave complete editable input through the coordinator and an application adapter |
@@ -84,6 +91,27 @@ remain optional because only the Material UI preset uses them.
 
 Default slots, native controls, and presets depend on these canonical modules.
 They do not define another runtime.
+
+## Headless definition testing
+
+`form-please/testing` creates one stateful definition tester without mounting
+React or React Hook Form. It resolves every inspection through
+`resolveDefinition`, runs selectable options through the executor shared with
+`useFieldOptions`, and sends managed control, array, and imperative proposals
+through `createValueCoordinator`.
+
+The tester reads `beforeUpdate`, middleware, and `afterUpdate` from the
+definition. Its middleware chain is constructed once and remains stateful
+across tester operations, matching one form binding without sharing state with
+it. Context and form-level interaction flags rerender resolution without
+entering the managed value pipeline. Definition callbacks receive the current
+context on the next managed proposal.
+
+Public inspections project stable observable node properties rather than
+exporting the private `ResolvedDefinition` graph. Transitions retain before and
+after inspections, the exact public node diff, and final managed transaction
+when a proposal commits. The tester does not emulate RHF validation, metadata,
+submission, focus, or field-array row IDs.
 
 ## Form-kit ownership
 
@@ -102,7 +130,11 @@ slots registry before calling `createFormKit`.
 
 ## Definition model
 
-A definition contains a Standard Schema and a recursive UI tree.
+A definition contains a Standard Schema, a recursive UI tree, and its fixed
+managed-update policy. `beforeUpdate`, the ordered middleware list, and
+`afterUpdate` are accepted by the optional third argument to `defineForm` and
+exposed as readonly normalized definition properties. The middleware list is
+copied and frozen during definition creation.
 
 Applications may author that tree as a `{ ui }` object or with the schema-bound
 builder passed to `defineForm` and `defineFragment`. Builder helpers create the
@@ -200,14 +232,12 @@ and the error-summary reference remain private runtime data.
 exact binding. This does not add diagnostic state to the public binding or make
 the resolved definition a stable public API.
 
-The definition and ordered middleware snapshot are fixed for the hook lifetime.
-Passing another definition or middleware list does not replace either one. A
-caller must change a React `key` to remount the component and create another
-form.
-
-The optional `beforeUpdate` and `afterUpdate` callbacks use their latest React
-render versions. They belong to the managed value-update lifecycle rather than
-the fixed middleware configuration.
+The definition, including both callbacks and the ordered middleware snapshot,
+is fixed for the hook lifetime. Passing another definition does not replace it.
+A caller must change a React `key` to remount the component and create another
+form. Each binding initializes an independent middleware chain from that
+definition. Binding-specific callback data comes from the current
+`transaction.context`, not a React closure captured during rendering.
 
 `kit.Form` provides the same API through RHF `FormProvider`. Manual composition
 uses ordinary RHF APIs such as `register`, `Controller`, `useController`,

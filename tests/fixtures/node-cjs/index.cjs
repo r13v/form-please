@@ -2,6 +2,7 @@ const { createFormKit, matchResource } = require("form-please")
 const { createDefaultSlots } = require("form-please/default-slots")
 const { createNativeControls } = require("form-please/native-controls")
 const { nativeFormKit } = require("form-please/preset-native")
+const { createDefinitionTester } = require("form-please/testing")
 
 const schema = {
 	"~standard": {
@@ -32,6 +33,10 @@ if (typeof createNativeControls().text.component !== "function") {
 }
 if (typeof nativeFormKit.AutoForm !== "function") {
 	throw new Error("CommonJS native preset did not initialize")
+}
+const tester = createDefinitionTester(definition, { values: { name: "Ada" } })
+if (tester.field("name").visible !== true) {
+	throw new Error("CommonJS testing entry did not resolve the definition")
 }
 if (
 	matchResource(

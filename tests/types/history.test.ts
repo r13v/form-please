@@ -35,15 +35,14 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 }).forContext<Context>()
-const definition = kit.defineForm(schema, { ui: [] })
 const feature = createHistoryMiddleware({ groupWindow: 0, limit: 20 })
 const middleware: FormMiddleware<Input, Context> = feature
+const definition = kit.defineForm(schema, { ui: [] }, { middleware: [feature] })
 
 function useHistoryForm() {
 	const form = kit.useForm(definition, {
 		context: { locale: "en" },
 		defaultValues: { items: [], name: "Ada" },
-		middleware: [feature],
 	})
 	const history: UseHistoryResult<Input> = useHistory(form, feature)
 	const snapshot = history.snapshot

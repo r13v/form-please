@@ -57,6 +57,7 @@ export default defineConfig({
 				{ text: "Persistence", link: "/persistence" },
 				{ text: "History", link: "/history" },
 				{ text: "Devtools", link: "/devtools" },
+				{ text: "Testing", link: "/testing" },
 			],
 		},
 		{

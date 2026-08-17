@@ -9,9 +9,6 @@ import { nativeFormKit } from "form-please/preset-native"
 import { z } from "zod"
 
 const settingsSchema = z.object({ theme: z.string() })
-const settingsDefinition = nativeFormKit.defineForm(settingsSchema, {
-	ui: [{ control: "text", kind: "field", label: "Theme", path: "theme" }],
-})
 
 // [!region local-storage]
 const settingsPersistence = createPersistenceMiddleware({
@@ -22,11 +19,17 @@ const settingsPersistence = createPersistenceMiddleware({
 	},
 	version: 1,
 })
+const settingsDefinition = nativeFormKit.defineForm(
+	settingsSchema,
+	{
+		ui: [{ control: "text", kind: "field", label: "Theme", path: "theme" }],
+	},
+	{ middleware: [settingsPersistence] },
+)
 
 export function SettingsDraftForm() {
 	const form = nativeFormKit.useForm(settingsDefinition, {
 		defaultValues: { theme: "system" },
-		middleware: [settingsPersistence],
 	})
 	usePersistence(form, settingsPersistence)
 

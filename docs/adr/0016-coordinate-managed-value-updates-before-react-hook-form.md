@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-04
-- Amended by: [ADR 0017](0017-add-managed-update-hooks-around-middleware.md), [ADR 0018](0018-add-managed-value-history.md), [ADR 0019](0019-add-form-persistence-middleware.md)
+- Amended by: [ADR 0017](0017-add-managed-update-hooks-around-middleware.md), [ADR 0018](0018-add-managed-value-history.md), [ADR 0019](0019-add-form-persistence-middleware.md), [ADR 0025](0025-move-managed-update-policy-to-form-definitions.md)
 - Amends: [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md)
 - Supersedes: [ADR 0008](0008-reducer-core-and-open-middleware.md)
 

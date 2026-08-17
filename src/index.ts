@@ -5,6 +5,7 @@ export { defineControl } from "./control-definition.js"
 export type {
 	AutoFormProps,
 	CreateFormKitOptions,
+	DefineFormOptions,
 	FormBinding,
 	FormKit,
 	FormProps,
@@ -37,6 +38,7 @@ export type {
 	FieldPath,
 	FieldSlotProps,
 	FormDefinition,
+	FormDefinitionUpdatePolicy,
 	FormFragment,
 	FormInput,
 	FormIssue,

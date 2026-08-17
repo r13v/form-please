@@ -12,10 +12,10 @@ form state. Persistence stores only the complete schema input.
 
 ## Configure and restore
 
-Create one feature, add that exact reference to `middleware`, and pass the form
-and feature to `usePersistence`. The hook subscribes to persistence state and
-starts `restore()` after mount. It loads at most once after a successful or
-empty result.
+Create one feature, add that exact reference to the definition's `middleware`,
+and pass the form and feature to `usePersistence`. The hook subscribes to
+persistence state and starts `restore()` after mount. It loads at most once
+after a successful or empty result.
 
 ```tsx
 // [!include ~/snippets/persistence-local-storage.tsx:local-storage]

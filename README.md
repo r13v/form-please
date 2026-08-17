@@ -110,7 +110,8 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
   may instead be an async function of `{ values, context, signal }`.
 - Fragment resolvers receive their local deeply readonly fragment input and
   minimum context.
-- Use `beforeUpdate` and `afterUpdate` for one form-local managed update rule.
+- Use definition-owned `beforeUpdate` and `afterUpdate` for one managed update
+  rule shared by every binding of that definition.
   Use value middleware and `form.update` when independent policies or dependent
   changes must compose atomically. Direct `form.api` changes bypass both.
 - Hidden fields preserve their values.
@@ -131,6 +132,7 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
 | `form-please/persistence` | Optional draft restore, autosave, migration, and storage adapters |
 | `form-please/preset-native` | Ready-to-use native form kit |
 | `form-please/preset-mui` | Material UI 9 form-kit factory |
+| `form-please/testing` | Headless definition inspection and managed update testing |
 | `form-please/layout.css` | Optional structural grid and spacing CSS |
 
 The main JavaScript entry does not import CSS.

@@ -42,12 +42,35 @@ import "form-please/layout.css"
 | `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec`, `usePersistence` | Restore and autosave editable drafts through application storage. |
 | `form-please/preset-native` | `nativeFormKit` | Use the ready-made native kit with English slots. |
 | `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
+| `form-please/testing` | `createDefinitionTester` | Inspect resolved definitions and exercise production managed updates without rendering React. |
 
 `form-please/layout.css` and `form-please/package.json` are non-JavaScript
 exports. React UI, devtools, history, and persistence entries are client modules.
+The testing entry is a server-compatible headless module.
 
 Mount `FormPleaseDevtools` only in development. See the [Devtools guide](/devtools)
 for its one-component integration and raw-data boundary.
+
+## `createDefinitionTester`
+
+Import `createDefinitionTester(definition, options)` from
+`form-please/testing`. It creates a stateful headless harness around the
+production definition resolver, managed value coordinator, and field-options
+executor.
+
+| Member | Result |
+| --- | --- |
+| `current`, `values` | Current readonly resolution and complete editable input. |
+| `field(path)`, `array(path)`, `node(id)` | Strict selectors with candidate-rich errors. |
+| `setValue(path, value)`, `update(recipe)` | Managed control or imperative proposals through hooks and middleware. |
+| `append(path)`, `remove(path, index)`, `move(path, from, to)` | Managed generated-array proposals. |
+| `setContext`, `setDisabled`, `setReadOnly`, `rerender` | Re-resolve non-value form inputs without middleware. |
+| `resolveOptions(path)` | Resolve static or asynchronous field options and expose failures. |
+
+Each operation returns a transition with `before`, `after`, and exact public
+node `changes`. Managed transitions also report `committed`, `transaction`, and
+the middleware `result`. Read [Test definitions](/testing) for complete examples
+and boundaries.
 
 ## `useSnapshot`
 
@@ -251,7 +274,7 @@ form.
 
 ## `defineForm`
 
-`kit.defineForm(schema, (ui) => [...])` validates, normalizes, and freezes a
+`kit.defineForm(schema, source, options?)` validates, normalizes, and freezes a
 typed definition. The schema-bound `field`, `section`, `array`, and `render`
 helpers create ordinary nodes without requiring an authored `kind` property.
 The schema must implement Standard Schema. Field paths and control values use
@@ -266,6 +289,19 @@ builder and each array child callback run once while the definition is created;
 they are not value resolvers. The object form
 `defineForm(schema, { ui: [...] })` remains supported and produces the same
 normalized definition.
+
+The optional third argument owns the complete managed-update policy:
+
+| Option | Effect |
+| --- | --- |
+| `beforeUpdate` | Adjust or cancel one managed value proposal before middleware. |
+| `middleware` | Ordered Redux-shaped value middleware. |
+| `afterUpdate` | Observe the final committed transaction after middleware unwinds. |
+
+The callbacks and a frozen copy of the middleware list become readonly
+properties of the definition. Each form binding and definition tester creates
+its own middleware instances from that fixed policy. Use the current
+`transaction.context` for binding-specific data.
 
 In addition to opaque fragment placements, the UI array accepts four ordinary
 node kinds:
@@ -341,9 +377,6 @@ the current kit context.
 | `mode` | Optional RHF validation mode. Defaults to `onSubmit`. |
 | `reValidateMode` | Optional RHF revalidation mode. Defaults to `onChange`. |
 | `delayError` | Optional RHF error-display delay in milliseconds. |
-| `beforeUpdate` | Adjust or cancel one managed value proposal before middleware. |
-| `afterUpdate` | Observe the final committed transaction after middleware unwinds. |
-| `middleware` | Ordered Redux-shaped value middleware, fixed for the hook lifetime. |
 | `onSubmit` | Receives parsed output, editable input, the current binding, and a submitter snapshot. |
 
 Use `FormSubmitDetails<Schema, Context>` from `form-please` when a reusable
@@ -399,10 +432,10 @@ raw RHF operations that deliberately bypass managed middleware.
 
 ## Managed update hooks
 
-Use `beforeUpdate` for one form-local rule that adjusts or cancels a managed
-proposal. Its Immer draft starts with the proposed `nextValues`. Mutate the
-draft and return nothing to continue, or return `false` to cancel the complete
-transaction.
+Configure `beforeUpdate` in the third argument to `defineForm` for one
+definition-owned rule that adjusts or cancels a managed proposal. Its Immer
+draft starts with the proposed `nextValues`. Mutate the draft and return
+nothing to continue, or return `false` to cancel the complete transaction.
 
 Use `afterUpdate` to observe the final `ValueTransaction` after commit and the
 synchronous middleware unwind. Its patches and `nextValues` include downstream
@@ -412,8 +445,9 @@ middleware changes.
 // [!include ~/snippets/api-reference.tsx:update-hooks]
 ```
 
-The callbacks use their latest React render versions. Both must return
-synchronously and cannot start another managed update. An error from
+The callbacks are fixed with the definition. Read current binding-specific data
+from `transaction.context`. Both must return synchronously and cannot start
+another managed update. An error from
 `beforeUpdate` prevents commit. An error from `afterUpdate` propagates without
 rolling committed values back. `afterUpdate` does not mean that React rendering
 or asynchronous validation has finished.
@@ -426,7 +460,8 @@ effective no-op proposals do not call `afterUpdate`.
 ## Managed value middleware
 
 Use middleware when a generated change and its dependent values must commit as
-one proposal, or when work must run only after that proposal commits.
+one proposal, or when work must run only after that proposal commits. Put the
+ordered list in the third argument to `defineForm`.
 
 Read [Value middleware](/middleware) for runnable examples, live previews,
 ordering, cancellation, bypasses, array constraints, and validation timing.
@@ -491,9 +526,9 @@ and `reValidateMode` after commit, but managed validation does not preserve
 ## Managed value history
 
 `createHistoryMiddleware(options?)` and `useHistory(form, feature)` are exported
-only from `form-please/history`. Configure the returned feature in a form's
-middleware list, then pass it and the form to the hook. The hook result combines
-the exact form-specific handle with its reactive `snapshot`.
+only from `form-please/history`. Configure the returned feature in the
+definition's middleware list, then pass it and the form to the hook. The hook
+result combines the exact form-specific handle with its reactive `snapshot`.
 
 | Option | Default | Effect |
 | --- | --- | --- |
@@ -519,9 +554,10 @@ boundaries, restoration, and journal leaf behavior.
 ## Form persistence
 
 `createPersistenceMiddleware(options)` and `usePersistence(form, feature)` are
-exported only from `form-please/persistence`. Configure the feature in the fixed
-middleware list, then pass it and the form to the hook. The hook starts restore
-after mount and combines the exact handle with its reactive `snapshot`.
+exported only from `form-please/persistence`. Configure the feature in the
+definition's fixed middleware list, then pass it and the form to the hook. The
+hook starts restore after mount and combines the exact handle with its reactive
+`snapshot`.
 
 | Option | Default | Effect |
 | --- | --- | --- |

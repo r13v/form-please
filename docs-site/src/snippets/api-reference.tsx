@@ -6,6 +6,7 @@ import {
 	type ControlProps,
 	createFormKit,
 	type DeepReadonly,
+	type DefineFormOptions,
 	defineControl,
 	type FormInput,
 	type FormMiddleware,
@@ -321,68 +322,6 @@ const countryDescription = fromResource(selectCountries, {
 })
 // [!endregion resource-resolver]
 
-// [!region context-kit]
-const profileKit = kit.forContext<ProfileContext>()
-// [!endregion context-kit]
-
-// [!region define-form]
-const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
-	ui.section("identity", {
-		title: "Profile",
-		columns: 2,
-		children: [
-			ui.field("name", {
-				control: "uppercase",
-				label: "Display name",
-				props: { placeholder: "ADA" },
-				required: true,
-			}),
-			ui.field("yearsOfExperience", {
-				control: "text",
-				label: "Years of experience",
-			}),
-			ui.field("plan", {
-				control: "select",
-				label: "Plan",
-				readOnly: (_values, { context }) => !context.canEditPlan,
-				options: [
-					{ value: "solo", label: "Solo" },
-					{ value: "team", label: "Team" },
-				],
-			}),
-			ui.field("teamName", {
-				control: "text",
-				label: "Team name",
-				visible: (values) => values.plan === "team",
-			}),
-			teamHint,
-			ui.field("country", {
-				control: "text",
-				label: "Country",
-				description: countryDescription,
-			}),
-		],
-	}),
-	ui.array("speakers", {
-		label: "Speakers",
-		itemDefault: { name: "" },
-		children: (speaker) => [
-			speaker.field("name", { control: "text", label: "Name" }),
-		],
-	}),
-])
-// [!endregion define-form]
-
-const defaultValues = {
-	name: "",
-	yearsOfExperience: "0",
-	plan: "solo",
-	teamName: undefined,
-	country: undefined,
-	billingReference: undefined,
-	speakers: [],
-} satisfies ProfileInput
-
 // [!region value-middleware]
 function recordManagedValues(_values: DeepReadonly<ProfileInput>) {}
 
@@ -406,28 +345,89 @@ const keepPlanValuesConsistent: FormMiddleware<ProfileInput, ProfileContext> =
 // [!endregion value-middleware]
 
 // [!region update-hooks]
-function ProfileUpdateHooks({ context }: { readonly context: ProfileContext }) {
-	const form = profileKit.useForm(profileDefinition, {
-		beforeUpdate(draft, transaction) {
-			if (
-				!context.canEditPlan &&
-				transaction.source.type === "control" &&
-				transaction.source.path === "plan"
-			) {
-				return false
-			}
-			if (draft.plan === "solo") draft.teamName = undefined
-		},
-		afterUpdate(transaction) {
-			recordManagedValues(transaction.nextValues)
-		},
-		context,
-		defaultValues,
-	})
-
-	return <profileKit.AutoForm form={form} />
-}
+const profileUpdatePolicy = {
+	beforeUpdate(draft, transaction) {
+		if (
+			!transaction.context.canEditPlan &&
+			transaction.source.type === "control" &&
+			transaction.source.path === "plan"
+		) {
+			return false
+		}
+		if (draft.plan === "solo") draft.teamName = undefined
+	},
+	afterUpdate(transaction) {
+		recordManagedValues(transaction.nextValues)
+	},
+	middleware: [keepPlanValuesConsistent],
+} satisfies DefineFormOptions<typeof profileSchema, ProfileContext>
 // [!endregion update-hooks]
+
+// [!region context-kit]
+const profileKit = kit.forContext<ProfileContext>()
+// [!endregion context-kit]
+
+// [!region define-form]
+const profileDefinition = profileKit.defineForm(
+	profileSchema,
+	(ui) => [
+		ui.section("identity", {
+			title: "Profile",
+			columns: 2,
+			children: [
+				ui.field("name", {
+					control: "uppercase",
+					label: "Display name",
+					props: { placeholder: "ADA" },
+					required: true,
+				}),
+				ui.field("yearsOfExperience", {
+					control: "text",
+					label: "Years of experience",
+				}),
+				ui.field("plan", {
+					control: "select",
+					label: "Plan",
+					readOnly: (_values, { context }) => !context.canEditPlan,
+					options: [
+						{ value: "solo", label: "Solo" },
+						{ value: "team", label: "Team" },
+					],
+				}),
+				ui.field("teamName", {
+					control: "text",
+					label: "Team name",
+					visible: (values) => values.plan === "team",
+				}),
+				teamHint,
+				ui.field("country", {
+					control: "text",
+					label: "Country",
+					description: countryDescription,
+				}),
+			],
+		}),
+		ui.array("speakers", {
+			label: "Speakers",
+			itemDefault: { name: "" },
+			children: (speaker) => [
+				speaker.field("name", { control: "text", label: "Name" }),
+			],
+		}),
+	],
+	profileUpdatePolicy,
+)
+// [!endregion define-form]
+
+const defaultValues = {
+	name: "",
+	yearsOfExperience: "0",
+	plan: "solo",
+	teamName: undefined,
+	country: undefined,
+	billingReference: undefined,
+	speakers: [],
+} satisfies ProfileInput
 
 async function saveProfile(_value: FormOutput<typeof profileSchema>) {}
 
@@ -436,7 +436,6 @@ function ProfileEditor({ context }: { readonly context: ProfileContext }) {
 	const form = profileKit.useForm(profileDefinition, {
 		defaultValues,
 		context,
-		middleware: [keepPlanValuesConsistent],
 		onSubmit: async ({ value, input, form }) => {
 			// `input.yearsOfExperience` is a string from React Hook Form.
 			// `value.yearsOfExperience` is the transformed number.
