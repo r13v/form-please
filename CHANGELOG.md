@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.5.0](https://github.com/r13v/form-please/compare/v1.4.0...v1.5.0) (2026-08-17)
+
+
+### Features
+
+* add devtools ([49122e5](https://github.com/r13v/form-please/commit/49122e588461aecf4c5f7ae8378daa227824c1e1))
+* add features hooks ([6f71e2d](https://github.com/r13v/form-please/commit/6f71e2d2228f17098c067e51a1b8331748afadcc))
+* add workflow example ([807d284](https://github.com/r13v/form-please/commit/807d2845ebe582c40a61899f7bb0aeefcaf994cb))
+* define form with middlewares ([747273e](https://github.com/r13v/form-please/commit/747273e4401ba4f7128dc3bd9642aa10f55a7b3e))
+* enhance documentation for array handling and validation ([42e02ee](https://github.com/r13v/form-please/commit/42e02eecc9178523bfd43bad523be8d5cc236cb7))
+* enhance submit slot with live state and typed values ([18802bd](https://github.com/r13v/form-please/commit/18802bda4486703786ec577adb0d8108b80bc8f7))
+* improve form value handling and persistence ([cc97b5a](https://github.com/r13v/form-please/commit/cc97b5ab3111d0748386e2c9e83cfdb7e83b5eb3))
+* introduce schema-bound UI builders for form definitions ([0ddd174](https://github.com/r13v/form-please/commit/0ddd174527eec827c23f4a0bb06e0475e518d822))
+* load selectable options asynchronously ([0d8b851](https://github.com/r13v/form-please/commit/0d8b85190de30513b55fa00ef2695c80c8cdb54e))
+* support form fragments ([55b8719](https://github.com/r13v/form-please/commit/55b871935753fdd3a2c2f39817e6c2841439a257))
+
+
+### Bug Fixes
+
+* address issues ([0f2c7dc](https://github.com/r13v/form-please/commit/0f2c7dc9480bec8f337e0ea347f9382ddddb359a))
+
 ## [1.4.0](https://github.com/r13v/form-please/compare/v1.3.0...v1.4.0) (2026-08-07)
 
 
