@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/r13v/form-please/compare/v1.5.0...v1.6.0) (2026-08-18)
+
+
+### Features
+
+* improve devtools json render ([04aa6b0](https://github.com/r13v/form-please/commit/04aa6b0e7658ba0f6423bf90ac49625d6a02b713))
+
 ## [1.5.0](https://github.com/r13v/form-please/compare/v1.4.0...v1.5.0) (2026-08-17)
 
 
