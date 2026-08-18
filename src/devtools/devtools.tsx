@@ -1,6 +1,7 @@
 "use client"
 
 import { DevTool } from "@hookform/devtools"
+import JsonView from "@uiw/react-json-view"
 import {
 	type CSSProperties,
 	type KeyboardEvent,
@@ -630,6 +631,14 @@ function UpdateDetails({
 					)}
 				</div>
 			</div>
+			<ValuesComparison
+				key={update.id}
+				nextValue={update.nextValues}
+				previousValue={update.previousValues}
+			/>
+			{update.patches === undefined ? null : (
+				<ValueBlock label="Final patches" value={update.patches} />
+			)}
 			<div className="fp-devtools__section">
 				<h3>Pipeline</h3>
 				{update.stages.map((stage) => (
@@ -655,19 +664,54 @@ function UpdateDetails({
 					</div>
 				))}
 			</div>
-			{update.patches === undefined ? null : (
-				<ValueBlock label="Final patches" value={update.patches} />
-			)}
-			{update.previousValues === undefined ? null : (
-				<ValueBlock label="Previous values" value={update.previousValues} />
-			)}
-			{update.nextValues === undefined ? null : (
-				<ValueBlock label="Next values" value={update.nextValues} />
-			)}
 			{update.error === undefined ? null : (
 				<ValueBlock label="Failure" value={update.error} />
 			)}
 		</>
+	)
+}
+
+function ValuesComparison({
+	nextValue,
+	previousValue,
+}: Readonly<{ nextValue: unknown; previousValue: unknown }>) {
+	const [side, setSide] = useState<"after" | "before">(
+		nextValue === undefined ? "before" : "after",
+	)
+	if (previousValue === undefined && nextValue === undefined) return null
+	const value = side === "before" ? previousValue : nextValue
+	return (
+		<div className="fp-devtools__section">
+			<div className="fp-devtools__row-line">
+				<h3>Values</h3>
+				<span className="fp-devtools__muted">
+					Changed fields highlight when switching views.
+				</span>
+			</div>
+			<div className="fp-devtools__toolbar">
+				<button
+					aria-pressed={side === "before"}
+					className="fp-devtools__button"
+					data-active={side === "before"}
+					disabled={previousValue === undefined}
+					onClick={() => setSide("before")}
+					type="button"
+				>
+					Before
+				</button>
+				<button
+					aria-pressed={side === "after"}
+					className="fp-devtools__button"
+					data-active={side === "after"}
+					disabled={nextValue === undefined}
+					onClick={() => setSide("after")}
+					type="button"
+				>
+					After
+				</button>
+			</div>
+			<ValuePreview value={value} />
+		</div>
 	)
 }
 
@@ -861,82 +905,49 @@ function ValueBlock({
 }
 
 function ValuePreview({ value }: Readonly<{ value: unknown }>) {
-	let content: ReactNode
 	try {
-		content = renderValue(value, 0, new WeakSet())
-	} catch (error) {
-		content = `[Unable to inspect: ${inspectionError(error)}]`
-	}
-	return <div className="fp-devtools__value">{content}</div>
-}
-
-function renderValue(
-	value: unknown,
-	depth: number,
-	ancestors: WeakSet<object>,
-): ReactNode {
-	if (value === null) return "null"
-	if (value === undefined) return "undefined"
-	if (typeof value === "string") return JSON.stringify(value)
-	if (
-		typeof value === "number" ||
-		typeof value === "boolean" ||
-		typeof value === "bigint"
-	)
-		return String(value)
-	if (typeof value === "symbol") return String(value)
-	if (typeof value === "function")
-		return `[Function ${value.name || "anonymous"}]`
-	if (value instanceof Error)
-		return `${value.name}: ${value.message}${value.stack === undefined ? "" : `\n${value.stack}`}`
-	if (value instanceof Date) return value.toISOString()
-	if (value instanceof RegExp) return String(value)
-	if (typeof Blob !== "undefined" && value instanceof Blob)
-		return `[Blob ${value.type || "unknown"}, ${value.size} bytes]`
-	if (typeof value !== "object") return String(value)
-	if (ancestors.has(value)) return "[Circular]"
-	if (depth >= 5) return `[${value.constructor?.name ?? "Object"}]`
-	ancestors.add(value)
-	try {
-		const entries = valueEntries(value).slice(0, 50)
-		const label = valueLabel(value)
 		return (
-			<details open={depth < 1}>
-				<summary>{label}</summary>
-				{entries.map(([key, item]) => (
-					<details key={key}>
-						<summary>{key}</summary>
-						{renderValue(item, depth + 1, ancestors)}
-					</details>
-				))}
-			</details>
+			<div className="fp-devtools__value">
+				<JsonView
+					className="fp-devtools__json"
+					collapsed={1}
+					displayDataTypes={false}
+					highlightUpdates
+					value={inspectableValue(value)}
+				/>
+			</div>
 		)
-	} finally {
-		ancestors.delete(value)
+	} catch (error) {
+		return (
+			<div className="fp-devtools__value">
+				[Unable to inspect: {inspectionError(error)}]
+			</div>
+		)
 	}
 }
 
-function valueEntries(value: object): [string, unknown][] {
-	if (value instanceof Map)
-		return [...value.entries()].map(([key, item], index) => [
-			`${index}: ${previewKey(key)}`,
-			item,
-		])
-	if (value instanceof Set)
-		return [...value].map((item, index) => [String(index), item])
-	return Reflect.ownKeys(value).map((key) => {
-		try {
-			return [String(key), Reflect.get(value, key)]
-		} catch (error) {
-			return [String(key), error]
+function inspectableValue(value: unknown): object {
+	if (value instanceof Error)
+		return {
+			message: value.message,
+			name: value.name,
+			...(value.stack === undefined ? {} : { stack: value.stack }),
 		}
-	})
-}
-
-function previewKey(value: unknown): string {
-	if (typeof value === "string" || typeof value === "number")
-		return String(value)
-	return Object.prototype.toString.call(value)
+	if (value instanceof RegExp) return { value: String(value) }
+	if (typeof Blob !== "undefined" && value instanceof Blob)
+		return { size: value.size, type: value.type || "unknown" }
+	if (typeof value === "function")
+		return { value: `[Function ${value.name || "anonymous"}]` }
+	if (typeof value === "symbol") return { value: String(value) }
+	if (
+		value === null ||
+		typeof value !== "object" ||
+		value instanceof Date ||
+		value instanceof Map ||
+		value instanceof Set
+	)
+		return { value }
+	return value
 }
 
 function flattenResolved(
@@ -1125,13 +1136,6 @@ function optionStatusTone(status: string): "danger" | "good" | undefined {
 	if (status === "rejected") return "danger"
 	if (status === "fulfilled" || status === "static") return "good"
 	return undefined
-}
-
-function valueLabel(value: object): string {
-	if (Array.isArray(value)) return `Array(${value.length})`
-	if (value instanceof Map) return `Map(${value.size})`
-	if (value instanceof Set) return `Set(${value.size})`
-	return value.constructor?.name ?? "Object"
 }
 
 function objectKey(object: object): number {

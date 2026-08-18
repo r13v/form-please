@@ -81,7 +81,7 @@ The Form Please launcher opens a resizable bottom drawer. Its initial height is
 | View | Content |
 | --- | --- |
 | **UI** | Complete resolved tree, including hidden nodes; effective and inherited state; issue routing; submit focus; copy path; highlight control |
-| **Updates** | Managed and direct RHF publications; source, paths, pipeline stages, patches, values, outcome, and duration |
+| **Updates** | Managed and direct RHF publications; source, paths, before/after value comparison, pipeline stages, patches, outcome, and duration |
 | **Options** | Static and async option sources; current and previous request; observed dependencies, duration, error, and option count |
 | **Features** | Configured or absent history and persistence; current snapshot, internal status details, and recent transitions |
 
@@ -95,10 +95,10 @@ when it exists. Hidden nodes remain inspectable but have no highlight target.
 
 ## Data and limits
 
-The first release shows local runtime values, context, patches, errors, and
-feature details as raw development data. The value viewer handles functions,
-browser values, maps, sets, errors, and cycles without JSON serialization.
-It limits depth and collection size before rendering.
+The drawer shows local runtime values, context, patches, errors, and feature
+details as raw development data. Values use a collapsible JavaScript inspector.
+Update details place before and after values in one view; switching between
+them highlights changed primitive fields.
 
 There is no export, remote forwarding, sanitizer API, state editing, forced
 submit, history seek, persistence action, validation trace, or generic React

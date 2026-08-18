@@ -106,8 +106,10 @@ describe("build output", () => {
 		const devtoolsGraph = await readEsmGraph("dist/devtools.js")
 
 		expect(rootGraph).not.toContain("@hookform/devtools")
+		expect(rootGraph).not.toContain("@uiw/react-json-view")
 		expect(rootGraph).not.toContain("FormPleaseDevtools")
 		expect(devtoolsGraph).toContain("@hookform/devtools")
+		expect(devtoolsGraph).toContain("@uiw/react-json-view")
 		expect(devtoolsGraph).toContain("FormPleaseDevtools")
 	})
 })

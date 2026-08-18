@@ -147,6 +147,7 @@ export const devtoolsStyles = `
   background: var(--fpd-accent-soft);
   border-color: var(--fpd-accent);
 }
+.fp-devtools__button:disabled { cursor: default; opacity: .5; }
 .fp-devtools__icon-button { font-size: 18px; line-height: 1; min-width: 32px; }
 .fp-devtools__tabs {
   align-items: end;
@@ -272,8 +273,17 @@ export const devtoolsStyles = `
   white-space: pre-wrap;
   word-break: break-word;
 }
-.fp-devtools__value details { margin-left: 10px; }
-.fp-devtools__value summary { cursor: pointer; }
+.fp-devtools__json {
+  --w-rjv-arrow-color: var(--fpd-muted);
+  --w-rjv-background-color: transparent;
+  --w-rjv-color: var(--fpd-text);
+  --w-rjv-info-color: var(--fpd-muted);
+  --w-rjv-key-string: var(--fpd-text);
+  --w-rjv-line-color: var(--fpd-border);
+  --w-rjv-update-color: var(--fpd-accent-soft);
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
 .fp-devtools__stage {
   border-left: 2px solid var(--fpd-border);
   margin-left: 5px;

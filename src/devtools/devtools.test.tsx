@@ -1,6 +1,6 @@
 "use client"
 
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 
@@ -66,5 +66,53 @@ describe("FormPleaseDevtools", () => {
 			fireEvent.click(within(drawer).getByRole("tab", { name: tab }))
 			expect(within(drawer).getByText(emptyState)).toBeDefined()
 		}
+	})
+
+	it("compares update values in one collapsible inspector", async () => {
+		let updateName!: () => void
+		function View() {
+			const form = nativeFormKit.useForm(definition, {
+				defaultValues: { name: "Ada" },
+			})
+			updateName = () => {
+				form.update((draft) => {
+					draft.name = "Grace"
+				})
+			}
+			return (
+				<nativeFormKit.AutoForm form={form}>
+					<FormPleaseDevtools form={form} name="Profile" />
+				</nativeFormKit.AutoForm>
+			)
+		}
+
+		render(<View />)
+		await screen.findByTestId("rhf-devtools")
+		act(() => updateName())
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "Open Profile Form Please Devtools",
+			}),
+		)
+		const drawer = screen.getByRole("complementary", {
+			name: "Profile Form Please Devtools",
+		})
+		fireEvent.click(within(drawer).getByRole("tab", { name: "Updates" }))
+
+		const values = within(drawer)
+			.getByRole("heading", { name: "Values" })
+			.closest(".fp-devtools__section")
+		if (!(values instanceof HTMLElement)) throw new Error("Values are missing")
+		const comparison = within(values)
+		expect(
+			comparison
+				.getByRole("button", { name: "After" })
+				.getAttribute("aria-pressed"),
+		).toBe("true")
+		expect(comparison.getByText("Grace")).toBeDefined()
+		expect(values.querySelector("details")).toBeNull()
+
+		fireEvent.click(comparison.getByRole("button", { name: "Before" }))
+		expect(comparison.getByText("Ada")).toBeDefined()
 	})
 })

@@ -169,8 +169,10 @@
 		}
 	},
 	"dependencies": {
+		"@babel/runtime": "7.29.7",
 		"@hookform/devtools": "4.4.0",
 		"@standard-schema/spec": "1.1.0",
+		"@uiw/react-json-view": "2.0.0-alpha.43",
 		"immer": "11.1.15"
 	},
 	"devDependencies": {

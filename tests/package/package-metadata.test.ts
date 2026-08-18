@@ -34,7 +34,9 @@ describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
 			dependencies: {
+				"@babel/runtime": "7.29.7",
 				"@hookform/devtools": "4.4.0",
+				"@uiw/react-json-view": "2.0.0-alpha.43",
 				immer: "11.1.15",
 			},
 			engines: { node: ">=24" },
