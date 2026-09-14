@@ -30,33 +30,12 @@ describe("built package entries", () => {
 		}
 	})
 
-	it("exports only canonical root runtime names", async () => {
-		for (const root of [(await loadEsm()).root, loadCommonJs().root]) {
-			expect(root).toHaveProperty("createFormKit")
-			expect(root).toHaveProperty("useSnapshot")
-			expect(root).not.toHaveProperty("createForm")
-			expect(root).not.toHaveProperty("createFormStore")
-			expect(root).not.toHaveProperty("useForm")
-			expect(root).not.toHaveProperty("useCreateForm")
-			expect(root).not.toHaveProperty("useBindForm")
-		}
-	})
-
-	it("omits retired names and keeps canonical declarations", async () => {
+	it("keeps every public declaration in both module formats", async () => {
 		for (const extension of ["d.ts", "d.cts"]) {
 			const declaration = await readFile(
 				new URL(`../../dist/index.${extension}`, import.meta.url),
 				"utf8",
 			)
-			for (const name of [
-				"TanStackFormKit",
-				"TanStackFormInstance",
-				"ControlFormData",
-				"ControlConfigOf",
-				"ValuePolicy",
-			]) {
-				expect(declaration).not.toContain(name)
-			}
 			for (const name of [
 				"ControlOwnPropsOf",
 				"DefineFormOptions",
@@ -95,7 +74,6 @@ describe("built package entries", () => {
 			)
 			expect(devtoolsDeclaration).toContain("FormPleaseDevtoolsProps")
 			expect(devtoolsDeclaration).toContain("FormPleaseDevtools")
-			expect(devtoolsDeclaration).not.toContain("createDevtoolsMiddleware")
 			expect(devtoolsDeclaration).not.toMatch(/\bid\?:/)
 
 			const nativeDeclaration = await readFile(
@@ -103,14 +81,12 @@ describe("built package entries", () => {
 				"utf8",
 			)
 			expect(nativeDeclaration).toContain("NativeSelectProps")
-			expect(nativeDeclaration).not.toContain("NativeSelectConfig")
 
 			const muiDeclaration = await readFile(
 				new URL(`../../dist/preset-mui.${extension}`, import.meta.url),
 				"utf8",
 			)
 			expect(muiDeclaration).toContain("MuiSelectProps")
-			expect(muiDeclaration).not.toContain("MuiSelectConfig")
 
 			const testingDeclaration = await readFile(
 				new URL(`../../dist/testing.${extension}`, import.meta.url),

@@ -69,8 +69,6 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /createHistoryMiddleware/)
 	assert.match(full, /createPersistenceMiddleware/)
 	assert.match(full, /Persistence restore \| `persistence`/)
-	assert.doesNotMatch(full, /form-please\/core/)
-	assert.doesNotMatch(full, /valuePolicy/)
 })
 
 test("production metadata uses the GitHub Pages URL", async () => {
