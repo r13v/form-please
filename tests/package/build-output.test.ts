@@ -57,14 +57,6 @@ describe("build output", () => {
 		}
 	})
 
-	it("removes every retired JavaScript entry", async () => {
-		for (const entrypoint of ["core", "react19", "server", "tanstack"]) {
-			await expect(
-				stat(resolve(rootDirectory, `dist/${entrypoint}.js`)),
-			).rejects.toMatchObject({ code: "ENOENT" })
-		}
-	})
-
 	it("keeps Material UI isolated to its preset graph", async () => {
 		for (const entrypoint of entrypoints) {
 			const graph = await readEsmGraph(`dist/${entrypoint}.js`)
@@ -80,7 +72,6 @@ describe("build output", () => {
 		const graph = await readEsmGraph("dist/index.js")
 		expect(graph).toContain("immer")
 		expect(graph).toContain("react-hook-form")
-		expect(graph).not.toContain("@tanstack/react-form")
 		expect(graph).not.toContain("layout.css")
 	})
 

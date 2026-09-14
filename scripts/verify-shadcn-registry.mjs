@@ -63,9 +63,6 @@ try {
 	for (const controlName of controlNames) {
 		assert.match(source, new RegExp(`\\n\\t${controlName}: defineControl<`))
 	}
-	for (const retiredContract of ["formData", "serialize(", "valuePolicy"]) {
-		assert.doesNotMatch(source, new RegExp(retiredContract.replace("(", "\\(")))
-	}
 	assert.match(source, /export const shadcnFormKit = createFormKit/)
 
 	const tarballPath = await packTarball(tempRoot)

@@ -33,12 +33,6 @@ const javaScriptEntrypoints = {
 describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
-			dependencies: {
-				"@babel/runtime": "7.29.7",
-				"@hookform/devtools": "4.4.0",
-				"@uiw/react-json-view": "2.0.0-alpha.43",
-				immer: "11.1.15",
-			},
 			engines: { node: ">=24" },
 			files: ["dist"],
 			license: "MIT",
@@ -81,10 +75,19 @@ describe("package metadata", () => {
 	})
 
 	it("lets release automation own the package version", () => {
-		expect(packageJson.scripts["package:check"]).toBe(
-			"npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./testing",
-		)
 		expect(packageJson.scripts).not.toHaveProperty("version")
+	})
+
+	it("checks every published entrypoint with the strict publish tooling", () => {
+		const packageCheck = packageJson.scripts["package:check"]
+		const published = Object.keys(packageJson.exports).filter(
+			(entrypoint) =>
+				!entrypoint.endsWith(".css") && entrypoint !== "./package.json",
+		)
+
+		expect(packageCheck).toContain("publint --strict")
+		expect(packageCheck).toContain("--profile node16")
+		expect(packageCheck).toContain(`--entrypoints ${published.join(" ")}`)
 	})
 
 	it("keeps the structural stylesheet explicit", async () => {

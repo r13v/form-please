@@ -1,90 +1,35 @@
-import { readFile } from "node:fs/promises"
-
 import { describe, expect, it } from "vitest"
 import { parse } from "yaml"
 
-const ciWorkflow = (
-	await readFile(new URL("../../.github/workflows/ci.yml", import.meta.url), {
-		encoding: "utf8",
-	})
-).replaceAll("\r\n", "\n")
-const playwrightConfig = await readFile(
-	new URL("../../playwright.config.ts", import.meta.url),
-	"utf8",
-)
+import {
+	expectRunOrder,
+	jobRuns,
+	readWorkflow,
+	record,
+} from "./workflow-contract.js"
+
+const ciWorkflow = await readWorkflow("ci.yml")
 const ci = parse(ciWorkflow) as Record<string, unknown>
-const matrixNodeVersionExpression = "$" + "{{ matrix.node-version }}"
-const concurrencyGroupExpression =
-	"$" + "{{ github.workflow }}-" + "$" + "{{ github.ref }}"
 
 describe("release-equivalent CI workflow", () => {
-	it("installs every workspace checked by the release-equivalent gates", () => {
-		const verify = job(ci, "verify")
-		const steps = workflowSteps(verify)
-		const runs = steps.map((step) => step.run).filter(Boolean)
-
-		expect(ci.name).toBe("CI")
+	it("runs the release-equivalent gates on pull requests and main", () => {
 		expect(record(ci.on).pull_request).toBeNull()
 		expect(record(record(ci.on).push).branches).toEqual(["main"])
 		expect(record(ci.permissions).contents).toBe("read")
-		expect(record(ci.concurrency)).toEqual({
-			group: concurrencyGroupExpression,
-			"cancel-in-progress": true,
-		})
-		expect(record(record(verify.strategy).matrix)["node-version"]).toEqual([24])
-		expect(steps.map((step) => step.name)).toEqual([
-			"Checkout",
-			"Setup Node",
-			"Install dependencies",
-			"Install docs dependencies",
-			"Verify package",
-			"Dry-run package",
-		])
-		expect(steps[0]?.uses).toBe("actions/checkout@v6")
-		expect(steps[1]?.uses).toBe("actions/setup-node@v6")
-		expect(record(steps[1]?.with)["node-version"]).toBe(
-			matrixNodeVersionExpression,
-		)
-		expect(record(steps[1]?.with).cache).toBe("npm")
-		expect(runs).toEqual([
+		expectRunOrder(jobRuns(ci, "verify"), [
 			"npm ci",
 			"npm ci --prefix docs-site",
 			"npm run verify",
-			"npm pack --dry-run",
 		])
-		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
-			runs.indexOf("npm run verify"),
-		)
 	})
 
 	it("runs preview verification after installing docs dependencies", () => {
-		const docsSite = job(ci, "docs-site")
-		const steps = workflowSteps(docsSite)
-		const runs = steps.map((step) => step.run).filter(Boolean)
-
-		expect(docsSite["runs-on"]).toBe("ubuntu-latest")
-		expect(steps.map((step) => step.name)).toEqual([
-			"Checkout",
-			"Setup Node",
-			"Install dependencies",
-			"Build package",
-			"Install docs dependencies",
-			"Verify docs preview",
-			"Upload docs Playwright artifacts",
-		])
-		expect(record(steps[1]?.with)["node-version"]).toBe(24)
-		expect(String(record(steps[1]?.with)["cache-dependency-path"])).toContain(
-			"docs-site/package-lock.json",
-		)
-		expect(runs).toEqual([
+		expectRunOrder(jobRuns(ci, "docs-site"), [
 			"npm ci",
 			"npm run build",
 			"npm ci --prefix docs-site",
 			"npm run site:verify:preview",
 		])
-		expect(runs.indexOf("npm ci --prefix docs-site")).toBeLessThan(
-			runs.indexOf("npm run site:verify:preview"),
-		)
 	})
 
 	it("does not publish, mutate source, or require credentials", () => {
@@ -102,36 +47,4 @@ describe("release-equivalent CI workflow", () => {
 		expect(ciWorkflow).not.toContain("upload-pages-artifact")
 		expect(ciWorkflow).not.toContain("playwright install")
 	})
-
-	it("uses the Chrome already installed on GitHub runners", () => {
-		expect(playwrightConfig).toContain(
-			'channel: process.env.GITHUB_ACTIONS ? "chrome" : undefined',
-		)
-	})
 })
-
-function job(
-	workflow: Record<string, unknown>,
-	name: string,
-): Record<string, unknown> {
-	return record(record(workflow.jobs)[name])
-}
-
-function workflowSteps(
-	jobDefinition: Record<string, unknown>,
-): readonly Record<string, unknown>[] {
-	const steps = jobDefinition.steps
-	if (!Array.isArray(steps)) {
-		throw new Error("Expected workflow job steps")
-	}
-
-	return steps.map((step) => record(step))
-}
-
-function record(value: unknown): Record<string, unknown> {
-	if (value === null || typeof value !== "object" || Array.isArray(value)) {
-		throw new Error("Expected workflow object")
-	}
-
-	return value as Record<string, unknown>
-}

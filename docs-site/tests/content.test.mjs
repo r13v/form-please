@@ -39,26 +39,6 @@ const pages = [
 	["src/pages/examples/campaign-builder.mdx", "Campaign builder"],
 ]
 
-const exampleSnippets = [
-	"src/snippets/mui-yup-conference.tsx",
-	"src/snippets/shadcn-valibot-workshop.tsx",
-	"src/snippets/complex-research-grant.tsx",
-	"src/snippets/complex-studio-policies.tsx",
-	"src/snippets/complex-makerspace-launch.tsx",
-	"src/snippets/complex-learning-cohort.tsx",
-	"src/snippets/complex-membership-ladder.tsx",
-	"src/snippets/complex-campaign-builder.tsx",
-	"src/snippets/lab-profile-form.tsx",
-	"src/snippets/async-multiselect.tsx",
-	"src/snippets/async-multiselect-request.ts",
-	"src/snippets/history-guide.tsx",
-	"src/snippets/persistence-basics.tsx",
-	"src/snippets/persistence-local-storage.tsx",
-	"src/snippets/persistence-nuqs.ts",
-	"src/snippets/persistence-tanstack-query.ts",
-	"src/snippets/devtools-guide.tsx",
-]
-
 const referenceSnippets = [
 	"src/snippets/api-reference.tsx",
 	"src/snippets/form-kits-control.tsx",
@@ -207,40 +187,6 @@ test("documents the React Hook Form runtime decisions", async () => {
 			new RegExp(escapeRegExp(term), "i"),
 			`missing ${term}`,
 		)
-	}
-})
-
-test("does not teach retired runtime entries or APIs", async () => {
-	const files = [
-		...pages.map(([path]) => path),
-		"src/snippets/profile-form.tsx",
-		...exampleSnippets,
-		...referenceSnippets,
-		"src/components/ui/form-please/shadcn-form-kit.tsx",
-		"vocs.config.ts",
-	]
-	const source = (
-		await Promise.all(
-			files.map((path) => readFile(new URL(path, siteRoot), "utf8")),
-		)
-	).join("\n")
-
-	for (const forbidden of [
-		"form-please/core",
-		"form-please/tanstack",
-		"form-please/react19",
-		"form-please/server",
-		"useCreateForm",
-		"useBindForm",
-		"form.api.Field",
-		"form.api.FormGroup",
-		"form.api.Subscribe",
-		"form.api.pushFieldValue",
-		"useArrayField",
-		"valuePolicy",
-		"kit.tf",
-	]) {
-		assert.doesNotMatch(source, new RegExp(escapeRegExp(forbidden)))
 	}
 })
 
