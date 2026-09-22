@@ -260,8 +260,7 @@ describe("persistence encoding", () => {
 					codecs: [dateCodec],
 					version: 1,
 				}),
-			).rejects.toThrow("Malformed encoded persistence value at")
-			expect(message).toBeTruthy()
+			).rejects.toThrow(`Malformed encoded persistence value at ${message}`)
 		}
 	})
 

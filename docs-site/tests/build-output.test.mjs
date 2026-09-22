@@ -1,19 +1,9 @@
 import assert from "node:assert/strict"
-import { constants } from "node:fs"
 import { access, readFile } from "node:fs/promises"
 import { test } from "node:test"
 
 const publicRoot = new URL("../dist/public/", import.meta.url)
 const expectProductionUrl = process.env.EXPECT_PRODUCTION_URL === "true"
-
-async function exists(path) {
-	try {
-		await access(new URL(path, publicRoot), constants.F_OK)
-		return true
-	} catch {
-		return false
-	}
-}
 
 test("Vocs emits every supported Markdown route and index artifact", async () => {
 	for (const file of [
@@ -53,13 +43,18 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 		"sitemap.xml",
 		"robots.txt",
 	]) {
-		assert.equal(await exists(file), true, `${file} should exist`)
+		await access(new URL(file, publicRoot))
 	}
 })
 
 test("generated LLM documentation describes the current runtime", async () => {
 	const full = await readFile(new URL("llms-full.txt", publicRoot), "utf8")
 	assert.match(full, /FormProvider/)
+	assert.match(full, /Controller/)
+	assert.match(full, /useFormState/)
+	assert.match(full, /complete schema input/i)
+	assert.match(full, /Hidden fields preserve/i)
+	assert.match(full, /stable field-array ID/i)
 	assert.match(full, /useWatch/)
 	assert.match(full, /fromResource/)
 	assert.match(full, /parses once/i)

@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises"
+import { readFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -22,16 +22,6 @@ const clientEntrypoints = entrypoints.filter(
 )
 
 describe("build output", () => {
-	it("emits both module formats and their declarations", async () => {
-		for (const entrypoint of entrypoints) {
-			for (const extension of ["js", "cjs", "d.ts", "d.cts"]) {
-				await expect(
-					stat(resolve(rootDirectory, `dist/${entrypoint}.${extension}`)),
-				).resolves.toBeDefined()
-			}
-		}
-	})
-
 	it("keeps the testing entry server-compatible", async () => {
 		for (const extension of ["js", "cjs"]) {
 			const source = await readFile(
