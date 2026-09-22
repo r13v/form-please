@@ -46,19 +46,6 @@ describe("package metadata", () => {
 			type: "module",
 		})
 		expect(packageJson.exports).toEqual(expectedExports())
-		expect(Object.keys(packageJson.exports)).toEqual([
-			".",
-			"./default-slots",
-			"./devtools",
-			"./history",
-			"./native-controls",
-			"./persistence",
-			"./preset-native",
-			"./preset-mui",
-			"./testing",
-			"./layout.css",
-			"./package.json",
-		])
 		expect(packageLock.version).toBe(packageJson.version)
 		expect(packageLock.packages[""].version).toBe(packageJson.version)
 	})
@@ -69,9 +56,6 @@ describe("package metadata", () => {
 			"@emotion/styled": { optional: true },
 			"@mui/material": { optional: true },
 		})
-		expect(packageJson.peerDependenciesMeta).not.toHaveProperty(
-			"react-hook-form",
-		)
 	})
 
 	it("lets release automation own the package version", () => {

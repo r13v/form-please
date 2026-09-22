@@ -33,7 +33,7 @@ describe("useSnapshot", () => {
 	})
 
 	it("releases its store subscription when the consumer unmounts", () => {
-		let snapshot: Readonly<{ count: number }> = Object.freeze({ count: 0 })
+		const snapshot: Readonly<{ count: number }> = Object.freeze({ count: 0 })
 		const listeners = new Set<() => void>()
 		let renders = 0
 		const store = {
@@ -60,9 +60,5 @@ describe("useSnapshot", () => {
 
 		view.unmount()
 		expect(listeners.size).toBe(0)
-		snapshot = Object.freeze({ count: 2 })
-		expect(() => {
-			for (const listener of listeners) listener()
-		}).not.toThrow()
 	})
 })

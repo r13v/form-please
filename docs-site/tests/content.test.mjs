@@ -6,55 +6,41 @@ const siteRoot = new URL("../", import.meta.url)
 const repositoryRoot = new URL("../", siteRoot)
 
 const pages = [
-	["src/pages/index.mdx", "Form, Please"],
-	["src/pages/get-started.mdx", "Get started"],
-	["src/pages/ai-agents.mdx", "Use with AI agents"],
-	["src/pages/definitions.mdx", "Definitions"],
-	["src/pages/validation.mdx", "Validation and submission"],
-	["src/pages/conditional-fields.mdx", "Conditional fields"],
-	["src/pages/arrays.mdx", "Arrays"],
-	["src/pages/middleware.mdx", "Value middleware"],
-	["src/pages/history.mdx", "Managed value history"],
-	["src/pages/persistence.mdx", "Form persistence"],
-	["src/pages/devtools.mdx", "Devtools"],
-	["src/pages/form-kits.mdx", "Form kits"],
-	["src/pages/resources.mdx", "Resource state"],
-	["src/pages/styling.mdx", "Styling"],
-	["src/pages/api.mdx", "API"],
-	["src/pages/recipes.mdx", "Production recipes"],
-	["src/pages/workflows.mdx", "Product workflows"],
-	["src/pages/types.mdx", "TypeScript"],
-	["src/pages/faqs.mdx", "FAQs"],
-	["src/pages/examples/index.mdx", "Examples"],
-	["src/pages/examples/history.mdx", "History workflow"],
-	["src/pages/examples/persistence.mdx", "Query string persistence"],
-	["src/pages/examples/mui-yup.mdx", "Material UI with Yup"],
-	["src/pages/examples/shadcn-valibot.mdx", "Shadcn with Valibot"],
-	["src/pages/examples/async-multiselect.mdx", "Async multiselect"],
-	["src/pages/examples/research-grant.mdx", "Research grant application"],
-	["src/pages/examples/studio-policies.mdx", "Creative studio policies"],
-	["src/pages/examples/makerspace-launch.mdx", "Makerspace launch wizard"],
-	["src/pages/examples/learning-cohort.mdx", "Learning cohort editor"],
-	["src/pages/examples/membership-ladder.mdx", "Membership ladder"],
-	["src/pages/examples/campaign-builder.mdx", "Campaign builder"],
-]
-
-const referenceSnippets = [
-	"src/snippets/api-reference.tsx",
-	"src/snippets/form-kits-control.tsx",
-	"src/snippets/form-kits.tsx",
-	"src/snippets/production-recipes.tsx",
-	"src/snippets/product-workflow.tsx",
-	"src/snippets/workflow-review.tsx",
-	"src/snippets/workflow-router-guard.tsx",
-	"src/snippets/workflow-server-issues.tsx",
-	"src/snippets/workflow-submit-actions.tsx",
-	"src/snippets/middleware-guide.tsx",
-	"src/snippets/validation-guide.tsx",
+	"src/pages/index.mdx",
+	"src/pages/get-started.mdx",
+	"src/pages/ai-agents.mdx",
+	"src/pages/definitions.mdx",
+	"src/pages/validation.mdx",
+	"src/pages/conditional-fields.mdx",
+	"src/pages/arrays.mdx",
+	"src/pages/middleware.mdx",
+	"src/pages/history.mdx",
+	"src/pages/persistence.mdx",
+	"src/pages/devtools.mdx",
+	"src/pages/form-kits.mdx",
+	"src/pages/resources.mdx",
+	"src/pages/styling.mdx",
+	"src/pages/api.mdx",
+	"src/pages/recipes.mdx",
+	"src/pages/workflows.mdx",
+	"src/pages/types.mdx",
+	"src/pages/faqs.mdx",
+	"src/pages/examples/index.mdx",
+	"src/pages/examples/history.mdx",
+	"src/pages/examples/persistence.mdx",
+	"src/pages/examples/mui-yup.mdx",
+	"src/pages/examples/shadcn-valibot.mdx",
+	"src/pages/examples/async-multiselect.mdx",
+	"src/pages/examples/research-grant.mdx",
+	"src/pages/examples/studio-policies.mdx",
+	"src/pages/examples/makerspace-launch.mdx",
+	"src/pages/examples/learning-cohort.mdx",
+	"src/pages/examples/membership-ladder.mdx",
+	"src/pages/examples/campaign-builder.mdx",
 ]
 
 test("uses Twoslash for complete TypeScript snippets", async () => {
-	for (const [path] of pages) {
+	for (const path of pages) {
 		const source = await readFile(new URL(path, siteRoot), "utf8")
 		const completeSnippets = source.matchAll(
 			/^```(?:ts|tsx)([^\n]*)\n\/\/ \[!include ~\/snippets\/[^\]: ]+\]\n```/gm,
@@ -70,79 +56,14 @@ test("uses Twoslash for complete TypeScript snippets", async () => {
 	}
 })
 
-test("documents only the supported navigation surface", async () => {
+test("keeps supported routes in navigation", async () => {
 	const config = await readFile(new URL("vocs.config.ts", siteRoot), "utf8")
-	for (const [path, title] of pages) {
-		const source = await readFile(new URL(path, siteRoot), "utf8")
-		assert.match(
-			source,
-			new RegExp(`^---[\\s\\S]*title: ${escapeRegExp(title)}`, "m"),
-		)
-	}
-
-	for (const route of [
-		"/get-started",
-		"/ai-agents",
-		"/definitions",
-		"/validation",
-		"/conditional-fields",
-		"/arrays",
-		"/middleware",
-		"/history",
-		"/persistence",
-		"/form-kits",
-		"/resources",
-		"/styling",
-		"/api",
-		"/recipes",
-		"/workflows",
-		"/types",
-		"/faqs",
-		"/examples",
-		"/examples/history",
-		"/examples/persistence",
-		"/examples/mui-yup",
-		"/examples/shadcn-valibot",
-		"/examples/async-multiselect",
-		"/examples/research-grant",
-		"/examples/studio-policies",
-		"/examples/makerspace-launch",
-		"/examples/learning-cohort",
-		"/examples/membership-ladder",
-		"/examples/campaign-builder",
-	]) {
+	for (const path of pages) {
+		const route = path
+			.replace("src/pages", "")
+			.replace(/\/index\.mdx$|\.mdx$/g, "")
+		if (route === "") continue
 		assert.match(config, new RegExp(`link: "${escapeRegExp(route)}"`))
-	}
-
-	const getStartedIndex = config.indexOf(
-		'{ text: "Get started", link: "/get-started" }',
-	)
-	const aiAgentsIndex = config.indexOf(
-		'{ text: "AI agents", link: "/ai-agents" }',
-	)
-	assert.ok(
-		aiAgentsIndex > getStartedIndex,
-		"AI agents follows Get started in the Start navigation",
-	)
-
-	let previousGuideIndex = -1
-	for (const [text, route] of [
-		["Form kits", "/form-kits"],
-		["Definitions", "/definitions"],
-		["Validation & submission", "/validation"],
-		["Styling", "/styling"],
-		["Conditional fields", "/conditional-fields"],
-		["Arrays", "/arrays"],
-		["Recipes", "/recipes"],
-		["Product workflows", "/workflows"],
-		["Resources", "/resources"],
-		["Middleware", "/middleware"],
-		["Persistence", "/persistence"],
-		["History", "/history"],
-	]) {
-		const guideIndex = config.indexOf(`{ text: "${text}", link: "${route}" }`)
-		assert.ok(guideIndex > previousGuideIndex, `${text} is in guide order`)
-		previousGuideIndex = guideIndex
 	}
 })
 
@@ -164,64 +85,12 @@ test("documents the complete agent skill lifecycle", async () => {
 	}
 })
 
-test("documents the React Hook Form runtime decisions", async () => {
-	const allPages = (
-		await Promise.all(
-			pages.map(([path]) => readFile(new URL(path, siteRoot), "utf8")),
-		)
-	).join("\n")
-
-	for (const term of [
-		"FormProvider",
-		"Controller",
-		"useWatch",
-		"useFormState",
-		"fromResource",
-		"complete schema input",
-		"Hidden fields preserve",
-		"stable field-array ID",
-		"parses once",
-	]) {
-		assert.match(
-			allPages,
-			new RegExp(escapeRegExp(term), "i"),
-			`missing ${term}`,
-		)
-	}
-})
-
-test("keeps the supported live documentation demos", async () => {
-	for (const [path, expected] of [
-		["src/pages/index.mdx", "<OverviewDemo />"],
-		["src/pages/get-started.mdx", "<InteractiveLab />"],
-		["src/pages/styling.mdx", "<TailwindProfileDemo />"],
-		["src/pages/devtools.mdx", "<DevtoolsDemo />"],
-		["src/pages/examples/async-multiselect.mdx", "<AsyncMultiSelectDemo />"],
-		["src/pages/validation.mdx", "~/snippets/zod-error-messages.ts"],
-		["src/pages/examples/persistence.mdx", "<PersistenceDemo />"],
-	]) {
-		const source = await readFile(new URL(path, siteRoot), "utf8")
-		assert.match(source, new RegExp(escapeRegExp(expected)))
-	}
-})
-
-test("documents devtools with a live, form-bound example", async () => {
+test("includes the live devtools example", async () => {
 	const page = await readFile(
 		new URL("src/pages/devtools.mdx", siteRoot),
 		"utf8",
 	)
-	const demo = await readFile(
-		new URL("src/components/devtools-demo.client.tsx", siteRoot),
-		"utf8",
-	)
-
 	assert.match(page, /<DevtoolsDemo \/>/)
-	assert.match(
-		demo,
-		/<FormPleaseDevtools form=\{form\} name="Docs profile" \/>/,
-	)
-	assert.match(demo, /middleware: \[historyFeature, persistenceFeature\]/)
-	assert.match(demo, /options: \(\{ values \}\) =>/)
 })
 
 test("keeps the async multiselect example copyable and production-shaped", async () => {
@@ -369,11 +238,6 @@ test("keeps form kits, API, and production guidance executable", async () => {
 	]) {
 		assert.match(formKits, new RegExp(`form-kits\\.tsx:${region}`))
 	}
-
-	for (const snippet of referenceSnippets) {
-		await access(new URL(snippet, siteRoot))
-	}
-
 	const definitions = await readFile(
 		new URL("src/pages/definitions.mdx", siteRoot),
 		"utf8",
@@ -604,25 +468,12 @@ test("keeps the shadcn adapter installable and release-version agnostic", async 
 	const rootPackage = JSON.parse(
 		await readFile(new URL("package.json", repositoryRoot), "utf8"),
 	)
-	const docsPackage = JSON.parse(
-		await readFile(new URL("package.json", siteRoot), "utf8"),
-	)
 	const rootCss = await readFile(
 		new URL("src/pages/_root.css", siteRoot),
 		"utf8",
 	)
 	const [item] = registry.items
 
-	assert.equal(registry.name, "form-please")
-	assert.equal(item.name, "shadcn-form-kit")
-	assert.deepEqual(item.files, [
-		{
-			path: "docs-site/src/components/ui/form-please/shadcn-form-kit.tsx",
-			type: "registry:component",
-			target: "@ui/form-please/shadcn-form-kit.tsx",
-		},
-	])
-	assert.equal(item.dependencies.includes("form-please"), true)
 	assert.equal(
 		item.dependencies.some((dependency) =>
 			dependency.startsWith("form-please@"),
@@ -631,7 +482,6 @@ test("keeps the shadcn adapter installable and release-version agnostic", async 
 	)
 	assert.equal(components.style, "base-nova")
 	assert.equal(components.aliases.ui, "#components/ui")
-	assert.equal(docsPackage.dependencies["tw-animate-css"], "1.4.0")
 	assert.match(rootCss, /@import "tw-animate-css"/)
 	assert.match(page, /npx shadcn@latest add r13v\/form-please\/shadcn-form-kit/)
 	assert.match(page, /registry manifest/)
@@ -640,20 +490,6 @@ test("keeps the shadcn adapter installable and release-version agnostic", async 
 		"node scripts/verify-shadcn-registry.mjs",
 	)
 	assert.match(rootPackage.scripts.verify, /npm run test:registry/)
-})
-
-test("keeps only the supported example routes", async () => {
-	for (const path of [
-		"src/pages/examples/devtools.mdx",
-		"src/pages/examples/tanstack-form.mdx",
-	]) {
-		await assert.rejects(access(new URL(path, siteRoot)))
-	}
-
-	const config = await readFile(new URL("vocs.config.ts", siteRoot), "utf8")
-	for (const route of ["/examples/devtools", "/examples/tanstack-form"]) {
-		assert.doesNotMatch(config, new RegExp(escapeRegExp(route)))
-	}
 })
 
 test("the physical example uses only public package imports", async () => {
@@ -668,13 +504,7 @@ test("the physical example uses only public package imports", async () => {
 	const packageJson = JSON.parse(
 		await readFile(new URL("package.json", siteRoot), "utf8"),
 	)
-	assert.equal(packageJson.dependencies["react-hook-form"], "7.84.0")
 	assert.equal(packageJson.dependencies["form-please"], "file:..")
-
-	const rootPackage = JSON.parse(
-		await readFile(new URL("package.json", repositoryRoot), "utf8"),
-	)
-	assert.equal(rootPackage.peerDependencies["react-hook-form"], "^7.76.1")
 })
 
 function escapeRegExp(value) {

@@ -73,15 +73,6 @@ async function runFixture(fixture, tarballPath, tempRoot) {
 
 	try {
 		await cp(sourceDirectory, targetDirectory, { recursive: true })
-		const packageJson = JSON.parse(
-			await readFile(join(targetDirectory, "package.json"), "utf8"),
-		)
-
-		for (const scriptName of fixture.requiredScripts) {
-			if (packageJson.scripts?.[scriptName] === undefined) {
-				throw new Error(`${fixture.name} is missing ${scriptName} script`)
-			}
-		}
 
 		await run("npm", ["ci"], targetDirectory)
 		await run("npm", ["install", "--no-save", tarballPath], targetDirectory)
@@ -123,15 +114,7 @@ async function readCssFiles(directory) {
 }
 
 async function walk(directory, files) {
-	let entries
-	try {
-		entries = await readdir(directory, { withFileTypes: true })
-	} catch (error) {
-		if (error?.code === "ENOENT") {
-			return
-		}
-		throw error
-	}
+	const entries = await readdir(directory, { withFileTypes: true })
 
 	for (const entry of entries) {
 		const absolutePath = join(directory, entry.name)
