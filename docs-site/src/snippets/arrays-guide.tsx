@@ -29,36 +29,28 @@ const contactDefaultValues = {
 	contacts: [{ id: "contact-1", email: "ada@example.com", label: "Primary" }],
 } satisfies FormInput<typeof contactsSchema>
 
-const contactsDefinition = kit.defineForm(contactsSchema, {
-	ui: [
-		{
-			kind: "array",
-			path: "contacts",
-			label: "Contacts",
-			description: "Add, reorder, or remove contacts.",
-			itemDefault: () => ({
-				id: crypto.randomUUID(),
-				email: "",
-				label: undefined,
+const contactsDefinition = kit.defineForm(contactsSchema, (ui) => [
+	ui.array("contacts", {
+		label: "Contacts",
+		description: "Add, reorder, or remove contacts.",
+		itemDefault: () => ({
+			id: crypto.randomUUID(),
+			email: "",
+			label: undefined,
+		}),
+		children: (contact) => [
+			contact.field("email", {
+				control: "text",
+				label: "Email",
+				required: true,
 			}),
-			children: [
-				{
-					kind: "field",
-					path: "email",
-					control: "text",
-					label: "Email",
-					required: true,
-				},
-				{
-					kind: "field",
-					path: "label",
-					control: "text",
-					label: "Label",
-				},
-			],
-		},
-	],
-})
+			contact.field("label", {
+				control: "text",
+				label: "Label",
+			}),
+		],
+	}),
+])
 // [!endregion define-array]
 
 // [!region nested-array]
@@ -71,33 +63,25 @@ const conferenceSchema = z.object({
 	),
 })
 
-const conferenceDefinition = kit.defineForm(conferenceSchema, {
-	ui: [
-		{
-			kind: "array",
-			path: "speakers",
-			label: "Speakers",
-			itemDefault: { name: "", sessions: [] },
-			children: [
-				{ kind: "field", path: "name", control: "text", label: "Name" },
-				{
-					kind: "array",
-					path: "sessions",
-					label: "Sessions",
-					itemDefault: { title: "" },
-					children: [
-						{
-							kind: "field",
-							path: "title",
-							control: "text",
-							label: "Title",
-						},
-					],
-				},
-			],
-		},
-	],
-})
+const conferenceDefinition = kit.defineForm(conferenceSchema, (ui) => [
+	ui.array("speakers", {
+		label: "Speakers",
+		itemDefault: { name: "", sessions: [] },
+		children: (speaker) => [
+			speaker.field("name", { control: "text", label: "Name" }),
+			speaker.array("sessions", {
+				label: "Sessions",
+				itemDefault: { title: "" },
+				children: (session) => [
+					session.field("title", {
+						control: "text",
+						label: "Title",
+					}),
+				],
+			}),
+		],
+	}),
+])
 // [!endregion nested-array]
 
 // [!region array-validation]

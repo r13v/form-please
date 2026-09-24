@@ -17,13 +17,6 @@ const profileSchema = z.object({
 	role: z.string(),
 })
 
-const profileDefinitionSource = {
-	ui: [
-		{ control: "text", kind: "field", label: "Name", path: "name" },
-		{ control: "text", kind: "field", label: "Role", path: "role" },
-	],
-} as const
-
 const draftParser = parseAsString.withOptions({
 	history: "replace",
 	shallow: true,
@@ -47,7 +40,10 @@ export function PersistencePreview() {
 		})
 		const definition = nativeFormKit.defineForm(
 			profileSchema,
-			profileDefinitionSource,
+			(ui) => [
+				ui.field("name", { control: "text", label: "Name" }),
+				ui.field("role", { control: "text", label: "Role" }),
+			],
 			{ middleware: [feature] },
 		)
 		return { definition, feature }

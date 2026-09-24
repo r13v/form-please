@@ -12,7 +12,6 @@ import {
 	type FormInput,
 	type FormOutput,
 	matchResource,
-	type UiNode,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -278,262 +277,191 @@ function TitleSuggestions({
 	)
 }
 
-const cohortDefinition = kit.defineForm(cohortSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "identity",
-			title: "Learning cohort",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "identity.title",
-					control: "text",
-					label: "Cohort title",
-					span: "full",
-				},
-				{
-					kind: "field",
-					path: "identity.discipline",
-					control: "select",
-					label: "Discipline",
-					options: [
-						{ value: "writing", label: "Writing" },
-						{ value: "data", label: "Data practice" },
-						{ value: "craft", label: "Material craft" },
-						{ value: "leadership", label: "Leadership" },
-					],
-				},
-				{
-					kind: "field",
-					path: "identity.level",
-					control: "select",
-					label: "Level",
-					options: [
-						{ value: "foundation", label: "Foundation" },
-						{ value: "intermediate", label: "Intermediate" },
-						{ value: "advanced", label: "Advanced" },
-					],
-				},
-				{
-					kind: "field",
-					path: "identity.durationWeeks",
-					control: "number",
-					label: "Duration in weeks",
-					props: { min: 1, max: 52, step: 1 },
-				},
-			],
-		},
-		{
-			kind: "array",
-			path: "sessionFormats",
-			label: "Session formats",
-			description: "Model different seating and mentor configurations.",
-			itemDefault: { format: "seminar", cohortSize: 8, mentorCount: 1 },
-			children: [
-				{
-					kind: "field",
-					path: "format",
-					control: "select",
-					label: "Format",
-					options: [
-						{ value: "seminar", label: "Seminar" },
-						{ value: "studio", label: "Studio" },
-						{ value: "clinic", label: "Clinic" },
-						{ value: "critique", label: "Critique" },
-					],
-				},
-				{
-					kind: "field",
-					path: "cohortSize",
-					control: "number",
-					label: "Learners",
-					props: { min: 2, max: 120, step: 1 },
-				},
-				{
-					kind: "field",
-					path: "mentorCount",
-					control: "number",
-					label: "Mentors",
-					props: { min: 1, max: 20, step: 1 },
-				},
-			],
-		},
-		{
-			kind: "array",
-			path: "priceBands",
-			label: "Per-capacity pricing",
-			itemDefault: { minimumSeats: 1, maximumSeats: 1, pricePerLearner: 0 },
-			children: [
-				{
-					kind: "field",
-					path: "minimumSeats",
-					control: "number",
-					label: "Minimum seats",
-					props: { min: 1, step: 1 },
-				},
-				{
-					kind: "field",
-					path: "maximumSeats",
-					control: "number",
-					label: "Maximum seats",
-					props: { min: 1, step: 1 },
-				},
-				{
-					kind: "field",
-					path: "pricePerLearner",
-					control: "number",
-					label: "Price per learner",
-					props: { min: 0, step: 10 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "media",
-			title: "Media",
-			children: [
-				{
-					kind: "field",
-					path: "media.cover",
-					control: "file",
-					label: "Cover image",
-					props: { accept: "image/*" },
-				},
-				{
-					kind: "array",
-					path: "media.resources",
-					label: "Resource gallery",
-					itemDefault: { url: "", caption: "" },
-					children: [
-						{
-							kind: "field",
-							path: "url",
-							control: "text",
-							label: "Resource URL",
-						},
-						{
-							kind: "field",
-							path: "caption",
-							control: "text",
-							label: "Caption",
-						},
-					],
-				},
-			],
-		},
-		...offerSections(),
-	],
-})
+const cohortDefinition = kit.defineForm(cohortSchema, (ui) => [
+	ui.section("identity", {
+		title: "Learning cohort",
+		columns: 2,
+		children: [
+			ui.field("identity.title", {
+				control: "text",
+				label: "Cohort title",
+				span: "full",
+			}),
+			ui.field("identity.discipline", {
+				control: "select",
+				label: "Discipline",
+				options: [
+					{ value: "writing", label: "Writing" },
+					{ value: "data", label: "Data practice" },
+					{ value: "craft", label: "Material craft" },
+					{ value: "leadership", label: "Leadership" },
+				],
+			}),
+			ui.field("identity.level", {
+				control: "select",
+				label: "Level",
+				options: [
+					{ value: "foundation", label: "Foundation" },
+					{ value: "intermediate", label: "Intermediate" },
+					{ value: "advanced", label: "Advanced" },
+				],
+			}),
+			ui.field("identity.durationWeeks", {
+				control: "number",
+				label: "Duration in weeks",
+				props: { min: 1, max: 52, step: 1 },
+			}),
+		],
+	}),
+	ui.array("sessionFormats", {
+		label: "Session formats",
+		description: "Model different seating and mentor configurations.",
+		itemDefault: { format: "seminar", cohortSize: 8, mentorCount: 1 },
+		children: (sessionFormat) => [
+			sessionFormat.field("format", {
+				control: "select",
+				label: "Format",
+				options: [
+					{ value: "seminar", label: "Seminar" },
+					{ value: "studio", label: "Studio" },
+					{ value: "clinic", label: "Clinic" },
+					{ value: "critique", label: "Critique" },
+				],
+			}),
+			sessionFormat.field("cohortSize", {
+				control: "number",
+				label: "Learners",
+				props: { min: 2, max: 120, step: 1 },
+			}),
+			sessionFormat.field("mentorCount", {
+				control: "number",
+				label: "Mentors",
+				props: { min: 1, max: 20, step: 1 },
+			}),
+		],
+	}),
+	ui.array("priceBands", {
+		label: "Per-capacity pricing",
+		itemDefault: { minimumSeats: 1, maximumSeats: 1, pricePerLearner: 0 },
+		children: (priceBand) => [
+			priceBand.field("minimumSeats", {
+				control: "number",
+				label: "Minimum seats",
+				props: { min: 1, step: 1 },
+			}),
+			priceBand.field("maximumSeats", {
+				control: "number",
+				label: "Maximum seats",
+				props: { min: 1, step: 1 },
+			}),
+			priceBand.field("pricePerLearner", {
+				control: "number",
+				label: "Price per learner",
+				props: { min: 0, step: 10 },
+			}),
+		],
+	}),
+	ui.section("media", {
+		title: "Media",
+		children: [
+			ui.field("media.cover", {
+				control: "file",
+				label: "Cover image",
+				props: { accept: "image/*" },
+			}),
+			ui.array("media.resources", {
+				label: "Resource gallery",
+				itemDefault: { url: "", caption: "" },
+				children: (resource) => [
+					resource.field("url", {
+						control: "text",
+						label: "Resource URL",
+					}),
+					resource.field("caption", {
+						control: "text",
+						label: "Caption",
+					}),
+				],
+			}),
+		],
+	}),
 
-function offerSections() {
-	return [
-		{
-			kind: "section",
-			id: "offer-early",
-			title: "Early-bird offer",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "offers.earlyBird.enabled",
-					control: "checkbox",
-					label: "Enabled",
-				},
-				{
-					kind: "field",
-					path: "offers.earlyBird.percent",
-					control: "number",
-					label: "Reduction percent",
-					visible: (values) => values.offers.earlyBird.enabled,
-					props: { min: 1, max: 80, step: 1 },
-				},
-				{
-					kind: "field",
-					path: "offers.earlyBird.deadline",
-					control: "date",
-					label: "Deadline",
-					visible: (values) => values.offers.earlyBird.enabled,
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "offer-team",
-			title: "Team offer",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "offers.team.enabled",
-					control: "checkbox",
-					label: "Enabled",
-				},
-				{
-					kind: "field",
-					path: "offers.team.minimumSeats",
-					control: "number",
-					label: "Minimum seats",
-					visible: (values) => values.offers.team.enabled,
-					props: { min: 2, step: 1 },
-				},
-				{
-					kind: "field",
-					path: "offers.team.percent",
-					control: "number",
-					label: "Reduction percent",
-					visible: (values) => values.offers.team.enabled,
-					props: { min: 1, max: 80, step: 1 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "offer-scholarship",
-			title: "Scholarship offer",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "offers.scholarship.enabled",
-					control: "checkbox",
-					label: "Enabled",
-				},
-				{
-					kind: "field",
-					path: "offers.scholarship.reservedSeats",
-					control: "number",
-					label: "Reserved seats",
-					visible: (values) => values.offers.scholarship.enabled,
-					props: { min: 1, step: 1 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "offer-alumni",
-			title: "Returning learner offer",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "offers.alumni.enabled",
-					control: "checkbox",
-					label: "Enabled",
-				},
-				{
-					kind: "field",
-					path: "offers.alumni.percent",
-					control: "number",
-					label: "Reduction percent",
-					visible: (values) => values.offers.alumni.enabled,
-					props: { min: 1, max: 80, step: 1 },
-				},
-			],
-		},
-	] satisfies readonly UiNode<CohortInput, typeof kit.controls>[]
-}
+	ui.section("offer-early", {
+		title: "Early-bird offer",
+		columns: 2,
+		children: [
+			ui.field("offers.earlyBird.enabled", {
+				control: "checkbox",
+				label: "Enabled",
+			}),
+			ui.field("offers.earlyBird.percent", {
+				control: "number",
+				label: "Reduction percent",
+				visible: (values) => values.offers.earlyBird.enabled,
+				props: { min: 1, max: 80, step: 1 },
+			}),
+			ui.field("offers.earlyBird.deadline", {
+				control: "date",
+				label: "Deadline",
+				visible: (values) => values.offers.earlyBird.enabled,
+			}),
+		],
+	}),
+	ui.section("offer-team", {
+		title: "Team offer",
+		columns: 2,
+		children: [
+			ui.field("offers.team.enabled", {
+				control: "checkbox",
+				label: "Enabled",
+			}),
+			ui.field("offers.team.minimumSeats", {
+				control: "number",
+				label: "Minimum seats",
+				visible: (values) => values.offers.team.enabled,
+				props: { min: 2, step: 1 },
+			}),
+			ui.field("offers.team.percent", {
+				control: "number",
+				label: "Reduction percent",
+				visible: (values) => values.offers.team.enabled,
+				props: { min: 1, max: 80, step: 1 },
+			}),
+		],
+	}),
+	ui.section("offer-scholarship", {
+		title: "Scholarship offer",
+		columns: 2,
+		children: [
+			ui.field("offers.scholarship.enabled", {
+				control: "checkbox",
+				label: "Enabled",
+			}),
+			ui.field("offers.scholarship.reservedSeats", {
+				control: "number",
+				label: "Reserved seats",
+				visible: (values) => values.offers.scholarship.enabled,
+				props: { min: 1, step: 1 },
+			}),
+		],
+	}),
+	ui.section("offer-alumni", {
+		title: "Returning learner offer",
+		columns: 2,
+		children: [
+			ui.field("offers.alumni.enabled", {
+				control: "checkbox",
+				label: "Enabled",
+			}),
+			ui.field("offers.alumni.percent", {
+				control: "number",
+				label: "Reduction percent",
+				visible: (values) => values.offers.alumni.enabled,
+				props: { min: 1, max: 80, step: 1 },
+			}),
+		],
+	}),
+])
 
 export function LearningCohortExample() {
 	const [queryClient] = useState(

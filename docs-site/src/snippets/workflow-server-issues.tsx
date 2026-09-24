@@ -58,32 +58,24 @@ function applyServerIssues(
 }
 
 const profileKit = nativeFormKit.forContext<ProfileContext>()
-const profileDefinition = profileKit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			visible: (_input, { context }) => context.screen === "identity",
-		},
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			props: { type: "email" },
-			visible: (_input, { context }) => context.screen === "identity",
-		},
-		{
-			kind: "field",
-			path: "department",
-			control: "text",
-			label: "Department",
-			visible: (_input, { context }) => context.screen === "work",
-		},
-	],
-})
+const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
+	ui.field("name", {
+		control: "text",
+		label: "Name",
+		visible: (_input, { context }) => context.screen === "identity",
+	}),
+	ui.field("email", {
+		control: "text",
+		label: "Email",
+		props: { type: "email" },
+		visible: (_input, { context }) => context.screen === "identity",
+	}),
+	ui.field("department", {
+		control: "text",
+		label: "Department",
+		visible: (_input, { context }) => context.screen === "work",
+	}),
+])
 
 export function ServerValidatedProfile() {
 	const [screen, setScreen] = useState<ProfileScreen>("identity")

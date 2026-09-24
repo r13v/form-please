@@ -217,52 +217,43 @@ const onboardingSteps = [
 ] satisfies readonly WorkflowStep<OnboardingInput, OnboardingScreen>[]
 
 const onboardingKit = nativeFormKit.forContext<OnboardingContext>()
-const onboardingDefinition = onboardingKit.defineForm(onboardingSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
+const onboardingDefinition = onboardingKit.defineForm(
+	onboardingSchema,
+	(ui) => [
+		ui.field("name", {
 			control: "text",
 			label: "Name",
 			visible: (_input, { context }) =>
 				context.screen === "identity" || context.screen === "review",
-		},
-		{
-			kind: "field",
-			path: "email",
+		}),
+		ui.field("email", {
 			control: "text",
 			label: "Email",
 			props: { type: "email" },
 			visible: (_input, { context }) =>
 				context.screen === "identity" || context.screen === "review",
-		},
-		{
-			kind: "field",
-			path: "organization",
+		}),
+		ui.field("organization", {
 			control: "checkbox",
 			label: "I represent an organization",
 			visible: (_input, { context }) =>
 				context.screen === "identity" || context.screen === "review",
-		},
-		{
-			kind: "field",
-			path: "organizationName",
+		}),
+		ui.field("organizationName", {
 			control: "text",
 			label: "Organization name",
 			visible: (input, { context }) =>
 				input.organization &&
 				(context.screen === "organization" || context.screen === "review"),
-		},
-		{
-			kind: "field",
-			path: "department",
+		}),
+		ui.field("department", {
 			control: "text",
 			label: "Department",
 			visible: (_input, { context }) =>
 				context.screen === "details" || context.screen === "review",
-		},
+		}),
 	],
-})
+)
 
 export function ProductWorkflowRecipe() {
 	const [screen, setScreen] = useState<OnboardingScreen>("identity")

@@ -28,7 +28,6 @@ Start with these types in application code:
 | Type form state and `defaultValues`. | `FormInput<Schema>` |
 | Type a successful submit result. | `FormOutput<Schema>` |
 | Accept a valid field name. | `FieldPath<Value>` |
-| Type shared form UI. | `UiNode<Input, Controls, ...>` |
 | Type a reusable form fragment. | `FormFragment<Schema, Controls, ...>` |
 | Type a custom control component. | `ControlProps<Value, OwnProps, Context, Option>` |
 | Type form-local value middleware. | `FormMiddleware<Input, Context>` |
@@ -86,14 +85,16 @@ generic when its value type must stay linked to the selected path. The
 returns a normalized `FormDefinition`. Let the call infer the type for a
 definition that stays in one file.
 
-Use `UiNode` when the UI tree is declared separately:
+The factory builder types each node from the schema and kit. The tree needs
+no type annotation:
 
 ```tsx
 // [!include ~/snippets/types-guide.tsx:ui-types]
 ```
 
-The node generics carry the schema input, control registry, context, slot
+The node types below carry the schema input, control registry, context, slot
 configuration, selectable options, and grid values through the complete tree.
+Use `defineFragment` instead of a separate node list to share UI.
 
 | Type | Purpose |
 | --- | --- |

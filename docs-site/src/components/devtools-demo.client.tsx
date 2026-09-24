@@ -38,53 +38,43 @@ const profileSchema = z.object({
 
 const profileDefinition = kit.defineForm(
 	profileSchema,
-	{
-		ui: [
-			{
-				control: "text",
-				kind: "field",
-				label: "Name",
-				path: "name",
-				required: true,
-			},
-			{
-				control: "select",
-				kind: "field",
-				label: "Profile type",
-				options: [
-					{ label: "Individual", value: "individual" },
-					{ label: "Team", value: "team" },
-				],
-				path: "profileType",
-			},
-			{
-				control: "select",
-				kind: "field",
-				label: "Role",
-				options: ({ values }) => {
-					if (values.profileType === "team") {
-						return [
-							{ label: "Designer", value: "designer" },
-							{ label: "Engineer", value: "engineer" },
-							{ label: "Team lead", value: "lead" },
-						]
-					}
+	(ui) => [
+		ui.field("name", {
+			control: "text",
+			label: "Name",
+			required: true,
+		}),
+		ui.field("profileType", {
+			control: "select",
+			label: "Profile type",
+			options: [
+				{ label: "Individual", value: "individual" },
+				{ label: "Team", value: "team" },
+			],
+		}),
+		ui.field("role", {
+			control: "select",
+			label: "Role",
+			options: ({ values }) => {
+				if (values.profileType === "team") {
 					return [
 						{ label: "Designer", value: "designer" },
 						{ label: "Engineer", value: "engineer" },
+						{ label: "Team lead", value: "lead" },
 					]
-				},
-				path: "role",
+				}
+				return [
+					{ label: "Designer", value: "designer" },
+					{ label: "Engineer", value: "engineer" },
+				]
 			},
-			{
-				control: "text",
-				kind: "field",
-				label: "Team name",
-				path: "teamName",
-				visible: ({ profileType }) => profileType === "team",
-			},
-		],
-	},
+		}),
+		ui.field("teamName", {
+			control: "text",
+			label: "Team name",
+			visible: ({ profileType }) => profileType === "team",
+		}),
+	],
 	{ middleware: [historyFeature, persistenceFeature] },
 )
 

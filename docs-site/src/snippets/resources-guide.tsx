@@ -88,33 +88,27 @@ const countryOptions = ({ context }: { readonly context: ProfileContext }) =>
 const profileKit = nativeFormKit.forContext<ProfileContext>()
 
 // [!region context-form]
-const profileDefinition = profileKit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "plan",
-			control: "select",
-			label: "Plan",
-			options: [
-				{ value: "solo", label: "Solo" },
-				{ value: "team", label: "Team" },
-			],
-		},
-		{
-			kind: "field",
-			path: "country",
-			control: "select",
-			label: "Country",
-			description: countryDescription,
-			options: countryOptions,
-			disabled: fromResource(selectCountries, {
-				pending: () => true,
-				success: () => false,
-				error: () => true,
-			}),
-		},
-	],
-})
+const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
+	ui.field("plan", {
+		control: "select",
+		label: "Plan",
+		options: [
+			{ value: "solo", label: "Solo" },
+			{ value: "team", label: "Team" },
+		],
+	}),
+	ui.field("country", {
+		control: "select",
+		label: "Country",
+		description: countryDescription,
+		options: countryOptions,
+		disabled: fromResource(selectCountries, {
+			pending: () => true,
+			success: () => false,
+			error: () => true,
+		}),
+	}),
+])
 
 function ProfileForm({ context }: { readonly context: ProfileContext }) {
 	const form = profileKit.useForm(profileDefinition, {

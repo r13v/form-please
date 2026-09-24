@@ -489,27 +489,23 @@ const kit = createFormKit({
 // [!endregion register-control]
 
 // [!region field-definition]
-const definition = kit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "cityIds",
-			control: "asyncMultiSelect",
-			label: "Cities",
-			description: "Search the remote list and keep more than one city.",
-			required: true,
-			props: {
-				queryKey: ["cities"],
-				queryFn: searchCities,
-				initialOptions: initiallySelected,
-				placeholder: "Choose cities",
-				searchPlaceholder: "Search cities",
-				emptyMessage: "No cities match this search.",
-				dialogLabel: "City options",
-			},
+const definition = kit.defineForm(schema, (ui) => [
+	ui.field("cityIds", {
+		control: "asyncMultiSelect",
+		label: "Cities",
+		description: "Search the remote list and keep more than one city.",
+		required: true,
+		props: {
+			queryKey: ["cities"],
+			queryFn: searchCities,
+			initialOptions: initiallySelected,
+			placeholder: "Choose cities",
+			searchPlaceholder: "Search cities",
+			emptyMessage: "No cities match this search.",
+			dialogLabel: "City options",
 		},
-	],
-})
+	}),
+])
 // [!endregion field-definition]
 
 // [!region provider-submit]

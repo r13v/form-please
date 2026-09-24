@@ -29,24 +29,18 @@ const profileSchema = z.object({
 
 type Profile = z.input<typeof profileSchema>
 
-const profileDefinition = nativeFormKit.defineForm(profileSchema, {
-	ui: [
-		{ kind: "field", path: "name", control: "text", label: "Name" },
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			props: { type: "email" },
-		},
-		{
-			kind: "field",
-			path: "department",
-			control: "text",
-			label: "Department",
-		},
-	],
-})
+const profileDefinition = nativeFormKit.defineForm(profileSchema, (ui) => [
+	ui.field("name", { control: "text", label: "Name" }),
+	ui.field("email", {
+		control: "text",
+		label: "Email",
+		props: { type: "email" },
+	}),
+	ui.field("department", {
+		control: "text",
+		label: "Department",
+	}),
+])
 
 const emptyProfile = {
 	id: "profile-1",
@@ -405,32 +399,24 @@ const wizardSchema = z.object({
 })
 
 const wizardKit = nativeFormKit.forContext<WizardContext>()
-const wizardDefinition = wizardKit.defineForm(wizardSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			visible: (_values, { context }) => context.step === "identity",
-		},
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			props: { type: "email" },
-			visible: (_values, { context }) => context.step === "identity",
-		},
-		{
-			kind: "field",
-			path: "department",
-			control: "text",
-			label: "Department",
-			visible: (_values, { context }) => context.step === "details",
-		},
-	],
-})
+const wizardDefinition = wizardKit.defineForm(wizardSchema, (ui) => [
+	ui.field("name", {
+		control: "text",
+		label: "Name",
+		visible: (_values, { context }) => context.step === "identity",
+	}),
+	ui.field("email", {
+		control: "text",
+		label: "Email",
+		props: { type: "email" },
+		visible: (_values, { context }) => context.step === "identity",
+	}),
+	ui.field("department", {
+		control: "text",
+		label: "Department",
+		visible: (_values, { context }) => context.step === "details",
+	}),
+])
 
 const identityFields = ["name", "email"] as const
 
@@ -510,18 +496,14 @@ type NormalizedProfileOutput = FormOutput<typeof normalizedProfileSchema>
 
 const normalizedProfileDefinition = nativeFormKit.defineForm(
 	normalizedProfileSchema,
-	{
-		ui: [
-			{ kind: "field", path: "name", control: "text", label: "Name" },
-			{
-				kind: "field",
-				path: "email",
-				control: "text",
-				label: "Email",
-				props: { type: "email" },
-			},
-		],
-	},
+	(ui) => [
+		ui.field("name", { control: "text", label: "Name" }),
+		ui.field("email", {
+			control: "text",
+			label: "Email",
+			props: { type: "email" },
+		}),
+	],
 )
 
 async function saveNormalizedProfile(
@@ -626,22 +608,18 @@ const departmentOptions = ({
 const directoryKit = nativeFormKit.forContext<DirectoryContext>()
 
 // [!region context-resource]
-const directoryDefinition = directoryKit.defineForm(profileSchema, {
-	ui: [
-		{ kind: "field", path: "name", control: "text", label: "Name" },
-		{
-			kind: "field",
-			path: "department",
-			control: "select",
-			label: "Department",
-			description: departmentDescription,
-			props: departmentProps,
-			options: departmentOptions,
-			disabled: (_values, { context }) =>
-				context.departments.status !== "success",
-		},
-	],
-})
+const directoryDefinition = directoryKit.defineForm(profileSchema, (ui) => [
+	ui.field("name", { control: "text", label: "Name" }),
+	ui.field("department", {
+		control: "select",
+		label: "Department",
+		description: departmentDescription,
+		props: departmentProps,
+		options: departmentOptions,
+		disabled: (_values, { context }) =>
+			context.departments.status !== "success",
+	}),
+])
 
 function DirectoryProfile({ context }: { readonly context: DirectoryContext }) {
 	const form = directoryKit.useForm(directoryDefinition, {

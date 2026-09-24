@@ -232,212 +232,163 @@ function OrganizationFinder({
 	)
 }
 
-const grantDefinition = kit.defineForm(grantSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "applicant",
-			title: "Applicant",
-			description: "Choose the legal path before entering dependent details.",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "applicantKind",
-					control: "select",
-					label: "Applying as",
-					options: [
-						{ value: "person", label: "An individual" },
-						{ value: "collective", label: "A collective" },
-					],
+const grantDefinition = kit.defineForm(grantSchema, (ui) => [
+	ui.section("applicant", {
+		title: "Applicant",
+		description: "Choose the legal path before entering dependent details.",
+		columns: 2,
+		children: [
+			ui.field("applicantKind", {
+				control: "select",
+				label: "Applying as",
+				options: [
+					{ value: "person", label: "An individual" },
+					{ value: "collective", label: "A collective" },
+				],
+			}),
+			ui.field("jurisdiction", {
+				control: "select",
+				label: "Administrative scope",
+				options: [
+					{ value: "local", label: "Domestic" },
+					{ value: "international", label: "Cross-border" },
+				],
+			}),
+			ui.field("contact.name", {
+				control: "text",
+				label: "Lead applicant",
+				required: true,
+			}),
+			ui.field("contact.email", {
+				control: "text",
+				label: "Contact email",
+				props: { type: "email" },
+				required: true,
+			}),
+		],
+	}),
+	ui.section("collective", {
+		title: "Collective identity",
+		visible: ({ applicantKind }) => applicantKind === "collective",
+		columns: 2,
+		children: [
+			ui.field("organization.path", {
+				control: "select",
+				label: "Representation",
+				options: [
+					{ value: "registered", label: "Registered collective" },
+					{ value: "forming", label: "Collective in formation" },
+				],
+				props: {
+					emptyOption: { label: "Choose a path", disabled: true },
 				},
-				{
-					kind: "field",
-					path: "jurisdiction",
-					control: "select",
-					label: "Administrative scope",
-					options: [
-						{ value: "local", label: "Domestic" },
-						{ value: "international", label: "Cross-border" },
-					],
+			}),
+			ui.field("organization.registryId", {
+				control: "text",
+				label: "Registry record ID",
+				visible: (values) => values.organization.path === "registered",
+				readOnly: true,
+			}),
+			ui.field("organization.name", {
+				control: "text",
+				label: (values) => {
+					if (values.organization.path === "registered")
+						return "Registered name"
+					return "Working name"
 				},
-				{
-					kind: "field",
-					path: "contact.name",
-					control: "text",
-					label: "Lead applicant",
-					required: true,
-				},
-				{
-					kind: "field",
-					path: "contact.email",
-					control: "text",
-					label: "Contact email",
-					props: { type: "email" },
-					required: true,
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "collective",
-			title: "Collective identity",
-			visible: ({ applicantKind }) => applicantKind === "collective",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "organization.path",
-					control: "select",
-					label: "Representation",
-					options: [
-						{ value: "registered", label: "Registered collective" },
-						{ value: "forming", label: "Collective in formation" },
-					],
-					props: {
-						emptyOption: { label: "Choose a path", disabled: true },
-					},
-				},
-				{
-					kind: "field",
-					path: "organization.registryId",
-					control: "text",
-					label: "Registry record ID",
-					visible: (values) => values.organization.path === "registered",
-					readOnly: true,
-				},
-				{
-					kind: "field",
-					path: "organization.name",
-					control: "text",
-					label: (values) => {
-						if (values.organization.path === "registered")
-							return "Registered name"
-						return "Working name"
-					},
-					visible: (values) => values.organization.path !== undefined,
-					readOnly: (values) => values.organization.path === "registered",
-				},
-				{
-					kind: "field",
-					path: "organization.registrationCountry",
-					control: "text",
-					label: "Registration country",
-					visible: (values) => values.organization.path !== undefined,
-					readOnly: (values) => values.organization.path === "registered",
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "project",
-			title: "Proposed work",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "project.stream",
-					control: "select",
-					label: "Funding stream",
-					options: [
-						{ value: "research", label: "Independent research" },
-						{ value: "public-program", label: "Public program" },
-						{ value: "education", label: "Open education" },
-					],
-				},
-				{
-					kind: "field",
-					path: "project.title",
-					control: "text",
-					label: "Project title",
-					required: true,
-				},
-				{
-					kind: "field",
-					path: "project.abstract",
-					control: "textarea",
-					label: "Abstract",
-					description:
-						"At least 80 characters; this becomes the public summary.",
-					span: "full",
-					required: true,
-					props: { rows: 5 },
-				},
-				{
-					kind: "field",
-					path: "project.requestedFunds",
-					control: "number",
-					label: "Requested funds",
-					props: { min: 1_000, max: 250_000, step: 500 },
-				},
-				{
-					kind: "field",
-					path: "project.durationMonths",
-					control: "number",
-					label: "Duration in months",
-					props: { min: 1, max: 36, step: 1 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "settlement",
-			title: "Settlement and reporting",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "payout.method",
-					control: "select",
-					label: "Disbursement route",
-					options: [
-						{ value: "bank", label: "Settlement account" },
-						{ value: "digital-wallet", label: "Digital wallet" },
-					],
-				},
-				{
-					kind: "field",
-					path: "payout.bankAccount",
-					control: "text",
-					label: "Settlement account",
-					visible: (values) => values.payout.method === "bank",
-				},
-				{
-					kind: "field",
-					path: "payout.walletHandle",
-					control: "text",
-					label: "Wallet handle",
-					visible: (values) => values.payout.method === "digital-wallet",
-				},
-				{
-					kind: "field",
-					path: "reporting.status",
-					control: "select",
-					label: "Reporting status",
-					options: [
-						{ value: "registered", label: "Registered" },
-						{ value: "exempt", label: "Exempt" },
-						{ value: "pending", label: "Pending" },
-					],
-				},
-				{
-					kind: "field",
-					path: "reporting.reference",
-					control: "text",
-					label: "Reporting reference",
-					visible: (values) => values.reporting.status === "registered",
-				},
-				{
-					kind: "field",
-					path: "confirmAccuracy",
-					control: "checkbox",
-					label: "I confirm that the application is accurate",
-					span: "full",
-				},
-			],
-		},
-	],
-})
+				visible: (values) => values.organization.path !== undefined,
+				readOnly: (values) => values.organization.path === "registered",
+			}),
+			ui.field("organization.registrationCountry", {
+				control: "text",
+				label: "Registration country",
+				visible: (values) => values.organization.path !== undefined,
+				readOnly: (values) => values.organization.path === "registered",
+			}),
+		],
+	}),
+	ui.section("project", {
+		title: "Proposed work",
+		columns: 2,
+		children: [
+			ui.field("project.stream", {
+				control: "select",
+				label: "Funding stream",
+				options: [
+					{ value: "research", label: "Independent research" },
+					{ value: "public-program", label: "Public program" },
+					{ value: "education", label: "Open education" },
+				],
+			}),
+			ui.field("project.title", {
+				control: "text",
+				label: "Project title",
+				required: true,
+			}),
+			ui.field("project.abstract", {
+				control: "textarea",
+				label: "Abstract",
+				description: "At least 80 characters; this becomes the public summary.",
+				span: "full",
+				required: true,
+				props: { rows: 5 },
+			}),
+			ui.field("project.requestedFunds", {
+				control: "number",
+				label: "Requested funds",
+				props: { min: 1_000, max: 250_000, step: 500 },
+			}),
+			ui.field("project.durationMonths", {
+				control: "number",
+				label: "Duration in months",
+				props: { min: 1, max: 36, step: 1 },
+			}),
+		],
+	}),
+	ui.section("settlement", {
+		title: "Settlement and reporting",
+		columns: 2,
+		children: [
+			ui.field("payout.method", {
+				control: "select",
+				label: "Disbursement route",
+				options: [
+					{ value: "bank", label: "Settlement account" },
+					{ value: "digital-wallet", label: "Digital wallet" },
+				],
+			}),
+			ui.field("payout.bankAccount", {
+				control: "text",
+				label: "Settlement account",
+				visible: (values) => values.payout.method === "bank",
+			}),
+			ui.field("payout.walletHandle", {
+				control: "text",
+				label: "Wallet handle",
+				visible: (values) => values.payout.method === "digital-wallet",
+			}),
+			ui.field("reporting.status", {
+				control: "select",
+				label: "Reporting status",
+				options: [
+					{ value: "registered", label: "Registered" },
+					{ value: "exempt", label: "Exempt" },
+					{ value: "pending", label: "Pending" },
+				],
+			}),
+			ui.field("reporting.reference", {
+				control: "text",
+				label: "Reporting reference",
+				visible: (values) => values.reporting.status === "registered",
+			}),
+			ui.field("confirmAccuracy", {
+				control: "checkbox",
+				label: "I confirm that the application is accurate",
+				span: "full",
+			}),
+		],
+	}),
+])
 
 export function ResearchGrantExample() {
 	const [queryClient] = useState(

@@ -164,241 +164,189 @@ const kit = createFormKit({
 })
 const contextualKit = kit.forContext<PolicyContext>()
 
-const policyDefinition = contextualKit.defineForm(studioPolicySchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "access",
-			title: "Access windows",
-			description: "Opening exceptions carry their own times and fees.",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "access.earlyEnabled",
-					control: "checkbox",
-					label: "Allow early access",
-				},
-				{
-					kind: "field",
-					path: "access.earlyFrom",
-					control: "time",
-					label: "Earliest arrival",
-					visible: (values) => values.access.earlyEnabled,
-					props: { step: 900 },
-				},
-				{
-					kind: "field",
-					path: "access.earlyFee",
-					control: "number",
-					label: "Early access fee",
-					visible: (values) => values.access.earlyEnabled,
-					props: { min: 0, step: 5 },
-				},
-				{
-					kind: "field",
-					path: "access.lateEnabled",
-					control: "checkbox",
-					label: "Allow late departure",
-				},
-				{
-					kind: "field",
-					path: "access.lateUntil",
-					control: "time",
-					label: "Latest departure",
-					visible: (values) => values.access.lateEnabled,
-					props: { step: 900 },
-				},
-				{
-					kind: "field",
-					path: "access.lateFee",
-					control: "number",
-					label: "Late departure fee",
-					visible: (values) => values.access.lateEnabled,
-					props: { min: 0, step: 5 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "safeguards",
-			title: "Safeguards and age policy",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "safeguard.depositRequired",
-					control: "checkbox",
-					label: "Hold a refundable deposit",
-				},
-				{
-					kind: "field",
-					path: "safeguard.amount",
-					control: "number",
-					label: "Deposit amount",
-					visible: (values) => values.safeguard.depositRequired,
-					props: { min: 0, step: 25 },
-				},
-				{
-					kind: "field",
-					path: "safeguard.currency",
-					control: "select",
-					label: "Currency",
-					options: [
-						{ value: "USD", label: "USD" },
-						{ value: "EUR", label: "EUR" },
-						{ value: "GBP", label: "GBP" },
-					],
-				},
-				{
-					kind: "field",
-					path: "youth.policy",
-					control: "select",
-					label: "Age policy",
-					options: [
-						{ value: "all-ages", label: "All ages" },
-						{ value: "sixteen-plus", label: "16 and older" },
-						{ value: "adults-only", label: "Adults only" },
-					],
-				},
-				{
-					kind: "field",
-					path: "youth.guardianRequired",
-					control: "checkbox",
-					label: "Require a guardian for minors",
-					visible: (values) => values.youth.policy !== "adults-only",
-				},
-				{
-					kind: "field",
-					path: "youth.quietHours",
-					control: "textarea",
-					label: "Quiet-hours rule",
-					span: "full",
-					props: { rows: 3 },
-				},
-			],
-		},
-		{
-			kind: "array",
-			path: "equipment",
-			label: "Equipment rules",
-			description: fromResource((_values, { context }) => context.equipment, {
-				pending: () => "Loading the equipment catalog…",
-				success: ({ refresh }) => {
-					switch (refresh.status) {
-						case "pending":
-							return "Refreshing the catalog; saved options remain available."
-						case "paused":
-							return "Catalog refresh paused; saved options remain available."
-						case "error":
-							return "Catalog refresh failed; saved options remain available."
-						case "idle":
-							return "RHF keeps stable row keys while indexed paths move."
-					}
-				},
-				error: () =>
-					"The equipment catalog is unavailable; existing rules are preserved.",
+const policyDefinition = contextualKit.defineForm(studioPolicySchema, (ui) => [
+	ui.section("access", {
+		title: "Access windows",
+		description: "Opening exceptions carry their own times and fees.",
+		columns: 2,
+		children: [
+			ui.field("access.earlyEnabled", {
+				control: "checkbox",
+				label: "Allow early access",
 			}),
-			disabled: fromResource((_values, { context }) => context.equipment, {
-				pending: () => true,
-				success: () => false,
-				error: () => true,
+			ui.field("access.earlyFrom", {
+				control: "time",
+				label: "Earliest arrival",
+				visible: (values) => values.access.earlyEnabled,
+				props: { step: 900 },
 			}),
-			itemDefault: {
-				assetId: "",
-				mandatoryBriefing: false,
-				replacementValue: 0,
+			ui.field("access.earlyFee", {
+				control: "number",
+				label: "Early access fee",
+				visible: (values) => values.access.earlyEnabled,
+				props: { min: 0, step: 5 },
+			}),
+			ui.field("access.lateEnabled", {
+				control: "checkbox",
+				label: "Allow late departure",
+			}),
+			ui.field("access.lateUntil", {
+				control: "time",
+				label: "Latest departure",
+				visible: (values) => values.access.lateEnabled,
+				props: { step: 900 },
+			}),
+			ui.field("access.lateFee", {
+				control: "number",
+				label: "Late departure fee",
+				visible: (values) => values.access.lateEnabled,
+				props: { min: 0, step: 5 },
+			}),
+		],
+	}),
+	ui.section("safeguards", {
+		title: "Safeguards and age policy",
+		columns: 2,
+		children: [
+			ui.field("safeguard.depositRequired", {
+				control: "checkbox",
+				label: "Hold a refundable deposit",
+			}),
+			ui.field("safeguard.amount", {
+				control: "number",
+				label: "Deposit amount",
+				visible: (values) => values.safeguard.depositRequired,
+				props: { min: 0, step: 25 },
+			}),
+			ui.field("safeguard.currency", {
+				control: "select",
+				label: "Currency",
+				options: [
+					{ value: "USD", label: "USD" },
+					{ value: "EUR", label: "EUR" },
+					{ value: "GBP", label: "GBP" },
+				],
+			}),
+			ui.field("youth.policy", {
+				control: "select",
+				label: "Age policy",
+				options: [
+					{ value: "all-ages", label: "All ages" },
+					{ value: "sixteen-plus", label: "16 and older" },
+					{ value: "adults-only", label: "Adults only" },
+				],
+			}),
+			ui.field("youth.guardianRequired", {
+				control: "checkbox",
+				label: "Require a guardian for minors",
+				visible: (values) => values.youth.policy !== "adults-only",
+			}),
+			ui.field("youth.quietHours", {
+				control: "textarea",
+				label: "Quiet-hours rule",
+				span: "full",
+				props: { rows: 3 },
+			}),
+		],
+	}),
+	ui.array("equipment", {
+		label: "Equipment rules",
+		description: fromResource((_values, { context }) => context.equipment, {
+			pending: () => "Loading the equipment catalog…",
+			success: ({ refresh }) => {
+				switch (refresh.status) {
+					case "pending":
+						return "Refreshing the catalog; saved options remain available."
+					case "paused":
+						return "Catalog refresh paused; saved options remain available."
+					case "error":
+						return "Catalog refresh failed; saved options remain available."
+					case "idle":
+						return "RHF keeps stable row keys while indexed paths move."
+				}
 			},
-			children: [
-				{
-					kind: "field",
-					path: "assetId",
-					control: "select",
-					label: "Equipment",
-					options: ({ context }) =>
-						matchResource(context.equipment, {
-							pending: () => context.savedEquipmentOptions,
-							success: ({ value }) => value,
-							error: () => context.savedEquipmentOptions,
-						}),
-				},
-				{
-					kind: "field",
-					path: "mandatoryBriefing",
-					control: "checkbox",
-					label: "Briefing required",
-				},
-				{
-					kind: "field",
-					path: "replacementValue",
-					control: "number",
-					label: "Replacement value",
-					props: { min: 0, step: 50 },
-				},
-			],
+			error: () =>
+				"The equipment catalog is unavailable; existing rules are preserved.",
+		}),
+		disabled: fromResource((_values, { context }) => context.equipment, {
+			pending: () => true,
+			success: () => false,
+			error: () => true,
+		}),
+		itemDefault: {
+			assetId: "",
+			mandatoryBriefing: false,
+			replacementValue: 0,
 		},
-		{
-			kind: "section",
-			id: "shared-services",
-			title: "Shared services",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "refreshments.allowed",
-					control: "checkbox",
-					label: "Allow catered refreshments",
-				},
-				{
-					kind: "field",
-					path: "refreshments.cateringNoticeHours",
-					control: "number",
-					label: "Catering notice in hours",
-					visible: (values) => values.refreshments.allowed,
-					props: { min: 0, step: 1 },
-				},
-				{
-					kind: "field",
-					path: "connectivity.mode",
-					control: "select",
-					label: "Connectivity",
-					options: [
-						{ value: "included", label: "Included" },
-						{ value: "request", label: "Available by request" },
-						{ value: "offline", label: "Offline space" },
-					],
-				},
-				{
-					kind: "field",
-					path: "connectivity.minimumMbps",
-					control: "number",
-					label: "Published minimum Mbps",
-					visible: (values) => values.connectivity.mode === "included",
-					props: { min: 1, step: 5 },
-				},
-				{
-					kind: "field",
-					path: "animals.policy",
-					control: "select",
-					label: "Animal access",
-					options: [
-						{ value: "assistance-only", label: "Assistance animals only" },
-						{ value: "approval", label: "With prior approval" },
-						{ value: "not-allowed", label: "Not allowed" },
-					],
-				},
-				{
-					kind: "field",
-					path: "animals.notes",
-					control: "textarea",
-					label: "Animal access notes",
-					visible: (values) => values.animals.policy === "approval",
-					props: { rows: 3 },
-				},
-			],
-		},
-	],
-})
+		children: (equipment) => [
+			equipment.field("assetId", {
+				control: "select",
+				label: "Equipment",
+				options: ({ context }) =>
+					matchResource(context.equipment, {
+						pending: () => context.savedEquipmentOptions,
+						success: ({ value }) => value,
+						error: () => context.savedEquipmentOptions,
+					}),
+			}),
+			equipment.field("mandatoryBriefing", {
+				control: "checkbox",
+				label: "Briefing required",
+			}),
+			equipment.field("replacementValue", {
+				control: "number",
+				label: "Replacement value",
+				props: { min: 0, step: 50 },
+			}),
+		],
+	}),
+	ui.section("shared-services", {
+		title: "Shared services",
+		columns: 2,
+		children: [
+			ui.field("refreshments.allowed", {
+				control: "checkbox",
+				label: "Allow catered refreshments",
+			}),
+			ui.field("refreshments.cateringNoticeHours", {
+				control: "number",
+				label: "Catering notice in hours",
+				visible: (values) => values.refreshments.allowed,
+				props: { min: 0, step: 1 },
+			}),
+			ui.field("connectivity.mode", {
+				control: "select",
+				label: "Connectivity",
+				options: [
+					{ value: "included", label: "Included" },
+					{ value: "request", label: "Available by request" },
+					{ value: "offline", label: "Offline space" },
+				],
+			}),
+			ui.field("connectivity.minimumMbps", {
+				control: "number",
+				label: "Published minimum Mbps",
+				visible: (values) => values.connectivity.mode === "included",
+				props: { min: 1, step: 5 },
+			}),
+			ui.field("animals.policy", {
+				control: "select",
+				label: "Animal access",
+				options: [
+					{ value: "assistance-only", label: "Assistance animals only" },
+					{ value: "approval", label: "With prior approval" },
+					{ value: "not-allowed", label: "Not allowed" },
+				],
+			}),
+			ui.field("animals.notes", {
+				control: "textarea",
+				label: "Animal access notes",
+				visible: (values) => values.animals.policy === "approval",
+				props: { rows: 3 },
+			}),
+		],
+	}),
+])
 
 export function StudioPoliciesExample() {
 	const [queryClient] = useState(

@@ -22,25 +22,19 @@ type HistoryInput = z.input<typeof historySchema>
 const historyFeature = createHistoryMiddleware({ limit: 50 })
 const historyDefinition = nativeFormKit.defineForm(
 	historySchema,
-	{
-		ui: [
-			{ control: "text", kind: "field", label: "Name", path: "name" },
-			{
-				children: [
-					{
-						control: "text",
-						kind: "field",
-						label: "Project title",
-						path: "title",
-					},
-				],
-				itemDefault: { title: "" },
-				kind: "array",
-				label: "Projects",
-				path: "projects",
-			},
-		],
-	},
+	(ui) => [
+		ui.field("name", { control: "text", label: "Name" }),
+		ui.array("projects", {
+			children: (project) => [
+				project.field("title", {
+					control: "text",
+					label: "Project title",
+				}),
+			],
+			itemDefault: { title: "" },
+			label: "Projects",
+		}),
+	],
 	{ middleware: [historyFeature] },
 )
 

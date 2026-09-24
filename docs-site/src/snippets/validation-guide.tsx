@@ -31,31 +31,23 @@ const bookingSchema = z
 // [!endregion schema]
 
 // [!region definition]
-const bookingDefinition = kit.defineForm(bookingSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "title",
-			control: "text",
-			label: "Event title",
-			required: true,
-		},
-		{
-			kind: "field",
-			path: "capacity",
-			control: "text",
-			label: "Capacity",
-			required: true,
-		},
-		{
-			kind: "field",
-			path: "reservedSeats",
-			control: "text",
-			label: "Reserved seats",
-			required: true,
-		},
-	],
-})
+const bookingDefinition = kit.defineForm(bookingSchema, (ui) => [
+	ui.field("title", {
+		control: "text",
+		label: "Event title",
+		required: true,
+	}),
+	ui.field("capacity", {
+		control: "text",
+		label: "Capacity",
+		required: true,
+	}),
+	ui.field("reservedSeats", {
+		control: "text",
+		label: "Reserved seats",
+		required: true,
+	}),
+])
 // [!endregion definition]
 
 // [!region submission]

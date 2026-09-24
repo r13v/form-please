@@ -21,9 +21,7 @@ const settingsPersistence = createPersistenceMiddleware({
 })
 const settingsDefinition = nativeFormKit.defineForm(
 	settingsSchema,
-	{
-		ui: [{ control: "text", kind: "field", label: "Theme", path: "theme" }],
-	},
+	(ui) => [ui.field("theme", { control: "text", label: "Theme" })],
 	{ middleware: [settingsPersistence] },
 )
 

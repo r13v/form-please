@@ -17,39 +17,31 @@ const defaultValues = {
 	newsletter: true,
 } satisfies FormInput<typeof profileSchema>
 
-const profileDefinition = kit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			required: true,
-			props: {
-				placeholder: "Ada Lovelace",
-				autoComplete: "name",
-			},
+const profileDefinition = kit.defineForm(profileSchema, (ui) => [
+	ui.field("name", {
+		control: "text",
+		label: "Name",
+		required: true,
+		props: {
+			placeholder: "Ada Lovelace",
+			autoComplete: "name",
 		},
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			required: true,
-			props: {
-				type: "email",
-				placeholder: "ada@example.com",
-				autoComplete: "email",
-			},
+	}),
+	ui.field("email", {
+		control: "text",
+		label: "Email",
+		required: true,
+		props: {
+			type: "email",
+			placeholder: "ada@example.com",
+			autoComplete: "email",
 		},
-		{
-			kind: "field",
-			path: "newsletter",
-			control: "checkbox",
-			label: "Send me product news",
-		},
-	],
-})
+	}),
+	ui.field("newsletter", {
+		control: "checkbox",
+		label: "Send me product news",
+	}),
+])
 
 export function OverviewDemoClient() {
 	const [saved, setSaved] = useState<FormOutput<typeof profileSchema>>()
