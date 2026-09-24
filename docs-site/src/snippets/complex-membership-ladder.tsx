@@ -12,7 +12,6 @@ import {
 	type FormBinding,
 	type FormInput,
 	type FormOutput,
-	type UiNode,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
@@ -227,23 +226,18 @@ function WorkspaceConnection({
 	)
 }
 
-const membershipDefinition = contextualKit.defineForm(membershipSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "program",
+const membershipDefinition = contextualKit.defineForm(
+	membershipSchema,
+	(ui) => [
+		ui.section("program", {
 			title: "Membership program",
 			columns: 2,
 			children: [
-				{
-					kind: "field",
-					path: "programName",
+				ui.field("programName", {
 					control: "text",
 					label: "Program name",
-				},
-				{
-					kind: "field",
-					path: "billingCycle",
+				}),
+				ui.field("billingCycle", {
 					control: "select",
 					label: "Billing cycle",
 					options: [
@@ -251,172 +245,123 @@ const membershipDefinition = contextualKit.defineForm(membershipSchema, {
 						{ value: "quarterly", label: "Quarterly" },
 						{ value: "annual", label: "Annual" },
 					],
-				},
-				{
-					kind: "field",
-					path: "workspaceId",
+				}),
+				ui.field("workspaceId", {
 					control: "select",
 					label: "Member workspace",
 					options: ({ context }) => context.workspaces,
-				},
-				{
-					kind: "field",
-					path: "connection.syncExistingMembers",
+				}),
+				ui.field("connection.syncExistingMembers", {
 					control: "checkbox",
 					label: "Sync existing members",
-				},
+				}),
 			],
-		},
-		...tierSections(),
-		{
-			kind: "array",
-			path: "pauseWindows",
+		}),
+
+		ui.section("tier-seed", {
+			title: "Seed tier",
+			children: [
+				ui.field("tiers.seed.discountPercent", {
+					control: "number",
+					label: "Reduction percent",
+					props: { min: 0, max: 80, step: 1 },
+				}),
+				ui.array("tiers.seed.benefits", {
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: (benefit) => [
+						benefit.field("label", {
+							control: "text",
+							label: "Benefit",
+						}),
+						benefit.field("monthlyLimit", {
+							control: "number",
+							label: "Monthly limit",
+							props: { min: 0, step: 1 },
+						}),
+					],
+				}),
+			],
+		}),
+		ui.section("tier-sprout", {
+			title: "Sprout tier",
+			children: [
+				ui.field("tiers.sprout.discountPercent", {
+					control: "number",
+					label: "Reduction percent",
+					props: { min: 0, max: 80, step: 1 },
+				}),
+				ui.array("tiers.sprout.benefits", {
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: (benefit) => [
+						benefit.field("label", { control: "text", label: "Benefit" }),
+						benefit.field("monthlyLimit", {
+							control: "number",
+							label: "Monthly limit",
+							props: { min: 0, step: 1 },
+						}),
+					],
+				}),
+			],
+		}),
+		ui.section("tier-canopy", {
+			title: "Canopy tier",
+			children: [
+				ui.field("tiers.canopy.discountPercent", {
+					control: "number",
+					label: "Reduction percent",
+					props: { min: 0, max: 80, step: 1 },
+				}),
+				ui.array("tiers.canopy.benefits", {
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: (benefit) => [
+						benefit.field("label", { control: "text", label: "Benefit" }),
+						benefit.field("monthlyLimit", {
+							control: "number",
+							label: "Monthly limit",
+							props: { min: 0, step: 1 },
+						}),
+					],
+				}),
+			],
+		}),
+		ui.section("tier-founder", {
+			title: "Founder tier",
+			children: [
+				ui.field("tiers.founder.discountPercent", {
+					control: "number",
+					label: "Reduction percent",
+					props: { min: 0, max: 80, step: 1 },
+				}),
+				ui.array("tiers.founder.benefits", {
+					label: "Benefits",
+					itemDefault: { label: "", monthlyLimit: 0 },
+					children: (benefit) => [
+						benefit.field("label", { control: "text", label: "Benefit" }),
+						benefit.field("monthlyLimit", {
+							control: "number",
+							label: "Monthly limit",
+							props: { min: 0, step: 1 },
+						}),
+					],
+				}),
+			],
+		}),
+		ui.array("pauseWindows", {
 			label: "Pause windows",
 			description:
 				"Dates can be entered directly or added from calendar shortcuts.",
 			itemDefault: { startsOn: "", endsOn: "", reason: "" },
-			children: [
-				{ kind: "field", path: "startsOn", control: "date", label: "Starts" },
-				{ kind: "field", path: "endsOn", control: "date", label: "Ends" },
-				{ kind: "field", path: "reason", control: "text", label: "Reason" },
+			children: (pauseWindow) => [
+				pauseWindow.field("startsOn", { control: "date", label: "Starts" }),
+				pauseWindow.field("endsOn", { control: "date", label: "Ends" }),
+				pauseWindow.field("reason", { control: "text", label: "Reason" }),
 			],
-		},
+		}),
 	],
-})
-
-function tierSections() {
-	return [
-		{
-			kind: "section",
-			id: "tier-seed",
-			title: "Seed tier",
-			children: [
-				{
-					kind: "field",
-					path: "tiers.seed.discountPercent",
-					control: "number",
-					label: "Reduction percent",
-					props: { min: 0, max: 80, step: 1 },
-				},
-				{
-					kind: "array",
-					path: "tiers.seed.benefits",
-					label: "Benefits",
-					itemDefault: { label: "", monthlyLimit: 0 },
-					children: [
-						{
-							kind: "field",
-							path: "label",
-							control: "text",
-							label: "Benefit",
-						},
-						{
-							kind: "field",
-							path: "monthlyLimit",
-							control: "number",
-							label: "Monthly limit",
-							props: { min: 0, step: 1 },
-						},
-					],
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "tier-sprout",
-			title: "Sprout tier",
-			children: [
-				{
-					kind: "field",
-					path: "tiers.sprout.discountPercent",
-					control: "number",
-					label: "Reduction percent",
-					props: { min: 0, max: 80, step: 1 },
-				},
-				{
-					kind: "array",
-					path: "tiers.sprout.benefits",
-					label: "Benefits",
-					itemDefault: { label: "", monthlyLimit: 0 },
-					children: [
-						{ kind: "field", path: "label", control: "text", label: "Benefit" },
-						{
-							kind: "field",
-							path: "monthlyLimit",
-							control: "number",
-							label: "Monthly limit",
-							props: { min: 0, step: 1 },
-						},
-					],
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "tier-canopy",
-			title: "Canopy tier",
-			children: [
-				{
-					kind: "field",
-					path: "tiers.canopy.discountPercent",
-					control: "number",
-					label: "Reduction percent",
-					props: { min: 0, max: 80, step: 1 },
-				},
-				{
-					kind: "array",
-					path: "tiers.canopy.benefits",
-					label: "Benefits",
-					itemDefault: { label: "", monthlyLimit: 0 },
-					children: [
-						{ kind: "field", path: "label", control: "text", label: "Benefit" },
-						{
-							kind: "field",
-							path: "monthlyLimit",
-							control: "number",
-							label: "Monthly limit",
-							props: { min: 0, step: 1 },
-						},
-					],
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "tier-founder",
-			title: "Founder tier",
-			children: [
-				{
-					kind: "field",
-					path: "tiers.founder.discountPercent",
-					control: "number",
-					label: "Reduction percent",
-					props: { min: 0, max: 80, step: 1 },
-				},
-				{
-					kind: "array",
-					path: "tiers.founder.benefits",
-					label: "Benefits",
-					itemDefault: { label: "", monthlyLimit: 0 },
-					children: [
-						{ kind: "field", path: "label", control: "text", label: "Benefit" },
-						{
-							kind: "field",
-							path: "monthlyLimit",
-							control: "number",
-							label: "Monthly limit",
-							props: { min: 0, step: 1 },
-						},
-					],
-				},
-			],
-		},
-	] satisfies readonly UiNode<
-		MembershipInput,
-		typeof contextualKit.controls,
-		MembershipContext
-	>[]
-}
+)
 
 export function MembershipLadderExample() {
 	const [queryClient] = useState(

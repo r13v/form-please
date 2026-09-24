@@ -22,7 +22,6 @@ import {
 	type OptionValue,
 	type PathValue,
 	type ResourceState,
-	type UiNode,
 	type UseFormOptions,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
@@ -78,39 +77,20 @@ type ProfileContext = {
 const profileKit = nativeFormKit.forContext<ProfileContext>()
 
 // [!region ui-types]
-type ProfileNode = UiNode<
-	ProfileInput,
-	typeof profileKit.controls,
-	ProfileContext
->
-
-const profileUi = [
-	{
-		kind: "field",
-		path: "name",
+const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
+	ui.field("name", {
 		control: "text",
 		label: "Name",
 		readOnly: (_values, { context }) => !context.canEdit,
-	},
-	{
-		kind: "array",
-		path: "contacts",
+	}),
+	ui.array("contacts", {
 		label: "Contacts",
 		itemDefault: { email: "" },
-		children: [
-			{
-				kind: "field",
-				path: "email",
-				control: "text",
-				label: "Email",
-			},
+		children: (contact) => [
+			contact.field("email", { control: "text", label: "Email" }),
 		],
-	},
-] satisfies readonly ProfileNode[]
-
-const profileDefinition = profileKit.defineForm(profileSchema, {
-	ui: profileUi,
-})
+	}),
+])
 // [!endregion ui-types]
 
 type MoneyProps = {

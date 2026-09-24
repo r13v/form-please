@@ -76,192 +76,148 @@ const choiceOptions = {
 	],
 } as const
 
-const workshopDefinition = kit.defineForm(workshopSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "proposal",
-			title: "Workshop proposal",
-			description: "Native controls rendered with local shadcn primitives.",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "title",
-					control: "text",
-					label: "Title",
-					required: true,
-					props: { placeholder: "Designing useful constraints" },
+const workshopDefinition = kit.defineForm(workshopSchema, (ui) => [
+	ui.section("proposal", {
+		title: "Workshop proposal",
+		description: "Native controls rendered with local shadcn primitives.",
+		columns: 2,
+		children: [
+			ui.field("title", {
+				control: "text",
+				label: "Title",
+				required: true,
+				props: { placeholder: "Designing useful constraints" },
+			}),
+			ui.field("track", {
+				control: "select",
+				label: "Track",
+				options: choiceOptions.track,
+			}),
+			ui.field("abstract", {
+				control: "textarea",
+				label: "Abstract",
+				required: true,
+				props: { rows: 4 },
+			}),
+			ui.field("capacity", {
+				control: "number",
+				label: "Capacity",
+				props: { min: 6, max: 80, step: 1 },
+			}),
+			ui.field("proposalDate", {
+				control: "date",
+				label: "Proposal date",
+			}),
+			ui.field("startsAt", {
+				control: "time",
+				label: "Preferred start time",
+				props: { step: 900 },
+			}),
+			ui.field("accessibilityReview", {
+				control: "checkbox",
+				label: "Request an accessibility review",
+			}),
+			ui.field("brief", {
+				control: "file",
+				label: "Optional brief",
+				props: { accept: ".pdf,.md,text/markdown,application/pdf" },
+			}),
+		],
+	}),
+	ui.section("experience", {
+		title: "Session experience",
+		description: "Base UI option controls and each slider value shape.",
+		columns: 2,
+		children: [
+			ui.field("format", {
+				control: "radio",
+				label: "Format",
+				options: choiceOptions.format,
+			}),
+			ui.field("recordingAllowed", {
+				control: "switch",
+				label: "Allow a recording",
+				props: { size: "sm" },
+			}),
+			ui.field("duration", {
+				control: "slider",
+				label: "Duration",
+				description: "One numeric value, in minutes.",
+				props: {
+					min: 30,
+					max: 180,
+					step: 15,
+					format: { style: "unit", unit: "minute" },
 				},
-				{
-					kind: "field",
-					path: "track",
-					control: "select",
-					label: "Track",
-					options: choiceOptions.track,
+			}),
+			ui.field("audienceRange", {
+				control: "rangeSlider",
+				label: "Audience experience range",
+				description: "A fixed two-number tuple.",
+				props: { min: 0, max: 10, step: 1, minStepsBetweenValues: 2 },
+			}),
+			ui.field("agendaCheckpoints", {
+				control: "multiSlider",
+				label: "Agenda checkpoints",
+				description: "An arbitrary array of numeric thumbs.",
+				props: { min: 0, max: 100, step: 5 },
+			}),
+		],
+	}),
+	ui.section("schedule", {
+		title: "Discovery and schedule",
+		description: "Searchable options, calendar values, and OTP input.",
+		columns: 2,
+		children: [
+			ui.field("venue", {
+				control: "combobox",
+				label: "Venue",
+				options: choiceOptions.venue,
+				props: {
+					placeholder: "Search venues",
+					showClear: true,
 				},
-				{
-					kind: "field",
-					path: "abstract",
-					control: "textarea",
-					label: "Abstract",
-					required: true,
-					props: { rows: 4 },
+			}),
+			ui.field("topics", {
+				control: "multiCombobox",
+				label: "Topics",
+				options: choiceOptions.topics,
+				props: {
+					placeholder: "Add topics",
 				},
-				{
-					kind: "field",
-					path: "capacity",
-					control: "number",
-					label: "Capacity",
-					props: { min: 6, max: 80, step: 1 },
+			}),
+			ui.field("workshopDate", {
+				control: "datePicker",
+				label: "Workshop date",
+				props: {
+					placeholder: "Pick a date",
+					captionLayout: "dropdown",
+					presets: [
+						{ value: "2027-04-09", label: "Spring lab" },
+						{ value: "2027-09-17", label: "Autumn lab" },
+					],
 				},
-				{
-					kind: "field",
-					path: "proposalDate",
-					control: "date",
-					label: "Proposal date",
+			}),
+			ui.field("availability", {
+				control: "dateRangePicker",
+				label: "Travel availability",
+				props: { numberOfMonths: 2 },
+			}),
+			ui.field("inviteCode", {
+				control: "inputOtp",
+				label: "Invite code",
+				required: true,
+				props: {
+					maxLength: 6,
+					groups: [3, 3],
+					separator: true,
+					pattern: "^\\d*$",
+					autoComplete: "one-time-code",
 				},
-				{
-					kind: "field",
-					path: "startsAt",
-					control: "time",
-					label: "Preferred start time",
-					props: { step: 900 },
-				},
-				{
-					kind: "field",
-					path: "accessibilityReview",
-					control: "checkbox",
-					label: "Request an accessibility review",
-				},
-				{
-					kind: "field",
-					path: "brief",
-					control: "file",
-					label: "Optional brief",
-					props: { accept: ".pdf,.md,text/markdown,application/pdf" },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "experience",
-			title: "Session experience",
-			description: "Base UI option controls and each slider value shape.",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "format",
-					control: "radio",
-					label: "Format",
-					options: choiceOptions.format,
-				},
-				{
-					kind: "field",
-					path: "recordingAllowed",
-					control: "switch",
-					label: "Allow a recording",
-					props: { size: "sm" },
-				},
-				{
-					kind: "field",
-					path: "duration",
-					control: "slider",
-					label: "Duration",
-					description: "One numeric value, in minutes.",
-					props: {
-						min: 30,
-						max: 180,
-						step: 15,
-						format: { style: "unit", unit: "minute" },
-					},
-				},
-				{
-					kind: "field",
-					path: "audienceRange",
-					control: "rangeSlider",
-					label: "Audience experience range",
-					description: "A fixed two-number tuple.",
-					props: { min: 0, max: 10, step: 1, minStepsBetweenValues: 2 },
-				},
-				{
-					kind: "field",
-					path: "agendaCheckpoints",
-					control: "multiSlider",
-					label: "Agenda checkpoints",
-					description: "An arbitrary array of numeric thumbs.",
-					props: { min: 0, max: 100, step: 5 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "schedule",
-			title: "Discovery and schedule",
-			description: "Searchable options, calendar values, and OTP input.",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "venue",
-					control: "combobox",
-					label: "Venue",
-					options: choiceOptions.venue,
-					props: {
-						placeholder: "Search venues",
-						showClear: true,
-					},
-				},
-				{
-					kind: "field",
-					path: "topics",
-					control: "multiCombobox",
-					label: "Topics",
-					options: choiceOptions.topics,
-					props: {
-						placeholder: "Add topics",
-					},
-				},
-				{
-					kind: "field",
-					path: "workshopDate",
-					control: "datePicker",
-					label: "Workshop date",
-					props: {
-						placeholder: "Pick a date",
-						captionLayout: "dropdown",
-						presets: [
-							{ value: "2027-04-09", label: "Spring lab" },
-							{ value: "2027-09-17", label: "Autumn lab" },
-						],
-					},
-				},
-				{
-					kind: "field",
-					path: "availability",
-					control: "dateRangePicker",
-					label: "Travel availability",
-					props: { numberOfMonths: 2 },
-				},
-				{
-					kind: "field",
-					path: "inviteCode",
-					control: "inputOtp",
-					label: "Invite code",
-					required: true,
-					props: {
-						maxLength: 6,
-						groups: [3, 3],
-						separator: true,
-						pattern: "^\\d*$",
-						autoComplete: "one-time-code",
-					},
-				},
-			],
-		},
-	],
-})
+			}),
+		],
+	}),
+])
 
 const defaultValues = {
 	title: "Designing useful constraints",

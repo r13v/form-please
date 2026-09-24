@@ -11,12 +11,10 @@ const profileDefinition = nativeFormKit.defineForm(
 		name: z.string().min(1, "Enter a name"),
 		role: z.string(),
 	}),
-	{
-		ui: [
-			{ control: "text", kind: "field", label: "Name", path: "name" },
-			{ control: "text", kind: "field", label: "Role", path: "role" },
-		],
-	},
+	(ui) => [
+		ui.field("name", { control: "text", label: "Name" }),
+		ui.field("role", { control: "text", label: "Role" }),
+	],
 )
 
 export function ProfileForm() {

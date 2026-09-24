@@ -13,7 +13,6 @@ import {
 	type FormOutput,
 	fromResource,
 	matchResource,
-	type RenderNode,
 	type RenderNodeProps,
 	type ResourceState,
 	type UiResolver,
@@ -169,18 +168,15 @@ const preferencesSchema = z.object({
 	newsletter: z.boolean(),
 })
 
-const preferencesDefinition = nativeFormKit.defineForm(preferencesSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "email",
+const preferencesDefinition = nativeFormKit.defineForm(
+	preferencesSchema,
+	(ui) => [
+		ui.field("email", {
 			control: "text",
 			label: "Email",
 			props: { type: "email", autoComplete: "email" },
-		},
-		{
-			kind: "field",
-			path: "plan",
+		}),
+		ui.field("plan", {
 			control: "select",
 			label: "Plan",
 			options: [
@@ -190,22 +186,18 @@ const preferencesDefinition = nativeFormKit.defineForm(preferencesSchema, {
 			props: {
 				emptyOption: { label: "Select a plan" },
 			},
-		},
-		{
-			kind: "field",
-			path: "seats",
+		}),
+		ui.field("seats", {
 			control: "number",
 			label: "Seats",
 			props: { min: 1, max: 100, step: 1 },
-		},
-		{
-			kind: "field",
-			path: "newsletter",
+		}),
+		ui.field("newsletter", {
 			control: "checkbox",
 			label: "Send product news",
-		},
+		}),
 	],
-})
+)
 // [!endregion native-control-options]
 
 // [!region mui-preset]
@@ -228,43 +220,33 @@ const muiSettingsSchema = z.object({
 	priority: z.number(),
 })
 
-const muiSettingsDefinition = muiKit.defineForm(muiSettingsSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			label: "Role",
-			options: [
-				{ value: "developer", label: "Developer" },
-				{ value: "designer", label: "Designer" },
-			],
-			props: {
-				displayEmpty: true,
-			},
+const muiSettingsDefinition = muiKit.defineForm(muiSettingsSchema, (ui) => [
+	ui.field("role", {
+		control: "select",
+		label: "Role",
+		options: [
+			{ value: "developer", label: "Developer" },
+			{ value: "designer", label: "Designer" },
+		],
+		props: {
+			displayEmpty: true,
 		},
-		{
-			kind: "field",
-			path: "topics",
-			control: "autocomplete-multiple",
-			label: "Topics",
-			options: ["React", "TypeScript", "Accessibility"],
-		},
-		{
-			kind: "field",
-			path: "notifications",
-			control: "switch",
-			label: "Notifications",
-		},
-		{
-			kind: "field",
-			path: "priority",
-			control: "slider",
-			label: "Priority",
-			props: { min: 0, max: 10, step: 1 },
-		},
-	],
-})
+	}),
+	ui.field("topics", {
+		control: "autocomplete-multiple",
+		label: "Topics",
+		options: ["React", "TypeScript", "Accessibility"],
+	}),
+	ui.field("notifications", {
+		control: "switch",
+		label: "Notifications",
+	}),
+	ui.field("priority", {
+		control: "slider",
+		label: "Priority",
+		props: { min: 0, max: 10, step: 1 },
+	}),
+])
 // [!endregion mui-fields]
 
 const profileSchema = z.object({
@@ -299,12 +281,14 @@ function TeamHint({ disabled, readOnly }: RenderNodeProps) {
 	)
 }
 
-const teamHint = {
-	kind: "render",
-	id: "team-hint",
-	component: TeamHint,
-	visible: (values) => values.plan === "team",
-} satisfies RenderNode<ProfileInput, ProfileContext>
+const teamHintDefinition = nativeFormKit
+	.forContext<ProfileContext>()
+	.defineForm(profileSchema, (ui) => [
+		ui.render("team-hint", {
+			component: TeamHint,
+			visible: (values) => values.plan === "team",
+		}),
+	])
 // [!endregion render-node]
 
 // [!region resource-resolver]
@@ -399,7 +383,10 @@ const profileDefinition = profileKit.defineForm(
 					label: "Team name",
 					visible: (values) => values.plan === "team",
 				}),
-				teamHint,
+				ui.render("team-hint", {
+					component: TeamHint,
+					visible: (values) => values.plan === "team",
+				}),
 				ui.field("country", {
 					control: "text",
 					label: "Country",

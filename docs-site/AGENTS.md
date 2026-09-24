@@ -12,5 +12,9 @@
   Reserve `text` fences for non-code diagrams, formulas, and plain output.
 - Docs examples and interactive components must use public package imports from
   `form-please`, not source imports or mocked APIs.
+- Author every definition and fragment with the builder factory
+  (`defineForm(schema, (ui) => [ui.field(...)])`). Never show the object form
+  (`{ ui: [...] }` with `kind` nodes) in pages, snippets, or components. Share
+  repeated UI with `defineFragment`, not with separate node lists.
 - Do not add an OpenAI Sites worker, `.openai/hosting.json`, redirects, a custom
   domain, analytics, API routes, or a server runtime.

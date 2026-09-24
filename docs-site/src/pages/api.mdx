@@ -303,15 +303,15 @@ properties of the definition. Each form binding and definition tester creates
 its own middleware instances from that fixed policy. Use the current
 `transaction.context` for binding-specific data.
 
-In addition to opaque fragment placements, the UI array accepts four ordinary
+In addition to opaque fragment placements, the builder creates four ordinary
 node kinds:
 
-| Kind | Required properties | Purpose |
+| Helper | Required options | Purpose |
 | --- | --- | --- |
-| `field` | `path`, `control` | Connect one schema input path to one registered control. |
-| `section` | `id`, `children` | Group nodes without changing their path scope. |
-| `array` | `path`, `itemDefault`, `children` | Repeat nodes for a non-nullable object-array path. |
-| `render` | `id`, `component` | Insert form-local React content. |
+| `ui.field(path, options)` | `control` | Connect one schema input path to one registered control. |
+| `ui.section(id, options)` | `children` | Group nodes without changing their path scope. |
+| `ui.array(path, options)` | `itemDefault`, `children` | Repeat nodes for a non-nullable object-array path. |
+| `ui.render(id, options)` | `component` | Insert form-local React content. |
 
 Field, section, and array nodes support resolved labels or descriptions. They
 also support `visible`, `disabled`, `readOnly`, `className`, `span`, and typed

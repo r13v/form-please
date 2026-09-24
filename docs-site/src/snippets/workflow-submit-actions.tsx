@@ -22,18 +22,14 @@ const releasePersistence = createPersistenceMiddleware({
 })
 const releaseDefinition = nativeFormKit.defineForm(
 	releaseSchema,
-	{
-		ui: [
-			{ kind: "field", path: "title", control: "text", label: "Title" },
-			{
-				kind: "field",
-				path: "description",
-				control: "textarea",
-				label: "Description",
-				props: { rows: 5 },
-			},
-		],
-	},
+	(ui) => [
+		ui.field("title", { control: "text", label: "Title" }),
+		ui.field("description", {
+			control: "textarea",
+			label: "Description",
+			props: { rows: 5 },
+		}),
+	],
 	{ middleware: [releasePersistence] },
 )
 

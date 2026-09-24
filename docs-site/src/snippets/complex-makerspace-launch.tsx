@@ -19,6 +19,11 @@ import { useMemo, useState } from "react"
 import { useWatch } from "react-hook-form"
 import { z } from "zod"
 
+const promotionSchema = z.object({
+	enabled: z.boolean(),
+	percent: z.number().min(1).max(90).optional(),
+})
+
 const launchSchema = z
 	.object({
 		identity: z.object({
@@ -68,22 +73,10 @@ const launchSchema = z
 			.string()
 			.min(20, "Explain how members enter the space"),
 		promotions: z.object({
-			launch: z.object({
-				enabled: z.boolean(),
-				percent: z.number().min(1).max(90).optional(),
-			}),
-			student: z.object({
-				enabled: z.boolean(),
-				percent: z.number().min(1).max(90).optional(),
-			}),
-			community: z.object({
-				enabled: z.boolean(),
-				percent: z.number().min(1).max(90).optional(),
-			}),
-			offPeak: z.object({
-				enabled: z.boolean(),
-				percent: z.number().min(1).max(90).optional(),
-			}),
+			launch: promotionSchema,
+			student: promotionSchema,
+			community: promotionSchema,
+			offPeak: promotionSchema,
 		}),
 	})
 	.superRefine((value, context) => {
@@ -189,6 +182,18 @@ const kit = createFormKit({
 	slots: createDefaultSlots(),
 })
 const contextualKit = kit.forContext<LaunchContext>()
+const promotionFragment = contextualKit.defineFragment(
+	promotionSchema,
+	(ui) => [
+		ui.field("enabled", { control: "checkbox", label: "Enabled" }),
+		ui.field("percent", {
+			control: "number",
+			label: "Reduction percent",
+			visible: (promotion) => promotion.enabled,
+			props: { min: 1, max: 90, step: 1 },
+		}),
+	],
+)
 const stageLabels = {
 	identity: "Identity",
 	location: "Location",
@@ -349,230 +354,162 @@ function AddressLookup({
 	)
 }
 
-const launchDefinition = contextualKit.defineForm(launchSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "identity",
-			title: "Makerspace identity",
-			visible: (_values, { context }) => context.screen === "identity",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "identity.name",
-					control: "text",
-					label: "Public name",
-					required: true,
-				},
-				{
-					kind: "field",
-					path: "identity.campusId",
-					control: "select",
-					label: "Campus",
-					options: ({ context }) => context.campuses,
-				},
-				{
-					kind: "field",
-					path: "identity.description",
-					control: "textarea",
-					label: "Public description",
-					description: "Explain the work this place makes possible.",
-					span: "full",
-					props: { rows: 5 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "location",
-			title: "Location",
-			visible: (_values, { context }) => context.screen === "location",
-			columns: 2,
-			children: [
-				{
-					kind: "field",
-					path: "location.regionId",
-					control: "select",
-					label: "Region",
-					options: ({ context }) => context.regions,
-				},
-				{
-					kind: "field",
-					path: "location.postalCode",
-					control: "text",
-					label: "Postal code",
-				},
-				{
-					kind: "field",
-					path: "location.address",
-					control: "text",
-					label: "Street address",
-					span: "full",
-				},
-				{
-					kind: "field",
-					path: "location.latitude",
-					control: "number",
-					label: "Latitude",
-					props: { min: -90, max: 90, step: 0.001 },
-				},
-				{
-					kind: "field",
-					path: "location.longitude",
-					control: "number",
-					label: "Longitude",
-					props: { min: -180, max: 180, step: 0.001 },
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "capacity",
-			title: "Capacity, media, and amenities",
-			visible: (_values, { context }) => context.screen === "capacity",
-			children: [
-				{
-					kind: "array",
-					path: "capacityBands",
-					label: "Capacity bands",
-					itemDefault: { label: "", people: 1, hourlyRate: 0 },
-					children: [
-						{
-							kind: "field",
-							path: "label",
-							control: "text",
-							label: "Band name",
-						},
-						{
-							kind: "field",
-							path: "people",
-							control: "number",
-							label: "People",
-							props: { min: 1, max: 500, step: 1 },
-						},
-						{
-							kind: "field",
-							path: "hourlyRate",
-							control: "number",
-							label: "Hourly rate",
-							props: { min: 0, step: 5 },
-						},
-					],
-				},
-				{
-					kind: "field",
-					path: "media.cover",
-					control: "file",
-					label: "Cover image",
-					props: { accept: "image/*" },
-				},
-				{
-					kind: "array",
-					path: "media.gallery",
-					label: "Gallery",
-					description: "Reorder references without losing row state.",
-					itemDefault: { assetUrl: "", caption: "" },
-					children: [
-						{
-							kind: "field",
-							path: "assetUrl",
-							control: "text",
-							label: "Media URL",
-						},
-						{
-							kind: "field",
-							path: "caption",
-							control: "text",
-							label: "Caption",
-						},
-					],
-				},
-				{
-					kind: "section",
-					id: "amenities",
-					title: "Amenities",
-					columns: 2,
-					children: [
-						{
-							kind: "field",
-							path: "amenities.stepFree",
-							control: "checkbox",
-							label: "Step-free",
-						},
-						{
-							kind: "field",
-							path: "amenities.ventilation",
-							control: "checkbox",
-							label: "Extract ventilation",
-						},
-						{
-							kind: "field",
-							path: "amenities.toolLibrary",
-							control: "checkbox",
-							label: "Tool library",
-						},
-						{
-							kind: "field",
-							path: "amenities.quietZone",
-							control: "checkbox",
-							label: "Quiet zone",
-						},
-					],
-				},
-			],
-		},
-		{
-			kind: "section",
-			id: "publishing",
-			title: "Publishing rules",
-			visible: (_values, { context }) => context.screen === "publishing",
-			children: [
-				{
-					kind: "field",
-					path: "accessInstructions",
-					control: "textarea",
-					label: "Access instructions",
-					props: { rows: 4 },
-				},
-				promotionSection("launch", "Launch offer"),
-				promotionSection("student", "Student access"),
-				promotionSection("community", "Community partner"),
-				promotionSection("offPeak", "Off-peak hours"),
-			],
-		},
-	],
-})
-
-function promotionSection(
-	name: "launch" | "student" | "community" | "offPeak",
-	title: string,
-) {
-	return {
-		kind: "section" as const,
-		id: `promotion-${name}`,
-		title,
-		columns: 2 as const,
+const launchDefinition = contextualKit.defineForm(launchSchema, (ui) => [
+	ui.section("identity", {
+		title: "Makerspace identity",
+		visible: (_values, { context }) => context.screen === "identity",
+		columns: 2,
 		children: [
-			{
-				kind: "field" as const,
-				path: `promotions.${name}.enabled` as const,
-				control: "checkbox" as const,
-				label: "Enabled",
-			},
-			{
-				kind: "field" as const,
-				path: `promotions.${name}.percent` as const,
-				control: "number" as const,
-				label: "Reduction percent",
-				visible: ({
-					[`promotions.${name}.enabled`]: enabled,
-				}: Record<string, unknown>) => Boolean(enabled),
-				props: { min: 1, max: 90, step: 1 },
-			},
+			ui.field("identity.name", {
+				control: "text",
+				label: "Public name",
+				required: true,
+			}),
+			ui.field("identity.campusId", {
+				control: "select",
+				label: "Campus",
+				options: ({ context }) => context.campuses,
+			}),
+			ui.field("identity.description", {
+				control: "textarea",
+				label: "Public description",
+				description: "Explain the work this place makes possible.",
+				span: "full",
+				props: { rows: 5 },
+			}),
 		],
-	}
-}
+	}),
+	ui.section("location", {
+		title: "Location",
+		visible: (_values, { context }) => context.screen === "location",
+		columns: 2,
+		children: [
+			ui.field("location.regionId", {
+				control: "select",
+				label: "Region",
+				options: ({ context }) => context.regions,
+			}),
+			ui.field("location.postalCode", {
+				control: "text",
+				label: "Postal code",
+			}),
+			ui.field("location.address", {
+				control: "text",
+				label: "Street address",
+				span: "full",
+			}),
+			ui.field("location.latitude", {
+				control: "number",
+				label: "Latitude",
+				props: { min: -90, max: 90, step: 0.001 },
+			}),
+			ui.field("location.longitude", {
+				control: "number",
+				label: "Longitude",
+				props: { min: -180, max: 180, step: 0.001 },
+			}),
+		],
+	}),
+	ui.section("capacity", {
+		title: "Capacity, media, and amenities",
+		visible: (_values, { context }) => context.screen === "capacity",
+		children: [
+			ui.array("capacityBands", {
+				label: "Capacity bands",
+				itemDefault: { label: "", people: 1, hourlyRate: 0 },
+				children: (capacityBand) => [
+					capacityBand.field("label", {
+						control: "text",
+						label: "Band name",
+					}),
+					capacityBand.field("people", {
+						control: "number",
+						label: "People",
+						props: { min: 1, max: 500, step: 1 },
+					}),
+					capacityBand.field("hourlyRate", {
+						control: "number",
+						label: "Hourly rate",
+						props: { min: 0, step: 5 },
+					}),
+				],
+			}),
+			ui.field("media.cover", {
+				control: "file",
+				label: "Cover image",
+				props: { accept: "image/*" },
+			}),
+			ui.array("media.gallery", {
+				label: "Gallery",
+				description: "Reorder references without losing row state.",
+				itemDefault: { assetUrl: "", caption: "" },
+				children: (media) => [
+					media.field("assetUrl", {
+						control: "text",
+						label: "Media URL",
+					}),
+					media.field("caption", {
+						control: "text",
+						label: "Caption",
+					}),
+				],
+			}),
+			ui.section("amenities", {
+				title: "Amenities",
+				columns: 2,
+				children: [
+					ui.field("amenities.stepFree", {
+						control: "checkbox",
+						label: "Step-free",
+					}),
+					ui.field("amenities.ventilation", {
+						control: "checkbox",
+						label: "Extract ventilation",
+					}),
+					ui.field("amenities.toolLibrary", {
+						control: "checkbox",
+						label: "Tool library",
+					}),
+					ui.field("amenities.quietZone", {
+						control: "checkbox",
+						label: "Quiet zone",
+					}),
+				],
+			}),
+		],
+	}),
+	ui.section("publishing", {
+		title: "Publishing rules",
+		visible: (_values, { context }) => context.screen === "publishing",
+		children: [
+			ui.field("accessInstructions", {
+				control: "textarea",
+				label: "Access instructions",
+				props: { rows: 4 },
+			}),
+			ui.section("promotion-launch", {
+				title: "Launch offer",
+				columns: 2,
+				children: [promotionFragment.fields({ at: "promotions.launch" })],
+			}),
+			ui.section("promotion-student", {
+				title: "Student access",
+				columns: 2,
+				children: [promotionFragment.fields({ at: "promotions.student" })],
+			}),
+			ui.section("promotion-community", {
+				title: "Community partner",
+				columns: 2,
+				children: [promotionFragment.fields({ at: "promotions.community" })],
+			}),
+			ui.section("promotion-offPeak", {
+				title: "Off-peak hours",
+				columns: 2,
+				children: [promotionFragment.fields({ at: "promotions.offPeak" })],
+			}),
+		],
+	}),
+])
 
 export function MakerspaceLaunchExample() {
 	const [queryClient] = useState(

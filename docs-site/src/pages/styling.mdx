@@ -44,27 +44,14 @@ your theme layer after `fp`.
 Set `columns` on a section. Set `span` on a field, nested section, or array:
 
 ```tsx
-{
-	kind: "section",
-	id: "contact",
+ui.section("contact", {
 	title: "Contact details",
 	columns: 2,
 	children: [
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-		},
-		{
-			kind: "field",
-			path: "notes",
-			control: "textarea",
-			label: "Notes",
-			span: "full",
-		},
+		ui.field("email", { control: "text", label: "Email" }),
+		ui.field("notes", { control: "textarea", label: "Notes", span: "full" }),
 	],
-}
+})
 ```
 
 The default grid accepts `1`, `2`, `3`, and `4`. The layout responds to the
@@ -280,9 +267,7 @@ theme for shared styles. Use `props.sx` for a control and `slotOptions` for a
 field, section, or array.
 
 ```tsx
-{
-	kind: "section",
-	id: "proposal",
+ui.section("proposal", {
 	title: "Conference proposal",
 	columns: 12,
 	slotOptions: {
@@ -290,16 +275,14 @@ field, section, or array.
 		layoutSx: { alignItems: "start" },
 	},
 	children: [
-		{
-			kind: "field",
-			path: "title",
+		ui.field("title", {
 			control: "text",
 			label: "Proposal title",
 			span: 7,
 			props: { sx: { bgcolor: "background.paper" } },
-		},
+		}),
 	],
-}
+})
 ```
 
 Read [Material UI with Yup](/examples/mui-yup) for a complete themed example.

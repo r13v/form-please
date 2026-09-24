@@ -87,158 +87,131 @@ const conferenceSchema = yup
 type ConferenceInput = FormInput<typeof conferenceSchema>
 type ConferenceOutput = FormOutput<typeof conferenceSchema>
 
-const conferenceDefinition = kit.defineForm(conferenceSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "proposal",
-			title: "Conference proposal",
-			description:
-				"Describe the session, schedule it, and confirm the speaker details.",
-			columns: 12,
-			slotOptions: {
-				sx: { width: "100%" },
-				layoutSx: { alignItems: "start" },
-			},
-			children: [
-				{
-					kind: "field",
-					path: "title",
-					control: "text",
-					label: "Proposal title",
-					required: true,
-					span: 7,
-					props: {
-						placeholder: "Designing forms people can finish",
-						sx: { bgcolor: "background.paper" },
-					},
-				},
-				{
-					kind: "field",
-					path: "email",
-					control: "email",
-					label: "Contact email",
-					required: true,
-					span: 5,
-					props: {
-						autoComplete: "email",
-						placeholder: "speaker@example.com",
-						sx: { bgcolor: "background.paper" },
-					},
-				},
-				{
-					kind: "field",
-					path: "format",
-					control: "radio",
-					label: "Session format",
-					required: true,
-					span: 6,
-					options: [
-						{ value: "talk", label: "Talk" },
-						{ value: "workshop", label: "Workshop" },
-					],
-					props: {
-						row: true,
-						sx: { minHeight: 56 },
-					},
-				},
-				{
-					kind: "field",
-					path: "topics",
-					control: "autocomplete-multiple",
-					label: "Topics",
-					required: true,
-					span: 6,
-					options: Object.keys(topicLabels) as TopicId[],
-					props: {
-						getOptionLabel: (option) => topicLabels[option as TopicId],
-						textFieldProps: { placeholder: "Search topics" },
-						sx: { bgcolor: "background.paper" },
-					},
-				},
-				{
-					kind: "field",
-					path: "experience",
-					control: "slider",
-					label: "Speaker experience",
-					description: "Years presenting to professional audiences.",
-					span: 6,
-					props: {
-						marks: true,
-						max: 5,
-						min: 1,
-						step: 1,
-						sx: { boxSizing: "border-box", mt: 1, px: 1 },
-						valueLabelDisplay: "auto",
-					},
-				},
-				{
-					kind: "field",
-					path: "remote",
-					control: "switch",
-					label: "Remote session",
-					description:
-						"Enable this when the speaker will not attend in person.",
-					span: 6,
-					props: { color: "secondary" },
-				},
-				{
-					kind: "field",
-					path: "date",
-					control: "date",
-					label: "Preferred date",
-					required: true,
-					span: 3,
-					props: { sx: { bgcolor: "background.paper" } },
-				},
-				{
-					kind: "field",
-					path: "time",
-					control: "time",
-					label: "Start time",
-					required: true,
-					span: 3,
-					props: { sx: { bgcolor: "background.paper" } },
-				},
-				{
-					kind: "field",
-					path: "slides",
-					control: "file",
-					label: "Draft slides",
-					description: "Optional PDF, up to the application's upload limit.",
-					span: 6,
-					props: {
-						buttonProps: { color: "secondary" },
-						inputProps: { accept: "application/pdf,.pdf" },
-						sx: { justifyContent: "flex-start" },
-					},
-				},
-				{
-					kind: "field",
-					path: "abstract",
-					control: "textarea",
-					label: "Abstract",
-					required: true,
-					span: "full",
-					props: {
-						minRows: 4,
-						placeholder: "Explain what attendees will learn.",
-						sx: { bgcolor: "background.paper" },
-					},
-				},
-				{
-					kind: "field",
-					path: "agreement",
-					control: "checkbox",
-					label: "I can attend at the selected date and time",
-					required: true,
-					span: "full",
-					props: { color: "secondary", sx: { p: 0.5 } },
-				},
-			],
+const conferenceDefinition = kit.defineForm(conferenceSchema, (ui) => [
+	ui.section("proposal", {
+		title: "Conference proposal",
+		description:
+			"Describe the session, schedule it, and confirm the speaker details.",
+		columns: 12,
+		slotOptions: {
+			sx: { width: "100%" },
+			layoutSx: { alignItems: "start" },
 		},
-	],
-})
+		children: [
+			ui.field("title", {
+				control: "text",
+				label: "Proposal title",
+				required: true,
+				span: 7,
+				props: {
+					placeholder: "Designing forms people can finish",
+					sx: { bgcolor: "background.paper" },
+				},
+			}),
+			ui.field("email", {
+				control: "email",
+				label: "Contact email",
+				required: true,
+				span: 5,
+				props: {
+					autoComplete: "email",
+					placeholder: "speaker@example.com",
+					sx: { bgcolor: "background.paper" },
+				},
+			}),
+			ui.field("format", {
+				control: "radio",
+				label: "Session format",
+				required: true,
+				span: 6,
+				options: [
+					{ value: "talk", label: "Talk" },
+					{ value: "workshop", label: "Workshop" },
+				],
+				props: {
+					row: true,
+					sx: { minHeight: 56 },
+				},
+			}),
+			ui.field("topics", {
+				control: "autocomplete-multiple",
+				label: "Topics",
+				required: true,
+				span: 6,
+				options: Object.keys(topicLabels) as TopicId[],
+				props: {
+					getOptionLabel: (option) => topicLabels[option as TopicId],
+					textFieldProps: { placeholder: "Search topics" },
+					sx: { bgcolor: "background.paper" },
+				},
+			}),
+			ui.field("experience", {
+				control: "slider",
+				label: "Speaker experience",
+				description: "Years presenting to professional audiences.",
+				span: 6,
+				props: {
+					marks: true,
+					max: 5,
+					min: 1,
+					step: 1,
+					sx: { boxSizing: "border-box", mt: 1, px: 1 },
+					valueLabelDisplay: "auto",
+				},
+			}),
+			ui.field("remote", {
+				control: "switch",
+				label: "Remote session",
+				description: "Enable this when the speaker will not attend in person.",
+				span: 6,
+				props: { color: "secondary" },
+			}),
+			ui.field("date", {
+				control: "date",
+				label: "Preferred date",
+				required: true,
+				span: 3,
+				props: { sx: { bgcolor: "background.paper" } },
+			}),
+			ui.field("time", {
+				control: "time",
+				label: "Start time",
+				required: true,
+				span: 3,
+				props: { sx: { bgcolor: "background.paper" } },
+			}),
+			ui.field("slides", {
+				control: "file",
+				label: "Draft slides",
+				description: "Optional PDF, up to the application's upload limit.",
+				span: 6,
+				props: {
+					buttonProps: { color: "secondary" },
+					inputProps: { accept: "application/pdf,.pdf" },
+					sx: { justifyContent: "flex-start" },
+				},
+			}),
+			ui.field("abstract", {
+				control: "textarea",
+				label: "Abstract",
+				required: true,
+				span: "full",
+				props: {
+					minRows: 4,
+					placeholder: "Explain what attendees will learn.",
+					sx: { bgcolor: "background.paper" },
+				},
+			}),
+			ui.field("agreement", {
+				control: "checkbox",
+				label: "I can attend at the selected date and time",
+				required: true,
+				span: "full",
+				props: { color: "secondary", sx: { p: 0.5 } },
+			}),
+		],
+	}),
+])
 
 const defaultValues = {
 	title: "Designing forms people can finish",

@@ -42,142 +42,98 @@ const passThroughEditing: FormMiddleware<ComplexEditingInput> =
 
 const complexEditingDefinition = nativeFormKit.defineForm(
 	complexEditingSchema,
-	{
-		ui: [
-			{
-				kind: "section",
-				id: "contact",
-				title: "Contact",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "contact.firstName",
-						control: "text",
-						label: "First name",
-					},
-					{
-						kind: "field",
-						path: "contact.lastName",
-						control: "text",
-						label: "Last name",
-					},
-					{
-						kind: "field",
-						path: "contact.role",
-						control: "text",
-						label: "Role",
-					},
-					{
-						kind: "field",
-						path: "contact.email",
-						control: "text",
-						label: "Email",
-					},
-					{
-						kind: "field",
-						path: "contact.phone",
-						control: "text",
-						label: "Phone",
-					},
-					{
-						kind: "field",
-						path: "contact.timeZone",
-						control: "text",
-						label: "Time zone",
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "organization",
-				title: "Organization",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "organization.name",
-						control: "text",
-						label: "Organization name",
-					},
-					{
-						kind: "field",
-						path: "organization.legalName",
-						control: "text",
-						label: "Legal name",
-					},
-					{
-						kind: "field",
-						path: "organization.website",
-						control: "text",
-						label: "Website",
-					},
-					{
-						kind: "field",
-						path: "organization.teamSize",
-						control: "text",
-						label: "Team size",
-					},
-					{
-						kind: "field",
-						path: "organization.city",
-						control: "text",
-						label: "City",
-					},
-					{
-						kind: "field",
-						path: "organization.country",
-						control: "text",
-						label: "Country",
-					},
-				],
-			},
-			{
-				kind: "section",
-				id: "project",
-				title: "Project",
-				columns: 2,
-				children: [
-					{
-						kind: "field",
-						path: "project.title",
-						control: "text",
-						label: "Project title",
-					},
-					{
-						kind: "field",
-						path: "project.code",
-						control: "text",
-						label: "Project code",
-					},
-					{
-						kind: "field",
-						path: "project.owner",
-						control: "text",
-						label: "Project owner",
-					},
-					{
-						kind: "field",
-						path: "project.audience",
-						control: "text",
-						label: "Audience",
-					},
-					{
-						kind: "field",
-						path: "project.launchDate",
-						control: "text",
-						label: "Launch date",
-					},
-					{
-						kind: "field",
-						path: "project.successMeasure",
-						control: "text",
-						label: "Success measure",
-					},
-				],
-			},
-		],
-	},
+	(ui) => [
+		ui.section("contact", {
+			title: "Contact",
+			columns: 2,
+			children: [
+				ui.field("contact.firstName", {
+					control: "text",
+					label: "First name",
+				}),
+				ui.field("contact.lastName", {
+					control: "text",
+					label: "Last name",
+				}),
+				ui.field("contact.role", {
+					control: "text",
+					label: "Role",
+				}),
+				ui.field("contact.email", {
+					control: "text",
+					label: "Email",
+				}),
+				ui.field("contact.phone", {
+					control: "text",
+					label: "Phone",
+				}),
+				ui.field("contact.timeZone", {
+					control: "text",
+					label: "Time zone",
+				}),
+			],
+		}),
+		ui.section("organization", {
+			title: "Organization",
+			columns: 2,
+			children: [
+				ui.field("organization.name", {
+					control: "text",
+					label: "Organization name",
+				}),
+				ui.field("organization.legalName", {
+					control: "text",
+					label: "Legal name",
+				}),
+				ui.field("organization.website", {
+					control: "text",
+					label: "Website",
+				}),
+				ui.field("organization.teamSize", {
+					control: "text",
+					label: "Team size",
+				}),
+				ui.field("organization.city", {
+					control: "text",
+					label: "City",
+				}),
+				ui.field("organization.country", {
+					control: "text",
+					label: "Country",
+				}),
+			],
+		}),
+		ui.section("project", {
+			title: "Project",
+			columns: 2,
+			children: [
+				ui.field("project.title", {
+					control: "text",
+					label: "Project title",
+				}),
+				ui.field("project.code", {
+					control: "text",
+					label: "Project code",
+				}),
+				ui.field("project.owner", {
+					control: "text",
+					label: "Project owner",
+				}),
+				ui.field("project.audience", {
+					control: "text",
+					label: "Audience",
+				}),
+				ui.field("project.launchDate", {
+					control: "text",
+					label: "Launch date",
+				}),
+				ui.field("project.successMeasure", {
+					control: "text",
+					label: "Success measure",
+				}),
+			],
+		}),
+	],
 	{ middleware: [passThroughEditing] },
 )
 
@@ -257,32 +213,24 @@ const keepOrderTotalCurrent: FormMiddleware<OrderInput> =
 
 const orderDefinition = nativeFormKit.defineForm(
 	orderSchema,
-	{
-		ui: [
-			{
-				kind: "field",
-				path: "quantity",
-				control: "number",
-				label: "Quantity",
-				props: { min: 1, step: 1 },
-			},
-			{
-				kind: "field",
-				path: "unitPrice",
-				control: "number",
-				label: "Unit price",
-				props: { min: 0, step: 0.01 },
-			},
-			{
-				kind: "field",
-				path: "total",
-				control: "number",
-				label: "Total",
-				readOnly: true,
-				props: { min: 0, step: 0.01 },
-			},
-		],
-	},
+	(ui) => [
+		ui.field("quantity", {
+			control: "number",
+			label: "Quantity",
+			props: { min: 1, step: 1 },
+		}),
+		ui.field("unitPrice", {
+			control: "number",
+			label: "Unit price",
+			props: { min: 0, step: 0.01 },
+		}),
+		ui.field("total", {
+			control: "number",
+			label: "Total",
+			readOnly: true,
+			props: { min: 0, step: 0.01 },
+		}),
+	],
 	{ middleware: [keepOrderTotalCurrent] },
 )
 
@@ -359,17 +307,13 @@ const guardDiscount: FormMiddleware<DiscountInput, DiscountContext> =
 	}
 const discountDefinition = discountKit.defineForm(
 	discountSchema,
-	{
-		ui: [
-			{
-				kind: "field",
-				path: "discount",
-				control: "number",
-				label: "Discount percentage",
-				props: { min: 0, max: 100, step: 1 },
-			},
-		],
-	},
+	(ui) => [
+		ui.field("discount", {
+			control: "number",
+			label: "Discount percentage",
+			props: { min: 0, max: 100, step: 1 },
+		}),
+	],
 	{ middleware: [guardDiscount] },
 )
 

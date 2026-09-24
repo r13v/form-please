@@ -17,25 +17,19 @@ const profileSchema = z
 // [!endregion schema]
 
 // [!region definition]
-const profileDefinition = kit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			required: true,
-		},
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			props: { type: "email", autoComplete: "email" },
-			required: true,
-		},
-	],
-})
+const profileDefinition = kit.defineForm(profileSchema, (ui) => [
+	ui.field("name", {
+		control: "text",
+		label: "Name",
+		required: true,
+	}),
+	ui.field("email", {
+		control: "text",
+		label: "Email",
+		props: { type: "email", autoComplete: "email" },
+		required: true,
+	}),
+])
 // [!endregion definition]
 
 // [!region component]

@@ -65,22 +65,18 @@ const normalizeTaxId: FormMiddleware<Input, Context> =
 		next(transaction.patches)
 
 test("runs the real managed update lifecycle", () => {
-	const managedDefinition = kit.defineForm(
-		schema,
-		{ ui: [] },
-		{
-			beforeUpdate(draft, transaction) {
-				if (
-					transaction.source.type === "control" &&
-					transaction.source.path === "kind" &&
-					transaction.nextValues.kind === "person"
-				) {
-					draft.taxId = ""
-				}
-			},
-			middleware: [normalizeTaxId],
+	const managedDefinition = kit.defineForm(schema, () => [], {
+		beforeUpdate(draft, transaction) {
+			if (
+				transaction.source.type === "control" &&
+				transaction.source.path === "kind" &&
+				transaction.nextValues.kind === "person"
+			) {
+				draft.taxId = ""
+			}
 		},
-	)
+		middleware: [normalizeTaxId],
+	})
 	const tester = createDefinitionTester(managedDefinition, {
 		context: { locale: "en" },
 		values: { contacts: [], kind: "company", taxId: "GB123" },

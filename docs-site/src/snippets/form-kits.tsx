@@ -36,43 +36,33 @@ const profileSchema = z.object({
 })
 
 // [!region control-options]
-const projectDefinition = projectKit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "displayName",
-			control: "uppercase",
-			label: "Display name",
-			props: { placeholder: "ADA LOVELACE" },
+const projectDefinition = projectKit.defineForm(profileSchema, (ui) => [
+	ui.field("displayName", {
+		control: "uppercase",
+		label: "Display name",
+		props: { placeholder: "ADA LOVELACE" },
+	}),
+	ui.field("age", {
+		control: "number",
+		label: "Age",
+		props: { min: 18, max: 120, step: 1 },
+	}),
+	ui.field("role", {
+		control: "select",
+		label: "Role",
+		options: [
+			{ value: "admin", label: "Administrator" },
+			{ value: "member", label: "Member" },
+		],
+		props: {
+			emptyOption: { label: "Select a role" },
 		},
-		{
-			kind: "field",
-			path: "age",
-			control: "number",
-			label: "Age",
-			props: { min: 18, max: 120, step: 1 },
-		},
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			label: "Role",
-			options: [
-				{ value: "admin", label: "Administrator" },
-				{ value: "member", label: "Member" },
-			],
-			props: {
-				emptyOption: { label: "Select a role" },
-			},
-		},
-		{
-			kind: "field",
-			path: "active",
-			control: "checkbox",
-			label: "Active account",
-		},
-	],
-})
+	}),
+	ui.field("active", {
+		control: "checkbox",
+		label: "Active account",
+	}),
+])
 // [!endregion control-options]
 
 // [!region project-form]
@@ -223,30 +213,22 @@ const brandedKit = createFormKit({
 // [!endregion slot-registry]
 
 // [!region slot-options]
-const brandedDefinition = brandedKit.defineForm(profileSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "displayName",
-			control: "uppercase",
-			label: "Display name",
-			slotOptions: { tone: "emphasis" },
-		},
-		{
-			kind: "array",
-			path: "members",
-			label: "Team members",
-			itemDefault: { name: "" },
-			slotOptions: { addLabel: "Add team member" },
-			children: [
-				{
-					kind: "field",
-					path: "name",
-					control: "text",
-					label: "Name",
-				},
-			],
-		},
-	],
-})
+const brandedDefinition = brandedKit.defineForm(profileSchema, (ui) => [
+	ui.field("displayName", {
+		control: "uppercase",
+		label: "Display name",
+		slotOptions: { tone: "emphasis" },
+	}),
+	ui.array("members", {
+		label: "Team members",
+		itemDefault: { name: "" },
+		slotOptions: { addLabel: "Add team member" },
+		children: (member) => [
+			member.field("name", {
+				control: "text",
+				label: "Name",
+			}),
+		],
+	}),
+])
 // [!endregion slot-options]

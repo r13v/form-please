@@ -61,9 +61,6 @@ The type checker verifies these connections:
 
 `defineForm` also validates the tree at runtime. It rejects unknown controls,
 invalid path syntax, duplicate IDs, missing children, and invalid grid values.
-The object form `defineForm(schema, { ui: [...] })` remains supported for
-generated definitions and direct node composition. Both authoring styles
-produce the same normalized tree.
 
 The optional third argument configures `beforeUpdate`, ordered `middleware`,
 and `afterUpdate`. These callbacks and a frozen middleware snapshot become
@@ -175,9 +172,8 @@ slots can implement the same layout contract. See [Styling](/styling).
 ## Reusable fragments
 
 `kit.defineFragment(schema, (ui) => [...])` defines one schema-owned UI subtree
-and keeps the concrete schema available as `fragment.schema`. The object form
-`defineFragment(schema, { ui })` remains supported. Compose that schema into a
-form schema, then place the fragment at each compatible object path:
+and keeps the concrete schema available as `fragment.schema`. Compose that
+schema into a form schema, then place the fragment at each compatible object path:
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:form-fragment]
@@ -339,19 +335,12 @@ and `required: false`. A section or array passes its resolved state to all
 descendants.
 
 ```tsx
-{
-	kind: "section",
-	id: "billing",
+ui.section("billing", {
 	disabled: (values) => values.useSavedBillingAddress,
 	children: [
-		{
-			kind: "field",
-			path: "billingAddress.street",
-			control: "text",
-			label: "Street",
-		},
+		ui.field("billingAddress.street", { control: "text", label: "Street" }),
 	],
-}
+})
 ```
 
 When a parent is disabled or read-only, a child cannot override that state.
@@ -375,11 +364,11 @@ These properties apply to more than one node type:
 | `span` | Field, section, array | Sets the node width in its parent grid. |
 | `slotOptions` | Field, section, array | Passes typed options to the matching slot. |
 
-Field properties:
+Field properties. `ui.field(path, options)` takes the path as its first
+argument:
 
 | Property | Required | Purpose |
 | --- | --- | --- |
-| `kind: "field"` | Yes | Selects a field node. |
 | `path` | Yes | Selects a path in the current schema scope. |
 | `control` | Yes | Selects a compatible registered control. |
 | `label` | No | Supplies string or React label content. |
@@ -388,33 +377,33 @@ Field properties:
 | `options` | Option-capable controls | Supplies a static or asynchronously loaded selectable list. |
 | `required` | No | Passes UI requirement state to the control. |
 
-Section properties:
+Section properties. `ui.section(id, options)` takes the ID as its first
+argument:
 
 | Property | Required | Purpose |
 | --- | --- | --- |
-| `kind: "section"` | Yes | Selects a section node. |
 | `id` | Yes | Gives the section a stable identifier. |
 | `children` | Yes | Contains nodes in the same path scope. |
 | `title` | No | Supplies string or React heading content. |
 | `description` | No | Supplies string or React help content. |
 | `columns` | No | Sets the child grid. The default is `1`. |
 
-Array properties:
+Array properties. `ui.array(path, options)` takes the path as its first
+argument:
 
 | Property | Required | Purpose |
 | --- | --- | --- |
-| `kind: "array"` | Yes | Selects an array node. |
 | `path` | Yes | Selects a non-nullable object-array path in the current schema scope. |
 | `itemDefault` | Yes | Supplies one complete item for the add action. |
-| `children` | Yes | Contains nodes relative to one array item. |
+| `children` | Yes | Receives a builder bound to one array item and returns its nodes. |
 | `label` | No | Supplies string or React label content. |
 | `description` | No | Supplies string or React help content. |
 
-Render properties:
+Render properties. `ui.render(id, options)` takes the ID as its first
+argument:
 
 | Property | Required | Purpose |
 | --- | --- | --- |
-| `kind: "render"` | Yes | Selects a render node. |
 | `id` | Yes | Gives the render node a stable identifier. |
 | `component` | Yes | Supplies the React component to render. |
 
@@ -434,22 +423,20 @@ same path scope.
 Use RHF dot syntax for both object properties and array indexes:
 
 ```tsx
-{ kind: "field", path: "profile.email", control: "text" }
-{ kind: "field", path: "speakers.0.name", control: "text" }
+ui.field("profile.email", { control: "text" })
+ui.field("speakers.0.name", { control: "text" })
 ```
 
 Do not put a root path in an array child. Use the path relative to one item:
 
 ```tsx
-{
-	kind: "array",
-	path: "speakers",
+ui.array("speakers", {
 	itemDefault: { name: "" },
-	children: [
+	children: (speaker) => [
 		// Correct: resolves to speakers.0.name for the first item.
-		{ kind: "field", path: "name", control: "text" },
+		speaker.field("name", { control: "text" }),
 	],
-}
+})
 ```
 
 ## Form-local React content
@@ -473,7 +460,9 @@ Keep a definition stable for the complete `kit.useForm` hook lifetime. Define
 it at module scope when possible.
 
 ```tsx
-const definition = kit.defineForm(schema, { ui })
+const definition = kit.defineForm(schema, (ui) => [
+	ui.field("name", { control: "text", label: "Name" }),
+])
 
 function Editor() {
 	const form = kit.useForm(definition, { defaultValues })

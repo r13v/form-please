@@ -20,30 +20,24 @@ const accountSchema = z.object({
 })
 
 // [!region node-classes]
-const accountDefinition = kit.defineForm(accountSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "account",
-			title: "Account",
-			columns: 2,
-			className: ({ accountType }) => {
-				if (accountType === "company") return "company-account"
-				return "personal-account"
-			},
-			children: [
-				{
-					kind: "field",
-					path: "email",
-					control: "text",
-					label: "Email",
-					className: "account-email",
-					span: "full",
-				},
-			],
+const accountDefinition = kit.defineForm(accountSchema, (ui) => [
+	ui.section("account", {
+		title: "Account",
+		columns: 2,
+		className: ({ accountType }) => {
+			if (accountType === "company") return "company-account"
+			return "personal-account"
 		},
-	],
-})
+		children: [
+			ui.field("email", {
+				control: "text",
+				label: "Email",
+				className: "account-email",
+				span: "full",
+			}),
+		],
+	}),
+])
 // [!endregion node-classes]
 
 // [!region form-root]
@@ -79,20 +73,16 @@ type StylingContext = {
 const contextualKit = kit.forContext<StylingContext>()
 
 // [!region context-class]
-const compactDefinition = contextualKit.defineForm(accountSchema, {
-	ui: [
-		{
-			kind: "field",
-			path: "email",
-			control: "text",
-			label: "Email",
-			className: (_values, { context }) => {
-				if (context.density === "compact") return "field-compact"
-				return "field-comfortable"
-			},
+const compactDefinition = contextualKit.defineForm(accountSchema, (ui) => [
+	ui.field("email", {
+		control: "text",
+		label: "Email",
+		className: (_values, { context }) => {
+			if (context.density === "compact") return "field-compact"
+			return "field-comfortable"
 		},
-	],
-})
+	}),
+])
 // [!endregion context-class]
 
 void compactDefinition

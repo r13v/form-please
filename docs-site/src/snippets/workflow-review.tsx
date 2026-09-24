@@ -13,18 +13,14 @@ const articleSchema = z.object({
 type ReviewScreen = "edit" | "review"
 type PublishReceipt = Readonly<{ id: string; publishedTitle: string }>
 
-const articleDefinition = nativeFormKit.defineForm(articleSchema, {
-	ui: [
-		{ kind: "field", path: "title", control: "text", label: "Title" },
-		{
-			kind: "field",
-			path: "summary",
-			control: "textarea",
-			label: "Summary",
-			props: { rows: 5 },
-		},
-	],
-})
+const articleDefinition = nativeFormKit.defineForm(articleSchema, (ui) => [
+	ui.field("title", { control: "text", label: "Title" }),
+	ui.field("summary", {
+		control: "textarea",
+		label: "Summary",
+		props: { rows: 5 },
+	}),
+])
 
 async function publishArticle(
 	value: z.output<typeof articleSchema>,
