@@ -1,42 +1,15 @@
 "use client"
 
-import {
-	defaultKeymap,
-	history,
-	historyKeymap,
-	indentWithTab,
-} from "@codemirror/commands"
-import { javascript } from "@codemirror/lang-javascript"
-import {
-	bracketMatching,
-	HighlightStyle,
-	indentOnInput,
-	syntaxHighlighting,
-} from "@codemirror/language"
-import {
-	type Diagnostic,
-	lintGutter,
-	setDiagnostics as setEditorDiagnostics,
-} from "@codemirror/lint"
-import { EditorState } from "@codemirror/state"
-import {
-	drawSelection,
-	EditorView,
-	highlightActiveLine,
-	hoverTooltip,
-	keymap,
-	lineNumbers,
-} from "@codemirror/view"
-import { tags } from "@lezer/highlight"
+import type * as Monaco from "monaco-editor"
 import {
 	Component,
 	type ComponentType,
-	type ErrorInfo,
 	type ReactNode,
 	useEffect,
 	useRef,
 	useState,
 } from "react"
+import type { PlaygroundMarker } from "#lib/playground-monaco"
 import {
 	availableModules,
 	type CompiledPlayground,
@@ -47,91 +20,21 @@ import {
 	type ScenarioId,
 	scenarios,
 } from "#lib/playground-scenarios"
-import { TypecheckClient } from "#lib/playground-typecheck"
-import type { PlaygroundDiagnostic } from "#lib/playground-typecheck-protocol"
 
 type TypecheckStatus = "starting" | "on" | "failed"
 
-const highlight = HighlightStyle.define([
-	{ tag: tags.keyword, color: "var(--fp-editor-keyword)" },
-	{
-		tag: [tags.string, tags.special(tags.string)],
-		color: "var(--fp-editor-string)",
-	},
-	{ tag: tags.comment, color: "var(--fp-editor-comment)", fontStyle: "italic" },
-	{ tag: [tags.typeName, tags.className], color: "var(--fp-editor-type)" },
-	{
-		tag: [tags.propertyName, tags.attributeName],
-		color: "var(--fp-editor-property)",
-	},
-	{
-		tag: [tags.function(tags.variableName), tags.function(tags.propertyName)],
-		color: "var(--fp-editor-function)",
-	},
-	{
-		tag: [tags.number, tags.bool, tags.null],
-		color: "var(--fp-editor-number)",
-	},
-	{ tag: [tags.tagName, tags.angleBracket], color: "var(--fp-editor-tag)" },
-])
-
-const editorTheme = EditorView.theme({
-	"&": {
-		backgroundColor: "var(--fp-docs-surface)",
-		color: "var(--fp-docs-ink)",
-		fontSize: "0.85rem",
-		height: "100%",
-	},
-	".cm-content": {
-		fontFamily: "var(--vocs-fontFamily_mono, ui-monospace, monospace)",
-	},
-	".cm-gutters": {
-		backgroundColor: "var(--fp-docs-panel)",
-		borderRight: "1px solid var(--fp-docs-border)",
-		color: "var(--fp-docs-muted)",
-	},
-	".cm-activeLine": {
-		backgroundColor:
-			"color-mix(in srgb, var(--fp-docs-accent) 8%, transparent)",
-	},
-	".cm-activeLineGutter": {
-		backgroundColor:
-			"color-mix(in srgb, var(--fp-docs-accent) 12%, transparent)",
-	},
-	"&.cm-focused": { outline: "none" },
-	".cm-tooltip": {
-		backgroundColor: "var(--fp-docs-surface)",
-		border: "1px solid var(--fp-docs-border)",
-		borderRadius: "0.5rem",
-		color: "var(--fp-docs-ink)",
-	},
-	".cm-tooltip .form-please-editor__hover": {
-		fontFamily: "var(--vocs-fontFamily_mono, ui-monospace, monospace)",
-		fontSize: "0.8rem",
-		maxWidth: "36rem",
-		padding: "0.5rem 0.65rem",
-		whiteSpace: "pre-wrap",
-	},
-	".cm-diagnostic-error": { borderLeftColor: "var(--fp-docs-rust)" },
-	".cm-lintRange-error": {
-		backgroundImage: "none",
-		textDecoration: "underline wavy var(--fp-docs-rust)",
-		textUnderlineOffset: "0.2em",
-	},
-})
-
 export function LivePlaygroundClient() {
 	const editorHost = useRef<HTMLDivElement>(null)
-	const viewRef = useRef<EditorView | null>(null)
-	const clientRef = useRef<TypecheckClient | null>(null)
+	const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null)
 	const [scenarioId, setScenarioId] = useState<ScenarioId>("basic")
-	const [source, setSource] = useState(() => findScenario("basic").source)
+	const sourcesRef = useRef<Readonly<Record<ScenarioId, string>> | null>(null)
+	const [source, setSource] = useState<string | null>(null)
 	const [compiled, setCompiled] = useState<CompiledPlayground | null>(null)
 	const [runtimeError, setRuntimeError] = useState<string | null>(null)
 	const [typecheck, setTypecheck] = useState<TypecheckStatus>("starting")
-	const [diagnostics, setDiagnostics] = useState<
-		readonly PlaygroundDiagnostic[] | null
-	>(null)
+	const [markers, setMarkers] = useState<readonly PlaygroundMarker[] | null>(
+		null,
+	)
 
 	useEffect(() => {
 		const host = editorHost.current
@@ -140,123 +43,133 @@ export function LivePlaygroundClient() {
 			"scenario",
 		)
 		const initial = findScenario(requested)
-		let timer: ReturnType<typeof setTimeout> | undefined
-		const view = new EditorView({
-			parent: host,
-			state: EditorState.create({
-				doc: initial.source,
-				extensions: [
-					lineNumbers(),
-					highlightActiveLine(),
-					drawSelection(),
-					history(),
-					bracketMatching(),
-					indentOnInput(),
-					javascript({ jsx: true, typescript: true }),
-					syntaxHighlighting(highlight),
-					editorTheme,
-					lintGutter(),
-					hoverTooltip(async (_view, position) => {
-						const client = clientRef.current
-						if (client === null) return null
-						const text = await client.quickInfo(position)
-						if (text === null) return null
-						return {
-							pos: position,
-							create() {
-								const dom = document.createElement("div")
-								dom.className = "form-please-editor__hover"
-								dom.textContent = text
-								return { dom }
-							},
-						}
-					}),
-					keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
-					EditorView.updateListener.of((update) => {
-						if (!update.docChanged) return
-						clearTimeout(timer)
-						timer = setTimeout(() => {
-							setSource(update.state.doc.toString())
-						}, 250)
-					}),
-				],
-			}),
-		})
-		viewRef.current = view
 		setScenarioId(initial.id)
-		setSource(initial.source)
-		const client = new TypecheckClient()
-		clientRef.current = client
-		client.ready.then(
-			() => setTypecheck("on"),
-			() => {
-				client.terminate()
-				clientRef.current = null
-				setTypecheck("failed")
+
+		let disposed = false
+		let timer: ReturnType<typeof setTimeout> | undefined
+		const disposables: Monaco.IDisposable[] = []
+		let observer: MutationObserver | undefined
+
+		void Promise.all([
+			import("#lib/playground-monaco"),
+			import("#lib/playground-sources"),
+		]).then(
+			([
+				{ collectErrors, currentThemeName, playgroundUri, setupMonaco },
+				{ scenarioSources },
+			]) => {
+				if (disposed) return
+				sourcesRef.current = scenarioSources
+				const initialSource = scenarioSources[initial.id]
+				setSource(initialSource)
+				const monaco = setupMonaco()
+				const model =
+					monaco.editor.getModel(playgroundUri) ??
+					monaco.editor.createModel(initialSource, "typescript", playgroundUri)
+				model.setValue(initialSource)
+				const editor = monaco.editor.create(host, {
+					automaticLayout: true,
+					fixedOverflowWidgets: true,
+					fontFamily:
+						"ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+					fontSize: 13,
+					lineNumbersMinChars: 3,
+					minimap: { enabled: false },
+					model,
+					padding: { top: 12 },
+					renderLineHighlight: "line",
+					scrollBeyondLastLine: false,
+					tabSize: 2,
+					theme: currentThemeName(),
+				})
+				editorRef.current = editor
+
+				disposables.push(
+					model.onDidChangeContent(() => {
+						clearTimeout(timer)
+						timer = setTimeout(() => setSource(model.getValue()), 250)
+					}),
+					monaco.editor.onDidChangeMarkers((uris) => {
+						if (
+							!uris.some((uri) => uri.toString() === playgroundUri.toString())
+						) {
+							return
+						}
+						setMarkers(
+							monaco.editor
+								.getModelMarkers({ resource: playgroundUri })
+								.filter(
+									(marker) => marker.severity === monaco.MarkerSeverity.Error,
+								)
+								.map((marker) => ({
+									column: marker.startColumn,
+									line: marker.startLineNumber,
+									message: marker.message,
+								})),
+						)
+					}),
+				)
+
+				observer = new MutationObserver(() => {
+					monaco.editor.setTheme(currentThemeName())
+				})
+				observer.observe(document.documentElement, {
+					attributeFilter: ["data-vocs-theme"],
+				})
+
+				collectErrors(model).then(
+					(errors) => {
+						if (disposed) return
+						setMarkers((current) => current ?? errors)
+						setTypecheck("on")
+					},
+					() => {
+						if (!disposed) setTypecheck("failed")
+					},
+				)
 			},
+			() => setTypecheck("failed"),
 		)
+
 		return () => {
+			disposed = true
 			clearTimeout(timer)
-			view.destroy()
-			viewRef.current = null
-			clientRef.current?.terminate()
-			clientRef.current = null
+			observer?.disconnect()
+			for (const disposable of disposables) disposable.dispose()
+			editorRef.current?.dispose()
+			editorRef.current = null
 		}
 	}, [])
 
 	useEffect(() => {
+		if (source === null) return
 		setRuntimeError(null)
 		setCompiled(compilePlayground(source))
 	}, [source])
 
-	useEffect(() => {
-		if (typecheck !== "on") return
-		const client = clientRef.current
-		const view = viewRef.current
-		if (client === null || view === null) return
-		let cancelled = false
-		void client.check(source).then((items) => {
-			if (cancelled) return
-			setDiagnostics(items)
-			if (view.state.doc.toString() !== source) return
-			view.dispatch(
-				setEditorDiagnostics(view.state, items.map(toEditorDiagnostic)),
-			)
-		})
-		return () => {
-			cancelled = true
-		}
-	}, [source, typecheck])
-
 	function loadScenario(id: ScenarioId) {
-		const view = viewRef.current
-		if (view === null) return
 		const next = findScenario(id)
+		const nextSource = sourcesRef.current?.[next.id]
+		if (nextSource === undefined) return
 		setScenarioId(next.id)
-		view.dispatch({
-			changes: { from: 0, to: view.state.doc.length, insert: next.source },
-		})
-		setSource(next.source)
+		editorRef.current?.getModel()?.setValue(nextSource)
+		setSource(nextSource)
 		const url = new URL(window.location.href)
 		url.searchParams.set("scenario", next.id)
 		window.history.replaceState(null, "", url)
 	}
 
-	function jumpTo(diagnostic: PlaygroundDiagnostic) {
-		const view = viewRef.current
-		if (view === null) return
-		view.dispatch({
-			selection: { anchor: diagnostic.from, head: diagnostic.to },
-			scrollIntoView: true,
-		})
-		view.focus()
+	function jumpTo(marker: PlaygroundMarker) {
+		const editor = editorRef.current
+		if (editor === null) return
+		editor.setPosition({ column: marker.column, lineNumber: marker.line })
+		editor.revealLineInCenter(marker.line)
+		editor.focus()
 	}
 
 	const scenario = findScenario(scenarioId)
 	let errorCount: number | null = null
-	if (diagnostics !== null) {
-		errorCount = diagnostics.filter((item) => item.severity === "error").length
-	}
+	if (markers !== null) errorCount = markers.length
 
 	return (
 		<section
@@ -288,12 +201,8 @@ export function LivePlaygroundClient() {
 						data-testid="live-editor"
 						ref={editorHost}
 					/>
-					{typecheck === "on" && diagnostics !== null && (
-						<DiagnosticsList
-							diagnostics={diagnostics}
-							onSelect={jumpTo}
-							source={source}
-						/>
+					{typecheck === "on" && markers !== null && (
+						<DiagnosticsList markers={markers} onSelect={jumpTo} />
 					)}
 				</div>
 				<div className="form-please-live__preview">
@@ -323,9 +232,9 @@ function TypecheckStatusLine({
 	readonly errorCount: number | null
 	readonly status: TypecheckStatus
 }) {
-	let text = "Loading the TypeScript compiler…"
+	let text = "Loading the TypeScript language service…"
 	if (status === "failed") {
-		text = "The type checker could not start in this browser."
+		text = "The language service could not start in this browser."
 	}
 	if (status === "on") {
 		text = "Type checking on · checking…"
@@ -347,40 +256,35 @@ function TypecheckStatusLine({
 }
 
 function DiagnosticsList({
-	diagnostics,
+	markers,
 	onSelect,
-	source,
 }: {
-	readonly diagnostics: readonly PlaygroundDiagnostic[]
-	readonly onSelect: (diagnostic: PlaygroundDiagnostic) => void
-	readonly source: string
+	readonly markers: readonly PlaygroundMarker[]
+	readonly onSelect: (marker: PlaygroundMarker) => void
 }) {
-	if (diagnostics.length === 0) {
+	if (markers.length === 0) {
 		return (
 			<p
 				className="form-please-live__diagnostics-empty"
 				data-testid="diagnostics"
 			>
-				No type errors. Hover any identifier in the editor to see its inferred
-				type.
+				No type errors. Hover an identifier for its type, press Ctrl+Space for
+				completions, or type an opening parenthesis for signature help.
 			</p>
 		)
 	}
 	return (
 		<ul className="form-please-live__diagnostics" data-testid="diagnostics">
-			{diagnostics.map((diagnostic) => {
-				const line = source.slice(0, diagnostic.from).split("\n").length
-				return (
-					<li key={`${diagnostic.from}-${diagnostic.code}`}>
-						<button onClick={() => onSelect(diagnostic)} type="button">
-							<span className="form-please-live__diagnostic-line">
-								Line {line}
-							</span>
-							<span>{diagnostic.message}</span>
-						</button>
-					</li>
-				)
-			})}
+			{markers.map((marker) => (
+				<li key={`${marker.line}:${marker.column}:${marker.message}`}>
+					<button onClick={() => onSelect(marker)} type="button">
+						<span className="form-please-live__diagnostic-line">
+							Line {marker.line}
+						</span>
+						<span>{marker.message}</span>
+					</button>
+				</li>
+			))}
 		</ul>
 	)
 }
@@ -394,7 +298,7 @@ function PreviewSurface({
 	readonly compiled: CompiledPlayground | null
 	readonly onRuntimeError: (message: string) => void
 	readonly runtimeError: string | null
-	readonly source: string
+	readonly source: string | null
 }) {
 	const lastGood = useRef<ComponentType | null>(null)
 	if (compiled?.ok === true) lastGood.current = compiled.Component
@@ -434,21 +338,12 @@ class PreviewBoundary extends Component<
 		return { failed: true }
 	}
 
-	componentDidCatch(error: Error, _info: ErrorInfo) {
+	componentDidCatch(error: Error) {
 		this.props.onError(error.message)
 	}
 
 	render() {
 		if (this.state.failed) return null
 		return this.props.children
-	}
-}
-
-function toEditorDiagnostic(diagnostic: PlaygroundDiagnostic): Diagnostic {
-	return {
-		from: diagnostic.from,
-		message: diagnostic.message,
-		severity: diagnostic.severity,
-		to: diagnostic.to,
 	}
 }

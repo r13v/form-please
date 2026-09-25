@@ -1,8 +1,61 @@
 import { fileURLToPath } from "node:url"
 import { defineConfig } from "vocs/config"
+import { findScenario } from "#lib/playground-scenarios"
 
 const basePath = process.env.BASE_PATH ?? "/"
 const assetBasePath = basePath.replace(/\/$/, "")
+
+type MarkdownNode = {
+	attributes?: readonly { name?: string; value?: unknown }[]
+	children?: MarkdownNode[]
+	name?: string
+	type: string
+	value?: string
+}
+
+/**
+ * Markdown output only: replaces the overview's scenario playground with a
+ * heading and summary per scenario followed by its Twoslash code fence, so
+ * llms.txt readers get the complete programs instead of JSX.
+ */
+function remarkScriptedPlayground() {
+	return (tree: unknown) => {
+		unwrapPlayground(tree as MarkdownNode)
+	}
+}
+
+function unwrapPlayground(node: MarkdownNode): void {
+	if (node.children === undefined) return
+	node.children = node.children.flatMap((child) => {
+		if (child.type !== "mdxJsxFlowElement") {
+			unwrapPlayground(child)
+			return [child]
+		}
+		if (child.name === "ScriptedPlayground") {
+			unwrapPlayground(child)
+			return child.children ?? []
+		}
+		if (child.name === "ScriptedPlayground.Scenario") {
+			const id = child.attributes?.find((attribute) => attribute.name === "id")
+			const scenario = findScenario(String(id?.value))
+			return [
+				{
+					type: "paragraph",
+					children: [
+						{
+							type: "strong",
+							children: [{ type: "text", value: scenario.title }],
+						},
+						{ type: "text", value: ` ${scenario.summary}` },
+					],
+				},
+				...(child.children ?? []),
+			]
+		}
+		unwrapPlayground(child)
+		return [child]
+	})
+}
 
 export default defineConfig({
 	title: "Form, Please",
@@ -25,6 +78,7 @@ export default defineConfig({
 			vfsRoot: fileURLToPath(new URL("./src/snippets", import.meta.url)),
 		},
 	},
+	markdown: { outputRemarkPlugins: [remarkScriptedPlayground] },
 	socials: [{ icon: "github", link: "https://github.com/r13v/form-please" }],
 	editLink: {
 		link: "https://github.com/r13v/form-please/edit/main/docs-site/:path",

@@ -6,7 +6,6 @@ import {
 } from "react"
 import type { ScenarioId } from "#lib/playground-scenarios"
 
-import { markdownFallback } from "./markdown-fallback"
 import {
 	type ScriptedPanel,
 	ScriptedPlaygroundClient,
@@ -33,15 +32,5 @@ export const ScriptedPlayground = Object.assign(
 		}
 		return <ScriptedPlaygroundClient panels={panels} />
 	},
-	{
-		Scenario,
-		toMarkdown() {
-			return [
-				...markdownFallback(
-					"The scenario playground runs only in a browser. Each tab pairs one complete TypeScript program from docs-site/src/snippets/playground-*.tsx with the form it renders.",
-					"docs-site/src/components/scripted-playground.client.tsx",
-				),
-			]
-		},
-	},
+	{ Scenario },
 )

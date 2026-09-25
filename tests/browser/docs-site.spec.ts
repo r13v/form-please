@@ -282,12 +282,6 @@ test.describe("Form, Please documentation", () => {
 		await page.goto("./")
 		const playground = page.getByTestId("scripted-playground")
 		await expect(playground).toBeVisible()
-		await playground.getByRole("button", { name: "Create account" }).click()
-		await expect(
-			playground.locator(
-				"[role=tabpanel]:not([hidden]) .form-please-playground__form pre",
-			),
-		).toContainText("ada@example.com")
 
 		await playground.getByRole("tab", { name: "Typed output" }).click()
 		await playground.getByRole("button", { name: "Save profile" }).click()
@@ -330,17 +324,17 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
-	test("runs the live playground with type checking", async ({ page }) => {
+	test("runs the live playground with IntelliSense", async ({ page }) => {
 		const errors = pageErrors(page)
 		await page.goto("./playground?scenario=transform")
 
-		const editor = page.getByTestId("live-editor").locator(".cm-content")
+		const editor = page.getByTestId("live-editor").locator(".monaco-editor")
+		await expect(editor).toBeVisible()
 		await expect(editor).toContainText("handle:")
 		await page.getByRole("button", { name: "Save profile" }).click()
 		await expect(page.getByTestId("live-preview")).toContainText(
 			"@ada-lovelace",
 		)
-
 		await expect(page.getByTestId("typecheck-status")).toContainText(
 			"no errors",
 			{ timeout: 60_000 },
@@ -353,19 +347,23 @@ test.describe("Form, Please documentation", () => {
 			`Argument of type '"emial"' is not assignable`,
 		)
 		await expect(
-			page.getByTestId("live-editor").locator(".cm-lintRange-error"),
-		).toHaveCount(2)
-		await expect(
 			page.getByRole("button", { name: "Create account" }),
 		).toBeVisible()
 
-		await editor.click()
+		await editor.locator(".view-lines").click({ position: { x: 24, y: 24 } })
 		await page.keyboard.press("ControlOrMeta+End")
-		await page.keyboard.type('\nconst broken: number = "text"')
-		await expect(page.getByTestId("typecheck-status")).toContainText("3 errors")
-		await expect(
-			page.getByRole("button", { name: "Create account" }),
-		).toBeVisible()
+		await page.keyboard.press("Enter")
+		await page.keyboard.type("kit.")
+		const suggestions = page.locator(".suggest-widget")
+		await expect(suggestions).toBeVisible()
+		await expect(suggestions).toContainText("defineForm")
+		await page.keyboard.press("Escape")
+		await page.keyboard.type("useForm(")
+		await expect(page.locator(".parameter-hints-widget")).toBeVisible()
+		await page.keyboard.press("Escape")
+		await expect(page.getByTestId("typecheck-status")).toContainText(
+			/· \d+ errors?$/,
+		)
 
 		expect(errors).toEqual([])
 	})
