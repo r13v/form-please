@@ -280,13 +280,33 @@ test.describe("Form, Please documentation", () => {
 		const errors = pageErrors(page)
 
 		await page.goto("./")
+		const playground = page.getByTestId("scripted-playground")
+		await expect(playground).toBeVisible()
+		await playground.getByRole("button", { name: "Create account" }).click()
 		await expect(
-			page.getByLabel("Live 'Form, Please' profile form"),
-		).toBeVisible()
-		await page.getByRole("button", { name: "Save profile" }).click()
-		await expect(page.getByTestId("overview-output")).toContainText(
-			"Ada Lovelace",
-		)
+			playground.locator(
+				"[role=tabpanel]:not([hidden]) .form-please-playground__form pre",
+			),
+		).toContainText("ada@example.com")
+
+		await playground.getByRole("tab", { name: "Typed output" }).click()
+		await playground.getByRole("button", { name: "Save profile" }).click()
+		await expect(
+			playground.locator(
+				"[role=tabpanel]:not([hidden]) .form-please-playground__form pre",
+			),
+		).toContainText("@ada-lovelace")
+		await expect(
+			playground.locator(
+				"[role=tabpanel]:not([hidden]) .twoslash-query-persisted",
+			),
+		).toContainText("handle: string")
+
+		await playground.getByRole("tab", { name: "Catch the typo" }).click()
+		await expect(playground.getByText("Nothing to render")).toBeVisible()
+		await expect(
+			playground.locator("[role=tabpanel]:not([hidden]) .twoslash-error-line"),
+		).toHaveCount(2)
 
 		await page.goto("./get-started")
 		await expect(page.getByTestId("lab")).toBeVisible()
@@ -305,6 +325,46 @@ test.describe("Form, Please documentation", () => {
 		await page.goto("./styling")
 		await expect(
 			page.getByLabel("Tailwind resolver profile form"),
+		).toBeVisible()
+
+		expect(errors).toEqual([])
+	})
+
+	test("runs the live playground with type checking", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./playground?scenario=transform")
+
+		const editor = page.getByTestId("live-editor").locator(".cm-content")
+		await expect(editor).toContainText("handle:")
+		await page.getByRole("button", { name: "Save profile" }).click()
+		await expect(page.getByTestId("live-preview")).toContainText(
+			"@ada-lovelace",
+		)
+
+		await expect(page.getByTestId("typecheck-status")).toContainText(
+			"no errors",
+			{ timeout: 60_000 },
+		)
+
+		await page.getByLabel("Scenario").selectOption("typo")
+		await expect(page).toHaveURL(/\/form-please\/playground\?scenario=typo$/)
+		await expect(page.getByTestId("typecheck-status")).toContainText("2 errors")
+		await expect(page.getByTestId("diagnostics")).toContainText(
+			`Argument of type '"emial"' is not assignable`,
+		)
+		await expect(
+			page.getByTestId("live-editor").locator(".cm-lintRange-error"),
+		).toHaveCount(2)
+		await expect(
+			page.getByRole("button", { name: "Create account" }),
+		).toBeVisible()
+
+		await editor.click()
+		await page.keyboard.press("ControlOrMeta+End")
+		await page.keyboard.type('\nconst broken: number = "text"')
+		await expect(page.getByTestId("typecheck-status")).toContainText("3 errors")
+		await expect(
+			page.getByRole("button", { name: "Create account" }),
 		).toBeVisible()
 
 		expect(errors).toEqual([])

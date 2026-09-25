@@ -8,6 +8,7 @@ const repositoryRoot = new URL("../", siteRoot)
 const pages = [
 	"src/pages/index.mdx",
 	"src/pages/get-started.mdx",
+	"src/pages/playground.mdx",
 	"src/pages/ai-agents.mdx",
 	"src/pages/definitions.mdx",
 	"src/pages/validation.mdx",
