@@ -1,10 +1,13 @@
 ---
 title: Form, Please
-description: Build typed, schema-validated React forms with React Hook Form state and your own design system.
+description: Typed, schema-validated React forms. Field paths, controls, and submit output are inferred from your schema, and your design system renders the result.
 showAskAi: false
+outline: false
+content:
+  width: full
 ---
 
-import { OverviewDemo } from "../components/overview-demo"
+import { ScriptedPlayground } from "../components/scripted-playground"
 
 
 <div className="form-please-overview-hero">
@@ -17,29 +20,151 @@ import { OverviewDemo } from "../components/overview-demo"
 
   <div className="form-please-overview-intro">
 
-    # Build forms with ease
+    # Your schema already knows the shape. Let it render the form.
 
     <div className="form-please-overview-intro-text">
-    Use "Form, Please" to build product forms quickly from an existing design system.
-    Wrap product controls and structural slots once, then reuse them across generated or manually composed forms.
-    It handles state, validation, and submission while
-    your application keeps control of components, markup, styling, and product logic.
-    Start with native controls or bring your own design system.
+    "Form, Please" turns a Standard Schema and a typed definition into a React
+    form. Field paths are checked against the schema. Validation messages come
+    from the schema. The submit callback receives the transformed output type.
+    React Hook Form runs the state. Your components render it.
+    </div>
+
+    <div className="form-please-overview-actions">
+      <a href={`${import.meta.env.BASE_URL}get-started`}>Get started</a>
+      <a href={`${import.meta.env.BASE_URL}playground`}>Open the playground</a>
     </div>
 
   </div>
 
 </div>
 
-[Build your first form](/get-started), explore the [live examples](/examples),
-or review the [API](/api).
+```sh
+npm install form-please react-hook-form zod
+```
 
-## See it work
+## See it before you install
 
-Edit the profile and submit it. The React Hook Form resolver validates and
-transforms the input once, then "Form, Please" displays the typed output.
+Each tab is one complete file. Hover any identifier in the code to see its
+inferred type. The form on the right is rendered by that exact code.
 
-<OverviewDemo />
+<ScriptedPlayground>
+
+<ScriptedPlayground.Scenario id="basic">
+
+```tsx twoslash
+// [!include ~/snippets/playground-basic.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
+<ScriptedPlayground.Scenario id="transform">
+
+```tsx twoslash
+// [!include ~/snippets/playground-transform.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
+<ScriptedPlayground.Scenario id="conditional">
+
+```tsx twoslash
+// [!include ~/snippets/playground-conditional.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
+<ScriptedPlayground.Scenario id="array">
+
+```tsx twoslash
+// [!include ~/snippets/playground-array.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
+<ScriptedPlayground.Scenario id="typo">
+
+```tsx twoslash
+// [!include ~/snippets/playground-typo.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
+</ScriptedPlayground>
+
+The first tab is a complete program. Copy it into a file, install the three
+packages, and render `SignupForm`. [Get started](/get-started) walks through
+the same file one step at a time.
+
+## Why teams pick it
+
+<ul className="form-please-benefits">
+  <li>
+    <strong>Typed against your schema</strong>
+    <span>Paths, controls, and submit output are inferred from the schema. A typo is a compile error, not a runtime surprise.</span>
+    <a href={`${import.meta.env.BASE_URL}types`}>TypeScript reference</a>
+  </li>
+  <li>
+    <strong>Any Standard Schema</strong>
+    <span>Zod, Valibot, Yup, or ArkType. Validation rules, messages, and transforms stay in the schema you already own.</span>
+    <a href={`${import.meta.env.BASE_URL}validation`}>Validation and submission</a>
+  </li>
+  <li>
+    <strong>Your design system</strong>
+    <span>Wrap your controls and slots once. Native, Material UI, and shadcn kits are included as working examples.</span>
+    <a href={`${import.meta.env.BASE_URL}form-kits`}>Form kits</a>
+  </li>
+  <li>
+    <strong>React Hook Form underneath</strong>
+    <span>register, Controller, useWatch, and useFieldArray keep working. Nothing is hidden behind the definition.</span>
+    <a href={`${import.meta.env.BASE_URL}recipes`}>Recipes</a>
+  </li>
+  <li>
+    <strong>Batteries, optional</strong>
+    <span>Draft persistence, undo history, devtools, and a headless testing entry ship as separate imports you add when needed.</span>
+    <a href={`${import.meta.env.BASE_URL}persistence`}>Persistence</a>
+  </li>
+  <li>
+    <strong>Built for agents too</strong>
+    <span>An llms.txt index, a full documentation dump, and an installable skill so your coding agent writes correct definitions.</span>
+    <a href={`${import.meta.env.BASE_URL}ai-agents`}>AI agents</a>
+  </li>
+</ul>
+
+## How it compares
+
+<div className="form-please-comparison">
+
+| | Form, Please | React Hook Form | TanStack Form | Formik |
+| --- | --- | --- | --- | --- |
+| Schema library | Any Standard Schema | Any, via resolvers | Any Standard Schema | Yup, or a validate function |
+| Field paths checked against the schema | Yes | Yes | Yes | No, string names |
+| Fields generated from a definition | Yes | No | No | No |
+| Conditional fields and arrays declared, not hand-wired | Yes | No | No | No |
+| Submit receives the transformed output type | Yes | With a resolver | No, input values only | No |
+| Design system | Wrapped once per kit | Wired per field | Wired per field | Wired per field |
+| Escape hatch | Full React Hook Form API | Is the API | Full TanStack API | Full Formik API |
+| Draft persistence and undo history | Optional entries | No | No | No |
+| Devtools | Optional entry | Official package | Official package | No |
+
+</div>
+
+Checked against each library's documentation in September 2026. Open an issue
+if a row is stale.
+
+## Proof
+
+<ul className="form-please-proof">
+  <li>React 18 and 19</li>
+  <li>28 kB gzipped for the native preset</li>
+  <li>Zod, Valibot, and Yup examples</li>
+  <li>Native, Material UI, and shadcn kits</li>
+  <li>Eleven browser-tested live examples</li>
+  <li>MIT</li>
+</ul>
+
+The size covers every entry the first tab imports. Material UI, persistence,
+history, and devtools are separate entries and add nothing until imported.
+Browse the [live examples](/examples) or the [API](/api).
 
 ## What stays explicit
 
@@ -50,17 +175,6 @@ transforms the input once, then "Form, Please" displays the typed output.
 
 Use RHF `register`, `Controller`, and hooks such as `useWatch` when a generated
 definition is not enough. `kit.Form` supplies `FormProvider`.
-
-## Supported package entries
-
-The package has nine JavaScript entries: `form-please`,
-`form-please/default-slots`, `form-please/devtools`, `form-please/history`,
-`form-please/native-controls`, `form-please/persistence`,
-`form-please/preset-native`, `form-please/preset-mui`, and
-`form-please/testing`.
-
-Release automation controls the exact version. Breaking public behavior starts
-a new major release line.
 
 ## Kudos
 

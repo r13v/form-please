@@ -37,6 +37,7 @@ export default defineConfig({
 			items: [
 				{ text: "Overview", link: "/" },
 				{ text: "Get started", link: "/get-started" },
+				{ text: "Playground", link: "/playground" },
 				{ text: "AI agents", link: "/ai-agents" },
 			],
 		},

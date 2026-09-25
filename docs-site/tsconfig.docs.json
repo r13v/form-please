@@ -1,12 +1,14 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"types": ["node"]
+		"types": ["node", "vite/client"]
 	},
 	"include": [
 		"vocs.config.ts",
 		"src/components/**/*.tsx",
+		"src/lib/**/*.ts",
 		"src/snippets/**/*.ts",
 		"src/snippets/**/*.tsx"
-	]
+	],
+	"exclude": ["src/snippets/playground-typo.tsx"]
 }

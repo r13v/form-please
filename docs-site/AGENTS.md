@@ -18,3 +18,15 @@
   repeated UI with `defineFragment`, not with separate node lists.
 - Do not add an OpenAI Sites worker, `.openai/hosting.json`, redirects, a custom
   domain, analytics, API routes, or a server runtime.
+- The overview and `/playground` share the scenario programs in
+  `src/snippets/playground-*.tsx`. Each file is one complete, self-contained
+  program that exports a component; the overview renders it, Twoslash displays
+  it, and the live editor loads it through `?raw`. Lines that start with `// @`
+  or `// ^?` are Twoslash directives and are stripped from the editor source.
+  `playground-typo.tsx` fails on purpose and is excluded in
+  `tsconfig.docs.json`; keep its `// @errors:` codes in sync with `tsc`.
+- The live playground evaluates editor code in the browser with Sucrase and
+  exposes only the modules listed in `src/lib/playground-runtime.ts`. The type
+  checker runs TypeScript in a worker over declaration files collected with
+  `import.meta.glob(..., { exhaustive: true })`; add a `paths` entry there when
+  a new package must resolve.

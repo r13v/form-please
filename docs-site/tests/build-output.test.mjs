@@ -11,6 +11,7 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 		"404.html",
 		"assets/md/index.md",
 		"assets/md/get-started.md",
+		"assets/md/playground.md",
 		"assets/md/ai-agents.md",
 		"assets/md/definitions.md",
 		"assets/md/validation.md",

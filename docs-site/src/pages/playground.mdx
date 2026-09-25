@@ -1,0 +1,36 @@
+---
+title: Playground
+description: Edit a Form, Please definition in the browser and watch the form, the output, and the TypeScript errors update as you type.
+showAskAi: false
+outline: false
+content:
+  width: full
+---
+
+import { LivePlayground } from "../components/live-playground"
+
+# Playground
+
+Edit the code. The form re-renders after each pause in typing. Submit it to
+see the validated output. The TypeScript compiler checks every change and
+shows the same errors and hover types your editor would.
+
+<LivePlayground />
+
+## How it works
+
+- The editor contents are compiled with Sucrase in your browser. Nothing is
+  sent to a server.
+- The compiled module receives the real `form-please` package, `react`, and
+  `zod`. The rendered form is the same code path an application uses.
+- Type checking runs the TypeScript compiler in a web worker with the package
+  declaration files. The worker downloads about 2 MB once per visit and starts
+  while you read this page.
+
+## Limits
+
+- Only the imports listed under the preview are available. Other packages and
+  relative files cannot be resolved.
+- The Material UI preset is not loaded here. See the
+  [Material UI example](/examples/mui-yup) for a live version.
+- Edits are not saved. Copy the code out before you leave the page.
