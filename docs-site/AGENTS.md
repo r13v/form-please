@@ -25,8 +25,15 @@
   or `// ^?` are Twoslash directives and are stripped from the editor source.
   `playground-typo.tsx` fails on purpose and is excluded in
   `tsconfig.docs.json`; keep its `// @errors:` codes in sync with `tsc`.
+- `vocs markdown-audit` loads every MDX component with `tsx` in Node. Modules
+  that a page component imports statically must not use Vite-only syntax such
+  as `?raw`, `?worker`, or `import.meta.glob`; load those lazily from client
+  code (see `src/lib/playground-sources.ts`). Components with children cannot
+  use `toMarkdown`; give them a Markdown representation through
+  `markdown.outputRemarkPlugins` in `vocs.config.ts` instead.
 - The live playground evaluates editor code in the browser with Sucrase and
-  exposes only the modules listed in `src/lib/playground-runtime.ts`. The type
-  checker runs TypeScript in a worker over declaration files collected with
-  `import.meta.glob(..., { exhaustive: true })`; add a `paths` entry there when
-  a new package must resolve.
+  exposes only the modules listed in `src/lib/playground-runtime.ts`. The
+  editor is Monaco; `src/lib/playground-monaco.ts` configures it with the
+  declaration files collected in `src/lib/playground-types.ts` through
+  `import.meta.glob(..., { exhaustive: true })`. Add a `paths` entry there
+  when a new package must resolve.

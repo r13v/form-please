@@ -757,28 +757,6 @@ table {
 
 /* Overview: hero, playground, benefits, comparison, proof */
 
-:root {
-	--fp-editor-comment: #6b7a74;
-	--fp-editor-function: #2c5f8a;
-	--fp-editor-keyword: #8a3e6a;
-	--fp-editor-number: #9a5a1c;
-	--fp-editor-property: #102e26;
-	--fp-editor-string: #3c7967;
-	--fp-editor-tag: #2c5f8a;
-	--fp-editor-type: #1f6f86;
-}
-
-:root[data-vocs-theme="dark"] {
-	--fp-editor-comment: #8ea199;
-	--fp-editor-function: #8ec3ea;
-	--fp-editor-keyword: #e39ac1;
-	--fp-editor-number: #f0b47a;
-	--fp-editor-property: #e8f0ec;
-	--fp-editor-string: #79bda8;
-	--fp-editor-tag: #8ec3ea;
-	--fp-editor-type: #7fd3e6;
-}
-
 .form-please-overview-hero h1 {
 	font-size: clamp(2rem, 5vw, 3rem);
 	line-height: 1.1;
@@ -989,12 +967,9 @@ table {
 	overflow: hidden;
 }
 
-.form-please-editor .cm-editor {
-	height: 100%;
-}
-
-.form-please-editor .cm-scroller {
-	overflow: auto;
+.form-please-editor .monaco-editor,
+.form-please-editor .monaco-editor .overflow-guard {
+	border-radius: 0.75rem;
 }
 
 .form-please-live__diagnostics,

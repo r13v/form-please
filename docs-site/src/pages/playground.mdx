@@ -12,8 +12,9 @@ import { LivePlayground } from "../components/live-playground"
 # Playground
 
 Edit the code. The form re-renders after each pause in typing. Submit it to
-see the validated output. The TypeScript compiler checks every change and
-shows the same errors and hover types your editor would.
+see the validated output. The editor is the one from VS Code, with the full
+TypeScript language service: completions, signature help, hover types, and
+errors as you type.
 
 <LivePlayground />
 
@@ -23,9 +24,9 @@ shows the same errors and hover types your editor would.
   sent to a server.
 - The compiled module receives the real `form-please` package, `react`, and
   `zod`. The rendered form is the same code path an application uses.
-- Type checking runs the TypeScript compiler in a web worker with the package
-  declaration files. The worker downloads about 2 MB once per visit and starts
-  while you read this page.
+- The editor is Monaco, the editor component of VS Code, with the TypeScript
+  language service running in a web worker over the package declaration files.
+  It downloads once per visit and starts while you read this page.
 
 ## Limits
 
