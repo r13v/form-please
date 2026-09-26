@@ -350,6 +350,34 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("validates only the selected variant in the union examples", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+
+		await page.goto("./examples/campaign-builder")
+		const campaign = page.getByLabel("Campaign builder example")
+		await campaign
+			.getByLabel("Campaign template")
+			.selectOption("product-launch")
+		await campaign.getByRole("button", { name: "Update campaign" }).click()
+		await expect(campaign.getByText("Name the product")).toBeVisible()
+		await expect(campaign.getByText("Describe the cause")).toHaveCount(0)
+
+		await page.goto("./examples/research-grant")
+		const grant = page.getByLabel("Research grant application example")
+		await grant.getByLabel("Applying as").selectOption("collective")
+		await grant.getByRole("button", { name: "Preview and send" }).click()
+		await expect(
+			grant.getByText("Choose how the collective is represented"),
+		).toBeVisible()
+		await grant.getByLabel("Representation").selectOption("forming")
+		await expect(grant.getByLabel("Working name")).toBeVisible()
+		await expect(grant.getByLabel("Registry record ID")).toHaveCount(0)
+
+		expect(errors).toEqual([])
+	})
+
 	test("submits preset and context examples", async ({ page }) => {
 		const errors = pageErrors(page)
 

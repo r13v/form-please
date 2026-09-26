@@ -1,6 +1,6 @@
 ---
 title: Campaign builder
-description: A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, and fake mutations.
+description: A create-or-edit campaign form with a seven-template discriminated union, shared audience and scheduling, payment variants, and fake mutations.
 showAskAi: false
 searchPriority: 0.5
 ---
@@ -9,25 +9,31 @@ import { CampaignBuilderDemo } from "../../components/campaign-builder-demo"
 
 # Campaign builder
 
-Seven campaign templates share an audience, schedule, channel, and payment
-model. Each template shows a different payload section.
+Seven campaign templates share an audience, schedule, and channel model. The
+schema is a discriminated union, so each template has its own fields and
+messages.
 
 ## Try the complete flow
 
 Switch between the loaded draft and a new campaign. Change the template to see
-the definition resolve a different section. Paid templates also show amount
-and recurring interval fields.
+the definition resolve a different section. Paid templates also show amount,
+currency, and recurring interval fields.
 
 <CampaignBuilderDemo />
 
 ## What this form demonstrates
 
-- Conditional sections for seven schema branches.
+- A discriminated union with seven template variants. One section shows the
+  fields of each variant.
+- A nested payment union for free, fixed or flexible, and recurring payments.
+- A starting draft for each template. Each select and checkbox has a value
+  when its section appears.
 - Context-provided audience options.
 - Separate create and update mutations outside form state.
 - `form.api.watch()` for the live campaign preview.
 - Transformed submit output with a derived channel list.
-- Preserved values when a conditional section becomes hidden.
+- Preserved values when a conditional section becomes hidden. The output
+  contains only the selected template.
 
 ## Copy the source
 

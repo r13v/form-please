@@ -13,77 +13,119 @@ import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
-const templateNames = [
-	"newsletter",
-	"product-launch",
-	"event-invite",
-	"fundraiser",
-	"course-drop",
-	"community-update",
-	"feedback-pulse",
-] as const
+// Fields that only some templates have. Each template selects its own entries.
+const templateFields = {
+	newsletter: z.object({
+		subject: z.string().min(1, "Write the email subject").prefault(""),
+		preheader: z.string().min(1, "Write the preheader").prefault(""),
+	}),
+	productLaunch: z.object({
+		productName: z.string().min(1, "Name the product").prefault(""),
+		sku: z.string().min(1, "Enter the catalog code").prefault(""),
+		initialStock: z.number({ error: "Set the opening stock" }).int().min(0),
+		releaseKind: z.enum(["limited", "general", "preorder"]),
+	}),
+	eventInvite: z.object({
+		eventName: z.string().min(1, "Name the event").prefault(""),
+		venue: z.string().min(1, "Enter the venue").prefault(""),
+		capacity: z.number({ error: "Set capacity" }).int().min(1),
+		requiresRegistration: z.boolean(),
+	}),
+	fundraiser: z.object({
+		cause: z.string().min(1, "Describe the cause").prefault(""),
+		goalAmount: z.number({ error: "Set the funding goal" }).min(1),
+		suggestedContribution: z.number().min(1).optional(),
+	}),
+	courseDrop: z.object({
+		courseTitle: z.string().min(1, "Name the course").prefault(""),
+		seatLimit: z.number({ error: "Set the seat limit" }).int().min(1),
+		certificateIncluded: z.boolean(),
+	}),
+	communityUpdate: z.object({
+		topic: z.string().min(1, "Describe the update topic").prefault(""),
+		moderator: z.string().min(1, "Name the moderator").prefault(""),
+		responseWindowDays: z
+			.number({ error: "Set the response window" })
+			.int()
+			.min(1),
+	}),
+	feedbackPulse: z.object({
+		question: z.string().min(1, "Write the feedback question").prefault(""),
+		responseLimit: z.number({ error: "Set the response limit" }).int().min(1),
+		anonymous: z.boolean(),
+	}),
+	payment: z.discriminatedUnion("mode", [
+		z.object({ mode: z.literal("free") }),
+		z.object({
+			mode: z.literal(["fixed", "flexible"]),
+			amount: z
+				.number({ error: "Set an amount for this payment model" })
+				.min(1),
+			currency: z.enum(["USD", "EUR", "GBP"], { error: "Choose a currency" }),
+		}),
+		z.object({
+			mode: z.literal("recurring"),
+			amount: z
+				.number({ error: "Set an amount for this payment model" })
+				.min(1),
+			currency: z.enum(["USD", "EUR", "GBP"], { error: "Choose a currency" }),
+			interval: z.enum(["monthly", "annual"], { error: "Choose an interval" }),
+		}),
+	]),
+}
+
+const campaignBase = z.object({
+	id: z.string().optional(),
+	name: z.string().min(4, "Name this campaign"),
+	audience: z.object({
+		segmentId: z.string().min(1, "Choose an audience"),
+		deliveryMode: z.enum(["immediate", "scheduled", "rolling"]),
+		channels: z.object({
+			email: z.boolean(),
+			push: z.boolean(),
+			web: z.boolean(),
+		}),
+	}),
+	schedule: z.object({
+		startsOn: z.string().min(1, "Choose a start date"),
+		endsOn: z.string().optional(),
+	}),
+})
 
 const campaignSchema = z
-	.object({
-		id: z.string().optional(),
-		name: z.string().min(4, "Name this campaign"),
-		template: z.enum(templateNames),
-		audience: z.object({
-			segmentId: z.string().min(1, "Choose an audience"),
-			deliveryMode: z.enum(["immediate", "scheduled", "rolling"]),
-			channels: z.object({
-				email: z.boolean(),
-				push: z.boolean(),
-				web: z.boolean(),
-			}),
+	.discriminatedUnion("template", [
+		campaignBase.extend({
+			template: z.literal("newsletter"),
+			newsletter: templateFields.newsletter,
 		}),
-		schedule: z.object({
-			startsOn: z.string().min(1, "Choose a start date"),
-			endsOn: z.string().optional(),
+		campaignBase.extend({
+			template: z.literal("product-launch"),
+			productLaunch: templateFields.productLaunch,
+			payment: templateFields.payment,
 		}),
-		newsletter: z.object({
-			subject: z.string().optional(),
-			preheader: z.string().optional(),
+		campaignBase.extend({
+			template: z.literal("event-invite"),
+			eventInvite: templateFields.eventInvite,
 		}),
-		productLaunch: z.object({
-			productName: z.string().optional(),
-			sku: z.string().optional(),
-			initialStock: z.number().int().min(0).optional(),
-			releaseKind: z.enum(["limited", "general", "preorder"]),
+		campaignBase.extend({
+			template: z.literal("fundraiser"),
+			fundraiser: templateFields.fundraiser,
+			payment: templateFields.payment,
 		}),
-		eventInvite: z.object({
-			eventName: z.string().optional(),
-			venue: z.string().optional(),
-			capacity: z.number().int().min(1).optional(),
-			requiresRegistration: z.boolean(),
+		campaignBase.extend({
+			template: z.literal("course-drop"),
+			courseDrop: templateFields.courseDrop,
+			payment: templateFields.payment,
 		}),
-		fundraiser: z.object({
-			cause: z.string().optional(),
-			goalAmount: z.number().min(1).optional(),
-			suggestedContribution: z.number().min(1).optional(),
+		campaignBase.extend({
+			template: z.literal("community-update"),
+			communityUpdate: templateFields.communityUpdate,
 		}),
-		courseDrop: z.object({
-			courseTitle: z.string().optional(),
-			seatLimit: z.number().int().min(1).optional(),
-			certificateIncluded: z.boolean(),
+		campaignBase.extend({
+			template: z.literal("feedback-pulse"),
+			feedbackPulse: templateFields.feedbackPulse,
 		}),
-		communityUpdate: z.object({
-			topic: z.string().optional(),
-			moderator: z.string().optional(),
-			responseWindowDays: z.number().int().min(1).optional(),
-		}),
-		feedbackPulse: z.object({
-			question: z.string().optional(),
-			responseLimit: z.number().int().min(1).optional(),
-			anonymous: z.boolean(),
-		}),
-		payment: z.object({
-			mode: z.enum(["free", "fixed", "flexible", "recurring"]),
-			amount: z.number().min(1).optional(),
-			currency: z.enum(["USD", "EUR", "GBP"]),
-			interval: z.enum(["monthly", "annual"]),
-		}),
-	})
+	])
 	.superRefine((value, context) => {
 		if (!Object.values(value.audience.channels).some(Boolean)) {
 			context.addIssue({
@@ -103,140 +145,6 @@ const campaignSchema = z
 				message: "The end date must follow the start date",
 			})
 		}
-
-		const required: Array<readonly [unknown, (string | number)[], string]> = []
-		switch (value.template) {
-			case "newsletter":
-				required.push(
-					[
-						value.newsletter.subject,
-						["newsletter", "subject"],
-						"Write the email subject",
-					],
-					[
-						value.newsletter.preheader,
-						["newsletter", "preheader"],
-						"Write the preheader",
-					],
-				)
-				break
-			case "product-launch":
-				required.push(
-					[
-						value.productLaunch.productName,
-						["productLaunch", "productName"],
-						"Name the product",
-					],
-					[
-						value.productLaunch.sku,
-						["productLaunch", "sku"],
-						"Enter the catalog code",
-					],
-					[
-						value.productLaunch.initialStock,
-						["productLaunch", "initialStock"],
-						"Set the opening stock",
-					],
-				)
-				break
-			case "event-invite":
-				required.push(
-					[
-						value.eventInvite.eventName,
-						["eventInvite", "eventName"],
-						"Name the event",
-					],
-					[
-						value.eventInvite.venue,
-						["eventInvite", "venue"],
-						"Enter the venue",
-					],
-					[
-						value.eventInvite.capacity,
-						["eventInvite", "capacity"],
-						"Set capacity",
-					],
-				)
-				break
-			case "fundraiser":
-				required.push(
-					[
-						value.fundraiser.cause,
-						["fundraiser", "cause"],
-						"Describe the cause",
-					],
-					[
-						value.fundraiser.goalAmount,
-						["fundraiser", "goalAmount"],
-						"Set the funding goal",
-					],
-				)
-				break
-			case "course-drop":
-				required.push(
-					[
-						value.courseDrop.courseTitle,
-						["courseDrop", "courseTitle"],
-						"Name the course",
-					],
-					[
-						value.courseDrop.seatLimit,
-						["courseDrop", "seatLimit"],
-						"Set the seat limit",
-					],
-				)
-				break
-			case "community-update":
-				required.push(
-					[
-						value.communityUpdate.topic,
-						["communityUpdate", "topic"],
-						"Describe the update topic",
-					],
-					[
-						value.communityUpdate.moderator,
-						["communityUpdate", "moderator"],
-						"Name the moderator",
-					],
-					[
-						value.communityUpdate.responseWindowDays,
-						["communityUpdate", "responseWindowDays"],
-						"Set the response window",
-					],
-				)
-				break
-			case "feedback-pulse":
-				required.push(
-					[
-						value.feedbackPulse.question,
-						["feedbackPulse", "question"],
-						"Write the feedback question",
-					],
-					[
-						value.feedbackPulse.responseLimit,
-						["feedbackPulse", "responseLimit"],
-						"Set the response limit",
-					],
-				)
-				break
-		}
-		for (const [fieldValue, path, message] of required) {
-			if (fieldValue === undefined || fieldValue === "") {
-				context.addIssue({ code: "custom", path, message })
-			}
-		}
-
-		if (
-			paymentApplies(value.template) &&
-			value.payment.mode !== "free" &&
-			value.payment.amount === undefined
-		) {
-			context.addIssue({
-				code: "custom",
-				path: ["payment", "amount"],
-				message: "Set an amount for this payment model",
-			})
-		}
 	})
 	.transform((value) => ({
 		...value,
@@ -254,43 +162,26 @@ type CampaignContext = {
 	}[]
 }
 
-const emptyVariants = {
-	newsletter: { subject: undefined, preheader: undefined },
-	productLaunch: {
-		productName: undefined,
-		sku: undefined,
-		initialStock: undefined,
-		releaseKind: "general",
-	},
-	eventInvite: {
-		eventName: undefined,
-		venue: undefined,
-		capacity: undefined,
-		requiresRegistration: true,
-	},
-	fundraiser: {
-		cause: undefined,
-		goalAmount: undefined,
-		suggestedContribution: undefined,
-	},
-	courseDrop: {
-		courseTitle: undefined,
-		seatLimit: undefined,
-		certificateIncluded: true,
-	},
-	communityUpdate: {
-		topic: undefined,
-		moderator: undefined,
-		responseWindowDays: undefined,
-	},
-	feedbackPulse: {
-		question: undefined,
-		responseLimit: undefined,
-		anonymous: true,
-	},
-} as const
+// A starting draft for every template. Selects and checkboxes need a value
+// when their section appears. The schema output keeps only the selected
+// template.
+const templateDrafts = {
+	newsletter: {},
+	productLaunch: { releaseKind: "general" },
+	eventInvite: { requiresRegistration: true },
+	fundraiser: {},
+	courseDrop: { certificateIncluded: true },
+	communityUpdate: {},
+	feedbackPulse: { anonymous: true },
+	payment: { mode: "free" },
+} satisfies {
+	readonly [Key in keyof typeof templateFields]: Partial<
+		z.input<(typeof templateFields)[Key]>
+	>
+}
 
 const newCampaign = {
+	...templateDrafts,
 	id: undefined,
 	name: "New community campaign",
 	template: "newsletter",
@@ -300,16 +191,9 @@ const newCampaign = {
 		channels: { email: true, push: false, web: true },
 	},
 	schedule: { startsOn: "2027-03-10", endsOn: "2027-03-21" },
-	...emptyVariants,
 	newsletter: {
 		subject: "What we are making this month",
 		preheader: "Three new ways to take part",
-	},
-	payment: {
-		mode: "free",
-		amount: undefined,
-		currency: "USD",
-		interval: "monthly",
 	},
 } satisfies CampaignInput
 
@@ -318,18 +202,12 @@ const savedCampaign = {
 	id: "campaign-204",
 	name: "Spring material fund",
 	template: "fundraiser",
-	newsletter: { subject: undefined, preheader: undefined },
 	fundraiser: {
 		cause: "Fund free access to the shared material library",
 		goalAmount: 18_000,
 		suggestedContribution: 35,
 	},
-	payment: {
-		mode: "flexible",
-		amount: 10,
-		currency: "USD",
-		interval: "monthly",
-	},
+	payment: { mode: "flexible", amount: 10, currency: "USD" },
 } satisfies CampaignInput
 
 const kit = createFormKit({
@@ -571,12 +449,14 @@ const campaignDefinition = contextualKit.defineForm(campaignSchema, (ui) => [
 			ui.field("payment.amount", {
 				control: "number",
 				label: "Amount",
-				visible: (values) => values.payment.mode !== "free",
+				visible: (values) => paymentMode(values) !== "free",
 				props: { min: 1, step: 1 },
 			}),
 			ui.field("payment.currency", {
 				control: "select",
 				label: "Currency",
+				visible: (values) => paymentMode(values) !== "free",
+				props: { emptyOption: { label: "Choose a currency", disabled: true } },
 				options: [
 					{ value: "USD", label: "USD" },
 					{ value: "EUR", label: "EUR" },
@@ -586,7 +466,8 @@ const campaignDefinition = contextualKit.defineForm(campaignSchema, (ui) => [
 			ui.field("payment.interval", {
 				control: "select",
 				label: "Recurring interval",
-				visible: (values) => values.payment.mode === "recurring",
+				visible: (values) => paymentMode(values) === "recurring",
+				props: { emptyOption: { label: "Choose an interval", disabled: true } },
 				options: [
 					{ value: "monthly", label: "Monthly" },
 					{ value: "annual", label: "Annual" },
@@ -751,12 +632,17 @@ function CampaignBuilderForm() {
 	)
 }
 
-function paymentApplies(template: (typeof templateNames)[number]): boolean {
+function paymentApplies(template: CampaignInput["template"]): boolean {
 	return (
 		template === "fundraiser" ||
 		template === "course-drop" ||
 		template === "product-launch"
 	)
+}
+
+function paymentMode(values: CampaignInput) {
+	if ("payment" in values) return values.payment.mode
+	return "free"
 }
 
 function fakeRequest<Value>(value: Value, delay: number): Promise<Value> {

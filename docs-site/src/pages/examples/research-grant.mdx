@@ -1,6 +1,6 @@
 ---
 title: Research grant application
-description: A branching grant form with registry search, preserved conditional values, live preview, cross-field validation, and two fake requests.
+description: A branching grant form with nested discriminated unions, registry search, preserved conditional values, live preview, and two fake requests.
 showAskAi: false
 searchPriority: 0.5
 ---
@@ -9,8 +9,8 @@ import { ResearchGrantDemo } from "../../components/research-grant-demo"
 
 # Research grant application
 
-The form changes shape for individual and collective applicants. It also
-changes the settlement and reporting fields for the selected routes.
+The schema is a discriminated union for individual and collective applicants.
+Nested unions select the representation, settlement, and reporting fields.
 
 ## Try the complete flow
 
@@ -22,12 +22,16 @@ route to resolve another conditional branch.
 
 ## What this form demonstrates
 
-- Conditional fields across several nested objects.
+- Nested discriminated unions for the applicant, the representation path, the
+  payout route, and the reporting status.
+- One section for each representation path instead of a resolver on each
+  field.
 - An application-owned registry search inside the form.
 - Read-only values populated through `form.api.setValue`.
 - `form.api.watch()` for conditional application UI and a live preview.
 - Two sequential mutations from transformed schema output.
-- Preserved values when the selected branch changes.
+- Preserved values when the selected branch changes. The output contains only
+  the selected branches.
 
 ## Copy the source
 
