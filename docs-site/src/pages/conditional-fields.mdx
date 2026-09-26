@@ -133,6 +133,13 @@ Write one object schema for each variant. Join the variants with
 - `accountBase` contains the fields that all variants share.
 - Each variant extends `accountBase` with its own fields.
 - The discriminator `accountType` has a different literal value in each variant.
+- `.prefault("")` validates a missing value as an empty string. The fields of
+  the other variant are not in `defaultValues`, so they are `undefined` after a
+  switch. Without `.prefault("")`, the schema shows `Invalid input: expected
+  string, received undefined` instead of your messages. Do not use
+  `.default("")`, because it skips the `.min(1)` rule.
+- `defaultValues` need only the shared fields and the discriminator, such as
+  `{ accountType: "personal", email: "" }`.
 
 Put the fields of each variant in one section. Show the section only when the
 discriminator selects its variant:
@@ -153,11 +160,6 @@ The definition has these parts:
   of the literal values.
 - Each section has one `visible` resolver. The variant fields do not need
   resolvers, so they use a static `required: true`.
-- `beforeUpdate` sets the fields of the selected variant to an empty string
-  when they have no value. Without this hook, the fields are `undefined` after
-  the first switch. The schema then shows `Invalid input: expected string,
-  received undefined` instead of your messages. The `??=` operator keeps the
-  values that the user typed before a switch back.
 
 Hidden fields keep their values. See [Hidden fields keep their
 values](/how-it-works#hidden-fields-keep-their-values). The schema validates
