@@ -128,7 +128,11 @@ test.describe("Form, Please documentation", () => {
 				"Troubleshooting",
 			],
 		] as const) {
-			await page.getByRole("button", { name: /^Search\.\.\./ }).click()
+			// A click before hydration opens nothing, so retry until the dialog opens.
+			await expect(async () => {
+				await page.getByRole("button", { name: /^Search\.\.\./ }).click()
+				await expect(page.getByRole("combobox")).toBeVisible({ timeout: 1_000 })
+			}).toPass()
 			await page.getByRole("combobox").fill(query)
 			await page
 				.getByRole("listbox", { name: "Search results" })

@@ -484,12 +484,43 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 
 ### Task 15: Verify acceptance criteria
 
-- [ ] verify that D1 to D12 are fixed; list which gate or e2e test covers each, and which were one-time text fixes
-- [ ] verify that I04, I05, I13, I14, I16, I20, I17, I10, and I15 match their refined proposals in `docs/ideas.md`
-- [ ] check the built site in the browser pane at 375 px and 1440 px: overview, navigation, search for "server errors" and "localization", Get started output, and the new pages
-- [ ] run the full docs gate: `npm run site:verify`
-- [ ] run the repository gates: `npm run verify`
-- [ ] run `npm run check` and `npm run knip`
+- [x] verify that D1 to D12 are fixed; list which gate or e2e test covers each, and which were one-time text fixes (see the coverage map below)
+- [x] verify that I04, I05, I13, I14, I16, I20, I17, I10, and I15 match their refined proposals in `docs/ideas.md` (see the idea check below)
+- [x] check the built site in the browser pane at 375 px and 1440 px: overview, navigation, search for "server errors" and "localization", Get started output, and the new pages (checked with a Playwright script on the preview build: at 375 px the hero `h1` and intro are 343 px wide, at 1440 px 748 px; no page overflow at either width; the sidebar shows Start, Learn, Build, Advanced, Examples, Reference, and Help, and the Docs tab is active on Get started; "server errors" opens `/how-it-works#server-issues-are-not-schema-issues`, and "localization" opens `/localization`; Get started shows the `slug` output; How it works, Troubleshooting, Localization, Accessibility, Glossary, and AI agents render with no page errors)
+- [x] run the full docs gate: `npm run site:verify`
+- [x] run the repository gates: `npm run verify`
+- [x] run `npm run check` and `npm run knip`
+- ➕ the search e2e test failed in about half of the runs: a click on **Search...** before hydration opens no dialog. The test now retries the click until the dialog opens (10 of 10 repeated runs passed).
+- ➕ `vocs preview` crashed at startup: `vocs.config.ts` read `../package.json` at run time, and in `dist/server` that path does not exist. The e2e web server did not show the crash, but a manual `npm run preview` did. The config now imports the root `package.json` as JSON, so the bundle inlines the version.
+
+**Defect coverage map (D1 to D12):**
+
+| Defect | Status | Covered by |
+|---|---|---|
+| D1 | Fixed | `postbuild.test.mjs` (`prefixMarkdownLinks` cases) and the output test "LLM files link to built pages under the base path" |
+| D2 | Fixed | e2e "fits the overview hero on phones and desktops" |
+| D3 | Fixed | One-time text fix |
+| D4 | Fixed | Source gate "example pages claim only APIs that their snippets use" |
+| D5 | Fixed | One-time text fix |
+| D6 | Fixed | One-time text fix; the rule now has one home (`how-it-works#the-schema-parses-once-on-submit`), and the output test finds `/parses once/i` in `llms-full.txt` |
+| D7 | Fixed | e2e "requires the company name in the conditional scenario" |
+| D8 | Fixed | Output gate "each internal anchor link matches an id on its target page" |
+| D9 | Fixed | Snippet typecheck (`npm run test:docs`) and e2e "runs the managed value history preview"; the region shape is a one-time fix |
+| D10 | Fixed | Snippet typecheck; one-time fix (the styling page renders no live demo of it) |
+| D11 | Fixed | Snippet typecheck; one-time fix |
+| D12 | Fixed | `tests/pages.mjs` feeds the source gate "keeps every page route in navigation" and the output gate "Vocs emits the Markdown file of each page" |
+
+**Idea check:**
+
+- I04: matches. The topNav has Docs, Examples, Playground, API, and a `v1.6.0` dropdown to GitHub releases. The Learn, Build, and Advanced groups exist. Later tasks added pages on purpose (I05, I13, I14, I17).
+- I05: matches. `how-it-works.mdx` has the flow diagram and one heading for each core rule. Other pages keep one sentence and a link.
+- I13: matches, with two plan changes. Each symptom is a `##` heading and not a `:::details` block, because Vocs search indexes headings only. A sixth entry, "Default values load too late", covers the synchronous `defaultValues` caveat from the I13 problem list.
+- I14: matches. Two guides exist. The control contract moved to Accessibility. A source test checks the i18n key table against the library.
+- I16: matches, with one plan change. `profile-form.tsx` and `playground-transform.tsx` are not merged (see Key decisions).
+- I20: matches. Six task cards, `## Next steps` on each guide, and `searchPriority` on the core pages and the complex examples.
+- I17: matches. The devtools UI label stays `Form Please Devtools` in inline code; a library rename is an owner decision (Post-Completion).
+- I10: matches. The export, anchor, route, and example-claims gates exist, each with a non-vacuity assertion.
+- I15: partly done, as the plan scoped it. The LLM links and the agent hub are done. Ask AI stays off until Vocs fixes the base-path bug, and the Context7 submission waits for the deploy (Post-Completion).
 
 ### Task 16: [Final] Update documentation
 

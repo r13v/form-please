@@ -1,13 +1,13 @@
-import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { defineConfig } from "vocs/config"
 import { findScenario } from "#lib/playground-scenarios"
+// A JSON import is inlined into the server bundle. A runtime file read would
+// resolve against dist/server and fail in `vocs preview`.
+import rootPackage from "../package.json" with { type: "json" }
 
 const basePath = process.env.BASE_PATH ?? "/"
 const assetBasePath = basePath.replace(/\/$/, "")
-const { version } = JSON.parse(
-	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
-) as { version: string }
+const { version } = rootPackage
 
 type MarkdownNode = {
 	attributes?: readonly { name?: string; value?: unknown }[]
