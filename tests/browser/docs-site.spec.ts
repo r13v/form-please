@@ -537,6 +537,32 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("shows the same form before and after the migration", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		await page.goto("./migrate-from-react-hook-form")
+		const demo = page.getByTestId("migration-demo")
+
+		for (const version of ["React Hook Form", "Form, Please"]) {
+			await demo.getByRole("tab", { name: version }).click()
+			const panel = demo.locator("[role=tabpanel]:not([hidden])")
+
+			await panel.getByRole("button", { name: "Send ticket" }).click()
+			await expect(
+				panel.getByText("Enter at least two characters").first(),
+			).toBeVisible()
+
+			await panel.getByLabel("Name").fill("Ada Lovelace")
+			await panel.getByLabel("Email").fill("ada@example.com")
+			await panel.getByLabel("Topic").selectOption("bug")
+			await panel.getByLabel("Message").fill("The export button fails.")
+			await panel.getByRole("button", { name: "Send ticket" }).click()
+			await expect(panel.locator("pre")).toContainText('"topic": "bug"')
+		}
+		expect(errors).toEqual([])
+	})
+
 	test("runs the live playground with IntelliSense", async ({ page }) => {
 		const errors = pageErrors(page)
 		await page.goto("./playground?scenario=transform")

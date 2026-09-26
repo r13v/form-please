@@ -74,6 +74,10 @@
   `vitest`), a `BASE_PATH=/form-please` build, the Markdown audit, the output
   tests, and e2e. To run `test:output` alone, set the same `BASE_PATH` as the
   build.
+- A snippet test that renders React starts with `// @vitest-environment jsdom`
+  and uses Testing Library. `vitest.docs.config.ts` dedupes `react`,
+  `react-dom`, and `react-hook-form`, so the snippet, the built package, and
+  Testing Library share one copy of each.
 - `postbuild` runs `scripts/fix-vocs-skip-links.mjs` and
   `scripts/fix-vocs-llms-links.mjs`. The second script adds the base path to
   root-relative links in `llms.txt`, `llms-full.txt`, and
