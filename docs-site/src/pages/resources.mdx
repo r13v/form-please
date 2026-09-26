@@ -1,26 +1,118 @@
 ---
 title: Resource state
-description: Represent application-owned request state and map it into form UI.
+description: Show loading and error states of application-owned requests in form fields.
 showAskAi: false
 ---
 
+import { ResourceStateDemo } from "../components/resources-guide-demo"
+
 # Resource state
 
-Use resource state when remote data changes labels, descriptions, permissions, or
-interaction state in a form.
+Show the state of a request in the form. While countries load, the country
+field can show a loading message and stay disabled. When the request fails, the
+field can show the error.
 
-For a simple selectable list, prefer an async field `options` function. Use
-resource state when the application must expose pending or error state, retain
-previous data, cache, retry, search, or coordinate several UI properties.
+## Show a request in a field
 
-| Required result | Helper |
+Put the request state in the form context as a `ResourceState`. Then read it in
+the field properties.
+
+```tsx
+// [!include ~/snippets/resources-guide.tsx:resource-form]
+```
+
+Select a request state. The options, description, and disabled state change
+together.
+
+<ResourceStateDemo />
+
+`matchResource` requires one callback for each state. TypeScript reports an
+error when a state has no callback.
+
+## Connect a request library
+
+Your request library keeps ownership of requests, retries, cancellation, and
+caching. Convert its result to a `ResourceState` and pass it as context:
+
+```tsx
+// [!include ~/snippets/resources-guide.tsx:query-context]
+```
+
+When the query changes, the component supplies a new context. The field
+properties then resolve again with the current state.
+
+This approach has these advantages:
+
+- The form definition does not load data. You can test it with a fixed context.
+- The request library stays the only owner of requests and cache.
+- One request state controls several field properties.
+
+:::tip
+For a plain option list without loading or error UI, an async field
+`options` function is sufficient. See
+[Async options](/definitions#async-options).
+:::
+
+## Advanced use
+
+### Keep saved options while a request runs
+
+A pending or failed request can show saved options instead of an empty list:
+
+```tsx
+// [!include ~/snippets/resources-guide.tsx:saved-options]
+```
+
+### Keep data after a failed background refresh
+
+The `toResource` function above maps a failed background refresh to `error`.
+The field then loses the loaded options. This adapter keeps the loaded data and
+reports the refresh state separately:
+
+```ts twoslash
+// [!include ~/snippets/query-to-resource.ts]
+```
+
+Use `queryToResource` in place of `toResource`. The adapter maps query states
+as follows:
+
+| Query result | Resource result |
 | --- | --- |
-| Derive a value immediately | `matchResource` |
-| Define a synchronous UI resolver | `fromResource` |
-| Load or refresh remote data | Application code or a request library |
-| Load one selectable list without request UI | Async field `options` |
+| Initial load | `pending` |
+| Loaded data | `success` |
+| Failed background refetch with old data | `success` with `refresh.error` |
+| Failed request without data | `error` |
 
-## Define the resource states
+The background refetch error stays in the success branch because usable data
+still exists. The UI can keep the options and report the refresh error. The
+top-level error branch does not contain previous data.
+
+`QueryResourceState` adds `fetchStatus` and `refresh` properties to the basic
+three-state shape. `matchResource` and `fromResource` keep these extra
+properties when they narrow a branch.
+
+See [Creative studio policies](/examples/studio-policies) for a live form with
+saved options and background refresh state.
+
+### Share one selector across properties
+
+`fromResource(select, cases)` creates a UI resolver. It calls `select` with the
+form values and resolver details, then runs the callback for the current state.
+Use it when several properties read the same resource:
+
+```tsx
+// [!include ~/snippets/resources-guide.tsx:shared-selector]
+```
+
+Each `fromResource` callback receives these arguments in this order:
+
+1. The narrowed resource state.
+2. The complete readonly form input.
+3. Resolver details, which contain the readonly form context.
+
+## Reference
+
+### `ResourceState`
 
 `ResourceState<Value, Error>` is a readonly tagged union with three states:
 
@@ -31,26 +123,20 @@ type ResourceState<Value, Error = unknown> =
 	| { readonly status: "error"; readonly error: Error }
 ```
 
-Set the `Error` type when a branch must read a known error property. The default
-error type is `unknown`.
-
-```ts
-// [!include ~/snippets/resources-guide.tsx:create-states]
-```
-
 The `status` property selects the branch. A successful state must contain
-`value`. An error state must contain `error`.
+`value`. An error state must contain `error`. Set the `Error` type when a
+callback reads a known error property. The default error type is `unknown`.
 
-## Match a standalone resource
+### Helpers
 
-Use `matchResource` when you already have a resource and need one result now.
-For example, create status text outside a form definition:
+| Required result | Helper |
+| --- | --- |
+| Derive a value from a resource now | `matchResource` |
+| Create a synchronous UI resolver from a selector | `fromResource` |
+| Load or refresh remote data | Application code or a request library |
+| Load one selectable list without request UI | Async field `options` |
 
-```ts
-// [!include ~/snippets/resources-guide.tsx:match-resource]
-```
-
-All three callbacks are required. Each callback receives the narrowed state:
+Each callback receives the narrowed state:
 
 | Callback | Available state data |
 | --- | --- |
@@ -61,102 +147,19 @@ All three callbacks are required. Each callback receives the narrowed state:
 The result type is the union of the three callback results. Keep the results
 compatible when a caller requires one specific type.
 
-## Build a UI resolver
+UI resolvers are synchronous. The selector and all callbacks must return
+synchronously. Load data before or beside the form. Do not pass an `async`
+function to `fromResource`. Field `options` has its own async contract.
 
-Use `fromResource` for a property in a form definition. Its first argument
-selects a resource from the current form values or context. Its second argument
-maps each state to the required property value.
-
-```ts
-// [!include ~/snippets/resources-guide.tsx:resource-resolvers]
-```
-
-Each branch receives these arguments in this order:
-
-1. The narrowed resource state.
-2. The complete readonly form input.
-3. Resolver details, which contain the readonly form context.
-
-Use only the arguments that the branch needs. In the example, the success
-description reads the selected plan. The options function reads saved options
-from context during pending and error states.
-
-`fromResource` returns a normal synchronous UI resolver. The selector and all
-branches must return synchronously. Load data before or beside the form. Do not
-pass an `async` function to `fromResource`; field `options` has its own async
-contract.
-
-## Pass the resource through context
-
-Create a contextual kit. Then pass the current context to `kit.useForm`.
-
-```tsx
-// [!include ~/snippets/resources-guide.tsx:context-form]
-```
-
-The example uses one resource for three properties:
-
-- `options` keeps saved options until the current request succeeds.
-- `description` reports the current state.
-- `disabled` prevents selection without usable remote data.
-
-Form context is runtime input. When the application supplies a new context
-value, the generated UI resolves again with the current resource state.
-
-## Adapt TanStack Query locally
-
-Keep the query result in application code. Convert its states before you pass
-the result through form context.
-
-This adapter preserves background refresh state without adding a TanStack Query
-dependency to Form, Please:
-
-```ts twoslash
-// [!include ~/snippets/query-to-resource.ts]
-```
-
-Use the adapter at the boundary between the query and the form:
-
-```tsx
-// [!include ~/snippets/resources-guide.tsx:query-context]
-```
-
-The adapter maps query states as follows:
-
-| Query result | Resource result |
-| --- | --- |
-| Initial load | `pending` |
-| Loaded data | `success` |
-| Failed background refetch with old data | `success` with `refresh.error` |
-| Failed request without data | `error` |
-
-The background refetch error stays in the success branch because usable data
-still exists. This lets the UI keep saved options and report the refresh error.
-The top-level error branch does not contain previous data.
-
-`QueryResourceState` adds `fetchStatus` and `refresh` properties to the basic
-three-state shape. `matchResource` and `fromResource` preserve these extra
-properties when they narrow a branch.
-
-## Handle invalid states and branch errors
+### Invalid states and callback errors
 
 TypeScript prevents unsupported status values in typed application code. At
 runtime, both helpers throw a `TypeError` for an unsupported status. They do not
-catch errors that a selector or branch callback throws.
+catch errors that a selector or callback throws.
 
 Keep resource objects inside the supported union. Handle request failures when
 you create the resource. Handle UI conversion failures where you call the
 helper.
-
-## Preserve request ownership
-
-- The request library owns requests, retries, cancellation, and caching.
-- The application converts request results to a resource state.
-- Form context carries the current resource state.
-- `fromResource` converts that state into a synchronous UI property.
-
-See [Creative studio policies](/examples/studio-policies) for a live form with
-saved options and background refresh state.
 
 ## Next steps
 

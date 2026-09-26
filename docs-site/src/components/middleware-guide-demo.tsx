@@ -14,7 +14,7 @@ export const DerivedTotalMiddlewareDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The derived-total preview runs only in a browser. Middleware updates a read-only total in the same managed commit as its source values.",
+				"The derived-total preview runs only in a browser. `beforeUpdate` updates a read-only total in the same commit as its source values.",
 				"docs-site/src/snippets/middleware-guide.tsx",
 			)
 		},
@@ -28,7 +28,7 @@ export const CancellationMiddlewareDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The cancellation preview runs only in a browser. It compares a cancelled managed update with a raw React Hook Form update that bypasses middleware.",
+				"The cancellation preview runs only in a browser. It compares a managed update that `beforeUpdate` cancels with a raw React Hook Form update that bypasses the hooks.",
 				"docs-site/src/snippets/middleware-guide.tsx",
 			)
 		},

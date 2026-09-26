@@ -40,14 +40,14 @@ parses once on submit](/how-it-works#the-schema-parses-once-on-submit).
 
 Direct `form.api` mutations, such as `setValue`, bypass middleware and history.
 Use `form.update(recipe)` to make a managed update. See [Know which changes
-enter middleware](/middleware#know-which-changes-enter-middleware) and [Know
+enter middleware](/middleware#changes-that-run-the-rules) and [Know
 what history records](/history#know-what-history-records).
 
 ## `delayError` does not delay errors after a managed update
 
 A managed update validates through one RHF `trigger` call, and this call does
 not keep the `delayError` timing. See [Understand form state and
-validation](/middleware#understand-form-state-and-validation).
+validation](/middleware#form-state-and-validation).
 
 ## Default values load too late
 

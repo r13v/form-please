@@ -1,6 +1,6 @@
 ---
 title: Value middleware
-description: Derive dependent values, cancel managed updates, inspect transactions, and run work after a synchronous commit.
+description: Keep dependent values in sync, block invalid changes, and run code after a change from the form definition.
 showAskAi: false
 ---
 
@@ -12,14 +12,122 @@ import {
 
 # Value middleware
 
-Value middleware intercepts managed value proposals before Form, Please
-commits them to React Hook Form (RHF). Use it to derive dependent values, cancel a
-proposal, or run ordered work after a commit.
+Write value rules once, in the form definition. Form, Please applies them to
+each managed update before React Hook Form (RHF) stores the values.
+
+Use value rules to:
+
+- keep a dependent value, such as an order total, in sync;
+- block a change that breaks a limit;
+- run code after a change, such as an audit log or an autosave.
+
+## Keep dependent values in sync
+
+Add `beforeUpdate` to the definition options. The hook receives a draft of the
+proposed values. Change the draft to change the values that commit.
+
+```tsx
+// [!include ~/snippets/middleware-guide.tsx:derived-hook]
+```
+
+Change the quantity or the unit price. The total changes in the same commit.
+
+<DerivedTotalMiddlewareDemo />
+
+Application code changes values with `form.update`. The same hook runs for
+these changes. The **Apply bulk order** button calls this function:
+
+```tsx
+// [!include ~/snippets/middleware-guide.tsx:bulk-order]
+```
+
+## Compare with an effect
+
+A common alternative watches the values in a component and calls `setValue`
+from `useEffect`. The hook has these advantages:
+
+| Concern | `useEffect` and `setValue` | `beforeUpdate` |
+| --- | --- | --- |
+| Rendering | React renders the old total first. The effect then sets the new total and causes a second render. | The total and its source values commit together. |
+| Invalid values | RHF stores the value before the effect can revert it. | Return `false` to cancel the change before it commits. |
+| Rule location | A component. | The form definition. |
+| Tests | Render the component. | Use the [definition tester](/testing) without React. |
+
+The hooks run for generated controls, generated arrays, `form.update`, history
+restores, and persistence restores. They do not run for `defaultValues`, resets,
+or direct `form.api` calls. See
+[Changes that run the rules](#changes-that-run-the-rules).
+
+## Block a change and report the result
+
+Return `false` from `beforeUpdate` to cancel the complete change. No value
+commits. Use `afterUpdate` to run code after a commit.
+
+```tsx
+// [!include ~/snippets/middleware-guide.tsx:guard-hooks]
+```
+
+- `beforeUpdate` reads the limit from the form context. It cancels a discount
+  above the limit.
+- `afterUpdate` receives the committed transaction. It does not run for a
+  cancelled change.
+
+<CancellationMiddlewareDemo />
+
+The first button uses `form.update`, so the limit applies. The second button
+uses raw `form.api.setValue`, so it bypasses the hooks. Use raw RHF operations
+only when you intend to bypass the rules.
+
+Both hooks are synchronous. To wait for asynchronous work after a commit, use
+middleware.
+
+## Split rules into middleware
+
+One `beforeUpdate` hook is sufficient for most forms. Use middleware when:
+
+- several independent rules must run in a declared order;
+- several forms share one rule;
+- a rule must wait for asynchronous work after the commit.
+
+A middleware has the shape `api => next => transaction`. It calls `next` with
+the Immer patches to commit. This middleware adds a patch for the total:
+
+```tsx
+// [!include ~/snippets/middleware-guide.tsx:derived-value]
+```
+
+The next middleware receives a new transaction. Its `nextValues` contain the
+new total.
+
+Pass the ordered list in the `middleware` option of `kit.defineForm`.
+Middleware runs in list order:
+
+```tsx
+// [!include ~/snippets/middleware-guide.tsx:async-after-next]
+```
+
+`auditCommittedOrder` receives the total patch from `keepOrderTotalCurrent`.
+Call `next` before the first `await`. The value commit is then complete before
+`saveOrderAudit` starts.
+
+Middleware completion does not mean that validation or the asynchronous work
+is complete. Observe RHF validation state when later code requires valid
+values.
+
+## Reference
+
+### Ownership
 
 Middleware policy belongs to a definition and initializes separately for every
-form binding. It does not create another form store. React Hook Form remains the
-owner of the schema input and form state. See
-[Ownership](/how-it-works#ownership).
+form binding. It does not create another form store. RHF remains the owner of
+the schema input and form state. See [Ownership](/how-it-works#ownership).
+
+The middleware list is copied and fixed when `defineForm` creates the
+definition. Create another definition to use another policy. Each binding gets
+independent middleware instances. `transaction.context` follows the current
+context of that binding.
+
+### Choose a tool
 
 | Need | Use |
 | --- | --- |
@@ -32,98 +140,9 @@ owner of the schema input and form state. See
 | Make an independent raw RHF change | `form.api` |
 | Validate or transform submitted output | The Standard Schema |
 
-## Use one managed update hook
+### Changes that run the rules
 
-`beforeUpdate` and `afterUpdate` provide one application callback on either
-side of the middleware chain. The first callback can mutate the proposed Immer
-draft or return `false`; the second receives the final committed transaction.
-
-```tsx
-// [!include ~/snippets/api-reference.tsx:update-hooks]
-```
-
-The order is `beforeUpdate`, middleware before `next`, commit, middleware after
-`next`, and `afterUpdate`. Both hooks are synchronous. `afterUpdate` still runs
-when middleware throws after a commit, because the committed change remains
-observable. If both fail after commit, dispatch throws an `AggregateError`.
-
-The callbacks are fixed with the definition. Their transactions are readonly
-views rather than archival snapshots. Read current binding data from
-`transaction.context`, and copy retained audit or save data. Use middleware
-when several rules must compose in a declared order.
-
-Generated array constraints still apply. Return `false` to cancel the proposed
-structural action; do not rewrite its length or order through the draft.
-
-## Check editing in a larger form
-
-Use this larger form to check editing in your browser. It renders 18 text
-inputs and sends each edit through one pass-through middleware.
-
-Edit fields quickly. Move focus between sections while you type.
-
-<ComplexMiddlewareEditingDemo />
-
-This preview is a manual check, not a repeatable benchmark. Browser extensions,
-computer load, and development tools can change the result.
-
-Use `npm run bench:middleware` to measure the coordinator without browser
-rendering. The automated browser test also checks that rapid edits do not lose
-input.
-
-## Derive a value in the same commit
-
-This middleware calculates an order total. It appends one Immer patch to the
-patches for the source change.
-
-```tsx
-// [!include ~/snippets/middleware-guide.tsx:derived-value]
-```
-
-Pass the ordered middleware list to `kit.defineForm`. Use `form.update` when an
-application action must enter the same managed boundary.
-
-```tsx
-// [!include ~/snippets/middleware-guide.tsx:derived-value-form]
-```
-
-Change the quantity or unit price. The read-only total changes in the same
-managed commit. The button changes both source fields with one Immer recipe.
-
-<DerivedTotalMiddlewareDemo />
-
-The managed update has this sequence:
-
-1. Form, Please creates patches for the proposed source change.
-2. The middleware calculates the total from `transaction.nextValues`.
-3. The middleware calls `next` with the source patches and the total patch.
-4. React Hook Form receives the final affected values before `next` returns.
-
-The transaction received by this middleware contains the value before its new
-total patch. The next middleware receives a new transaction with the recalculated
-`nextValues`.
-
-## Cancel a managed update
-
-Return without calling `next` to cancel the complete proposal. No source patch
-or dependent patch commits.
-
-```tsx
-// [!include ~/snippets/middleware-guide.tsx:cancellation]
-```
-
-The first button uses `form.update`, so the 30% limit applies. The second
-button uses raw `form.api.setValue`, so it bypasses the limit.
-
-<CancellationMiddlewareDemo />
-
-Use raw RHF operations only when bypassing middleware is intentional. A direct
-operation can violate an invariant that middleware enforces for managed
-updates.
-
-## Know which changes enter middleware
-
-Middleware handles these entry points:
+Hooks and middleware handle these entry points:
 
 | Entry point | `transaction.source.type` |
 | --- | --- |
@@ -141,17 +160,38 @@ These operations bypass middleware and managed update hooks:
 - application-owned `useFieldArray` operations.
 
 Supply consistent derived values in `defaultValues` and every reset input.
-Middleware does not calculate dependent values for these entry points.
-Active persistence can observe their resulting RHF values for autosave, but
-they do not become middleware transactions.
+The rules do not calculate dependent values for these entry points. Active
+persistence can observe the resulting RHF values for autosave. These changes do
+not become middleware transactions.
 
 `form.update` accepts a synchronous Immer recipe. Mutate the draft or return a
 replacement value. Do not do both. A recipe that produces no patches does not
 create a transaction.
 
-## Read a transaction
+### Hook order and errors
 
-Each middleware receives one `ValueTransaction`.
+`beforeUpdate` and `afterUpdate` provide one application callback on either
+side of the middleware chain. The order is:
+
+1. `beforeUpdate`.
+2. Middleware code before `next`, in list order.
+3. The commit to RHF.
+4. Middleware code after `next`, in reverse order.
+5. `afterUpdate`.
+
+`afterUpdate` still runs when middleware throws after a commit, because the
+committed change remains observable. If both fail after commit, dispatch throws
+an `AggregateError`.
+
+The callbacks are fixed with the definition. Read current binding data from
+`transaction.context`. Copy data that you keep for audit or save operations.
+
+Generated array constraints still apply. Return `false` to cancel a proposed
+structural action. Do not change its length or order through the draft.
+
+### Read a transaction
+
+Hooks and middleware receive one `ValueTransaction`.
 
 | Field | Meaning |
 | --- | --- |
@@ -176,7 +216,7 @@ must remain an independent snapshot.
 Do not mutate the transaction, its patches, its values, or its context. Supply
 a new patch array to `next` when middleware changes a proposal.
 
-## Use the middleware API
+### Use the middleware API
 
 The first function receives one `FormMiddlewareApi` when a form binding or
 definition tester creates its middleware chain.
@@ -193,18 +233,12 @@ Do not call `api.update` while middleware configures or while a transaction is
 active. An asynchronous handler can call it after awaited post-commit work.
 That call starts a separate transaction.
 
-## Forward patches once
+### Forward patches once
 
-Middleware has the shape `api => next => transaction`. Call `next(patches)`
-synchronously at most once.
-
-You can forward the original patches, append patches, or replace the patch
-list. Form, Please reapplies the supplied patches to `previousValues`. This
-operation creates the transaction for the next middleware.
-
-Middleware runs in list order. With `[deriveTotal, auditOrder]`, `deriveTotal`
-runs first. `auditOrder` receives the derived total. Code after `next` runs in
-reverse order and sees committed values.
+Call `next(patches)` synchronously at most once. You can forward the original
+patches, append patches, or replace the patch list. Form, Please reapplies the
+supplied patches to `previousValues`. This operation creates the transaction
+for the next middleware.
 
 The chain makes one ordered pass. It does not rerun middleware when a later
 middleware adds a patch. It does not calculate a dependency fixed point.
@@ -213,31 +247,15 @@ Any middleware can replace the value returned by `next`. Therefore,
 `FormMiddlewareNext` and `form.update` return `unknown`. Do not use that return
 value as a commit result unless the complete chain defines that convention.
 
-## Run asynchronous work after the commit
+### Generated arrays
 
-Call `next` before the first `await`. An asynchronous handler can return a
-promise after the synchronous commit.
-
-```tsx
-// [!include ~/snippets/middleware-guide.tsx:async-after-next]
-```
-
-In this order, `auditCommittedOrder` receives the total patch from
-`keepOrderTotalCurrent`. The value commit is complete before
-`saveOrderAudit` starts.
-
-Middleware completion does not mean validation or the asynchronous work is
-complete. Observe RHF validation state when later code requires valid values.
-
-## Handle generated arrays safely
-
-Generated add, remove, and move actions enter middleware. Middleware can
-cancel the action or add dependent value patches. The source action still uses
-RHF `useFieldArray` so the row IDs remain stable.
+Generated add, remove, and move actions enter middleware. Middleware can cancel
+the action or add dependent value patches. The source action still uses RHF
+`useFieldArray`, so the row IDs remain stable.
 
 Do not change the source array length or order beyond its proposed action. Do
-not change another generated array's structure in the same transaction. Use
-that array's generated action for its structural change.
+not change the structure of another generated array in the same transaction.
+Use the generated action of that array for its structural change.
 
 Do not change generated array length or order from a generated control or
 `form.update`. RHF `setValues` cannot synchronize the private row IDs that
@@ -247,7 +265,7 @@ Generated array actions promise one final React render with dependent values.
 They do not promise one raw RHF publication. A raw RHF subscriber can observe
 the native array operation before the dependent value commit.
 
-## Understand form state and validation
+### Form state and validation
 
 The value commit completes before `next` returns. Validation can finish later.
 Managed validation follows `mode` and `reValidateMode` through one RHF
@@ -257,7 +275,7 @@ RHF calculates `isDirty` from the complete current value and default values.
 `dirtyFields` is guaranteed only for mounted patched paths. A control becomes
 touched only after a real blur event.
 
-## Avoid invalid pipeline operations
+### Invalid pipeline operations
 
 | Operation | Result |
 | --- | --- |
@@ -272,12 +290,21 @@ Assign `undefined` instead of removing a top-level key when the schema permits
 it. Nested removal is supported because Form, Please commits the complete
 affected root.
 
-The middleware list is copied and fixed when `defineForm` creates the
-definition. Create another definition to use another policy. Each binding gets
-independent middleware instances, while `transaction.context` follows that
-binding's current context.
-
 See the [API reference](/api#managed-value-middleware) for the exported types.
+
+### Check editing in a larger form
+
+This form renders 18 text inputs and sends each edit through one pass-through
+middleware. Type quickly and move focus between sections to check the editing
+response.
+
+<ComplexMiddlewareEditingDemo />
+
+This preview is a manual check, not a repeatable benchmark. Browser extensions,
+computer load, and development tools can change the result. Use
+`npm run bench:middleware` to measure the coordinator without browser
+rendering. The automated browser test also checks that rapid edits do not lose
+input.
 
 ## Next steps
 

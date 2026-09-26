@@ -14,6 +14,24 @@ key in `src/default-slots/default-slots.tsx` or `src/preset-mui/index.ts`,
 update the table in `docs-site/src/pages/localization.mdx`. Run
 `npm run site:test` to check both.
 
+## Guide Pages
+
+Write each guide page in `docs-site/src/pages` in this order:
+
+1. The problem that the page solves, in one or two sentences.
+2. One complete example and a live demo that runs the same code.
+3. The advantage over the usual alternative.
+4. An `Advanced use` section for less common cases.
+5. A `Reference` section for type shapes, ordering rules, and limits.
+
+In the first example, write callbacks and options inline in `kit.defineForm`
+so that TypeScript infers their types. Do not use `satisfies`, explicit
+generic arguments, or standalone typed constants there. If a type annotation
+exists only because a snippet region splits the code, move the region boundary.
+
+Write prose in Simplified Technical English (STE) clarity mode: one term for
+one concept, active voice, and one instruction in each sentence.
+
 ## Reuse Before Adding Helpers
 
 Before creating a helper, search `src` for the same behavior, including helpers

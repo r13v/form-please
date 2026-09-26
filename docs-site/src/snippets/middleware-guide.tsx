@@ -211,28 +211,21 @@ const keepOrderTotalCurrent: FormMiddleware<OrderInput> =
 	}
 // [!endregion derived-value]
 
+// [!region derived-hook]
 const orderDefinition = nativeFormKit.defineForm(
 	orderSchema,
 	(ui) => [
-		ui.field("quantity", {
-			control: "number",
-			label: "Quantity",
-			props: { min: 1, step: 1 },
-		}),
-		ui.field("unitPrice", {
-			control: "number",
-			label: "Unit price",
-			props: { min: 0, step: 0.01 },
-		}),
-		ui.field("total", {
-			control: "number",
-			label: "Total",
-			readOnly: true,
-			props: { min: 0, step: 0.01 },
-		}),
+		ui.field("quantity", { control: "number", label: "Quantity" }),
+		ui.field("unitPrice", { control: "number", label: "Unit price" }),
+		ui.field("total", { control: "number", label: "Total", readOnly: true }),
 	],
-	{ middleware: [keepOrderTotalCurrent] },
+	{
+		beforeUpdate(draft) {
+			draft.total = Math.round(draft.quantity * draft.unitPrice * 100) / 100
+		},
+	},
 )
+// [!endregion derived-hook]
 
 const initialOrder = {
 	quantity: 2,
@@ -240,18 +233,21 @@ const initialOrder = {
 	unitPrice: 15,
 } satisfies OrderInput
 
-// [!region derived-value-form]
 export function DerivedTotalMiddlewarePreview() {
 	const form = nativeFormKit.useForm(orderDefinition, {
 		defaultValues: initialOrder,
 	})
+	// [!region bulk-order]
+	const applyBulkOrder = () =>
+		form.update((draft) => {
+			draft.quantity = 10
+			draft.unitPrice = 9
+		})
+	// [!endregion bulk-order]
 	const total = useWatch({ control: form.api.control, name: "total" })
 
 	return (
-		<section
-			aria-label="Derived total middleware preview"
-			className="form-please-complex"
-		>
+		<section aria-label="Derived total preview" className="form-please-complex">
 			<p className="form-please-complex__kicker">Live preview</p>
 			<p className="form-please-complex__summary">
 				Change a source field. The read-only total changes in the same managed
@@ -279,7 +275,6 @@ export function DerivedTotalMiddlewarePreview() {
 		</section>
 	)
 }
-// [!endregion derived-value-form]
 
 const discountSchema = z.object({
 	discount: z.number().min(0).max(100),
@@ -293,31 +288,27 @@ type DiscountContext = {
 }
 
 const discountKit = nativeFormKit.forContext<DiscountContext>()
-const guardDiscount: FormMiddleware<DiscountInput, DiscountContext> =
-	() => (next) => (transaction) => {
-		const discount = transaction.nextValues.discount
-		if (discount > transaction.context.maximum) {
-			transaction.context.report(`Cancelled ${discount}% discount.`)
-			return
-		}
 
-		const result = next(transaction.patches)
-		transaction.context.report(`Committed ${discount}% discount.`)
-		return result
-	}
+// [!region guard-hooks]
 const discountDefinition = discountKit.defineForm(
 	discountSchema,
 	(ui) => [
-		ui.field("discount", {
-			control: "number",
-			label: "Discount percentage",
-			props: { min: 0, max: 100, step: 1 },
-		}),
+		ui.field("discount", { control: "number", label: "Discount percentage" }),
 	],
-	{ middleware: [guardDiscount] },
+	{
+		beforeUpdate(draft, { context }) {
+			if (draft.discount > context.maximum) {
+				context.report(`Cancelled ${draft.discount}% discount.`)
+				return false
+			}
+		},
+		afterUpdate({ nextValues, context }) {
+			context.report(`Committed ${nextValues.discount}% discount.`)
+		},
+	},
 )
+// [!endregion guard-hooks]
 
-// [!region cancellation]
 export function CancellationMiddlewarePreview() {
 	const [decision, setDecision] = useState("No managed update yet.")
 	const form = discountKit.useForm(discountDefinition, {
@@ -330,10 +321,7 @@ export function CancellationMiddlewarePreview() {
 	})
 
 	return (
-		<section
-			aria-label="Cancellation middleware preview"
-			className="form-please-complex"
-		>
+		<section aria-label="Cancellation preview" className="form-please-complex">
 			<p className="form-please-complex__kicker">Live preview</p>
 			<p className="form-please-complex__summary">
 				Managed updates above 30% are cancelled. A raw RHF update bypasses the
@@ -355,7 +343,7 @@ export function CancellationMiddlewarePreview() {
 					<button
 						onClick={() => {
 							form.api.setValue("discount", 40, { shouldDirty: true })
-							setDecision("Raw form.api.setValue bypassed middleware.")
+							setDecision("Raw form.api.setValue bypassed the hooks.")
 						}}
 						type="button"
 					>
@@ -369,7 +357,6 @@ export function CancellationMiddlewarePreview() {
 		</section>
 	)
 }
-// [!endregion cancellation]
 
 async function saveOrderAudit(
 	_values: DeepReadonly<OrderInput>,
@@ -383,5 +370,5 @@ const auditCommittedOrder: FormMiddleware<OrderInput> =
 		return result
 	}
 
-const orderMiddleware = [keepOrderTotalCurrent, auditCommittedOrder] as const
+const orderMiddleware = [keepOrderTotalCurrent, auditCommittedOrder]
 // [!endregion async-after-next]
