@@ -73,6 +73,14 @@ inferred type. The form on the right is rendered by that exact code.
 
 </ScriptedPlayground.Scenario>
 
+<ScriptedPlayground.Scenario id="derived">
+
+```tsx twoslash
+// [!include ~/snippets/playground-derived.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
 <ScriptedPlayground.Scenario id="array">
 
 ```tsx twoslash
@@ -109,6 +117,11 @@ the same file one step at a time.
     <a href={`${import.meta.env.BASE_URL}form-kits`}>Form kits</a>
   </li>
   <li>
+    <strong>Keep a total in sync</strong>
+    <span>Write the rule once in the definition. It runs before each change commits, can cancel the change, and needs no effect.</span>
+    <a href={`${import.meta.env.BASE_URL}middleware`}>Value middleware</a>
+  </li>
+  <li>
     <strong>Save a draft</strong>
     <span>Keep the schema input in storage that you own and restore it when the user returns.</span>
     <a href={`${import.meta.env.BASE_URL}persistence`}>Persistence</a>
@@ -140,6 +153,7 @@ the same file one step at a time.
 | Field paths checked against the schema | Yes | Yes | Yes | No, string names |
 | Fields generated from a definition | Yes | No | No | No |
 | Conditional fields and arrays declared, not hand-wired | Yes | No | No | No |
+| Dependent values commit with their sources | Yes, `beforeUpdate` | No, `useEffect` and `setValue` | Field listeners, after the change | No, `useEffect` and `setFieldValue` |
 | Submit receives the transformed output type | Yes | With a resolver | No, input values only | No |
 | Design system | Wrapped once per kit | Wired per field | Wired per field | Wired per field |
 | Escape hatch | Full React Hook Form API | Is the API | Full TanStack API | Full Formik API |

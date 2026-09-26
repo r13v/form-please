@@ -5,6 +5,7 @@ import { findScenario, type ScenarioId } from "#lib/playground-scenarios"
 import { TeamForm } from "../snippets/playground-array"
 import { SignupForm } from "../snippets/playground-basic"
 import { AccountForm } from "../snippets/playground-conditional"
+import { OrderForm } from "../snippets/playground-derived"
 import { ProfileForm } from "../snippets/playground-transform"
 
 export type ScriptedPanel = Readonly<{
@@ -16,6 +17,7 @@ const previews: Readonly<Record<ScenarioId, (() => ReactNode) | null>> = {
 	array: TeamForm,
 	basic: SignupForm,
 	conditional: AccountForm,
+	derived: OrderForm,
 	transform: ProfileForm,
 	typo: null,
 }
