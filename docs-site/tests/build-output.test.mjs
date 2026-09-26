@@ -2,45 +2,18 @@ import assert from "node:assert/strict"
 import { access, readdir, readFile } from "node:fs/promises"
 import { test } from "node:test"
 import { normalizeBasePath } from "../../scripts/fix-vocs-skip-links.mjs"
+import { pages } from "./pages.mjs"
 
 const publicRoot = new URL("../dist/public/", import.meta.url)
 const expectProductionUrl = process.env.EXPECT_PRODUCTION_URL === "true"
 const basePath = normalizeBasePath(process.env.BASE_PATH ?? "/")
 
-test("Vocs emits every supported Markdown route and index artifact", async () => {
+test("Vocs emits the Markdown file of each page and the index artifacts", async () => {
+	assert.ok(pages.length > 0, "the page list must not be empty")
 	for (const file of [
 		"index.html",
 		"404.html",
-		"assets/md/index.md",
-		"assets/md/get-started.md",
-		"assets/md/playground.md",
-		"assets/md/ai-agents.md",
-		"assets/md/definitions.md",
-		"assets/md/validation.md",
-		"assets/md/conditional-fields.md",
-		"assets/md/arrays.md",
-		"assets/md/middleware.md",
-		"assets/md/history.md",
-		"assets/md/persistence.md",
-		"assets/md/form-kits.md",
-		"assets/md/resources.md",
-		"assets/md/styling.md",
-		"assets/md/api.md",
-		"assets/md/recipes.md",
-		"assets/md/types.md",
-		"assets/md/faqs.md",
-		"assets/md/examples.md",
-		"assets/md/examples/history.md",
-		"assets/md/examples/persistence.md",
-		"assets/md/examples/mui-yup.md",
-		"assets/md/examples/shadcn-valibot.md",
-		"assets/md/examples/async-multiselect.md",
-		"assets/md/examples/research-grant.md",
-		"assets/md/examples/studio-policies.md",
-		"assets/md/examples/makerspace-launch.md",
-		"assets/md/examples/learning-cohort.md",
-		"assets/md/examples/membership-ladder.md",
-		"assets/md/examples/campaign-builder.md",
+		...pages.map(({ markdown }) => markdown),
 		"llms.txt",
 		"llms-full.txt",
 		"sitemap.xml",
@@ -48,6 +21,47 @@ test("Vocs emits every supported Markdown route and index artifact", async () =>
 	]) {
 		await access(new URL(file, publicRoot))
 	}
+})
+
+test("each internal anchor link matches an id on its target page", async () => {
+	const htmlFiles = (await readdir(publicRoot, { recursive: true })).filter(
+		(name) => name === "index.html" || name.endsWith("/index.html"),
+	)
+	const ids = new Map()
+	for (const file of htmlFiles) {
+		const html = await readFile(new URL(file, publicRoot), "utf8")
+		ids.set(
+			file,
+			new Set(Array.from(html.matchAll(/\sid="([^"]+)"/g), ([, id]) => id)),
+		)
+	}
+	let checked = 0
+
+	for (const file of htmlFiles) {
+		const html = await readFile(new URL(file, publicRoot), "utf8")
+		for (const [, href] of html.matchAll(/\shref="([^"]*#[^"]*)"/g)) {
+			const [pathWithQuery, hash] = href.split("#")
+			const path = pathWithQuery.replace(/\?.*$/, "")
+			if (hash === "vocs-content" || /^[a-z]+:|^\/\//i.test(path)) continue
+			let target = file
+			if (path !== "") {
+				const route = (
+					path.startsWith(`${basePath}/`) || path === basePath
+						? path.slice(basePath.length)
+						: path
+				).replace(/^\/+|\/+$/g, "")
+				target = route === "" ? "index.html" : `${route}/index.html`
+			}
+			assert.ok(ids.has(target), `${file} links to missing page ${href}`)
+			assert.ok(
+				ids.get(target).has(decodeURIComponent(hash)),
+				`${file} links to missing anchor ${href}`,
+			)
+			checked++
+		}
+	}
+
+	assert.ok(checked > 0, "no anchor links were checked")
 })
 
 test("generated LLM documentation describes the current runtime", async () => {

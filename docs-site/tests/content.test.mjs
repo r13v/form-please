@@ -1,47 +1,13 @@
 import assert from "node:assert/strict"
-import { access, readFile } from "node:fs/promises"
+import { access, readdir, readFile } from "node:fs/promises"
 import { test } from "node:test"
+import { pages, sidebarLinks } from "./pages.mjs"
 
 const siteRoot = new URL("../", import.meta.url)
 const repositoryRoot = new URL("../", siteRoot)
 
-const pages = [
-	"src/pages/index.mdx",
-	"src/pages/get-started.mdx",
-	"src/pages/playground.mdx",
-	"src/pages/ai-agents.mdx",
-	"src/pages/definitions.mdx",
-	"src/pages/validation.mdx",
-	"src/pages/conditional-fields.mdx",
-	"src/pages/arrays.mdx",
-	"src/pages/middleware.mdx",
-	"src/pages/history.mdx",
-	"src/pages/persistence.mdx",
-	"src/pages/devtools.mdx",
-	"src/pages/form-kits.mdx",
-	"src/pages/resources.mdx",
-	"src/pages/styling.mdx",
-	"src/pages/api.mdx",
-	"src/pages/recipes.mdx",
-	"src/pages/workflows.mdx",
-	"src/pages/types.mdx",
-	"src/pages/faqs.mdx",
-	"src/pages/examples/index.mdx",
-	"src/pages/examples/history.mdx",
-	"src/pages/examples/persistence.mdx",
-	"src/pages/examples/mui-yup.mdx",
-	"src/pages/examples/shadcn-valibot.mdx",
-	"src/pages/examples/async-multiselect.mdx",
-	"src/pages/examples/research-grant.mdx",
-	"src/pages/examples/studio-policies.mdx",
-	"src/pages/examples/makerspace-launch.mdx",
-	"src/pages/examples/learning-cohort.mdx",
-	"src/pages/examples/membership-ladder.mdx",
-	"src/pages/examples/campaign-builder.mdx",
-]
-
 test("uses Twoslash for complete TypeScript snippets", async () => {
-	for (const path of pages) {
+	for (const { source: path } of pages) {
 		const source = await readFile(new URL(path, siteRoot), "utf8")
 		const completeSnippets = source.matchAll(
 			/^```(?:ts|tsx)([^\n]*)\n\/\/ \[!include ~\/snippets\/[^\]: ]+\]\n```/gm,
@@ -57,14 +23,11 @@ test("uses Twoslash for complete TypeScript snippets", async () => {
 	}
 })
 
-test("keeps supported routes in navigation", async () => {
-	const config = await readFile(new URL("vocs.config.ts", siteRoot), "utf8")
-	for (const path of pages) {
-		const route = path
-			.replace("src/pages", "")
-			.replace(/\/index\.mdx$|\.mdx$/g, "")
-		if (route === "") continue
-		assert.match(config, new RegExp(`link: "${escapeRegExp(route)}"`))
+test("keeps every page route in navigation", () => {
+	assert.equal(new Set(pages.map(({ route }) => route)).size, pages.length)
+	assert.ok(pages.length > 30, "the page list must not be empty")
+	for (const { route, source } of pages) {
+		assert.ok(sidebarLinks.has(route), `${source} has no sidebar link ${route}`)
 	}
 })
 
@@ -506,6 +469,84 @@ test("the physical example uses only public package imports", async () => {
 		await readFile(new URL("package.json", siteRoot), "utf8"),
 	)
 	assert.equal(packageJson.dependencies["form-please"], "file:..")
+})
+
+test("documents each public export on the API or TypeScript page", async () => {
+	const docs = [
+		await readFile(new URL("src/pages/api.mdx", siteRoot), "utf8"),
+		await readFile(new URL("src/pages/types.mdx", siteRoot), "utf8"),
+	].join("\n")
+	const entries = (
+		await readdir(new URL("src/", repositoryRoot), { recursive: true })
+	).filter((name) => /(^|\/)index\.ts$/.test(name))
+	const names = new Set()
+
+	for (const entry of entries) {
+		const source = await readFile(
+			new URL(`src/${entry}`, repositoryRoot),
+			"utf8",
+		)
+		for (const [, list] of source.matchAll(
+			/^export\s+(?:type\s+)?\{([^}]*)\}/gm,
+		)) {
+			for (const item of list.split(",")) {
+				const name = item
+					.trim()
+					.replace(/^type\s+/, "")
+					.split(/\s+as\s+/)
+					.pop()
+				if (name) names.add(name)
+			}
+		}
+		for (const [, name] of source.matchAll(
+			/^export\s+(?:function|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm,
+		)) {
+			names.add(name)
+		}
+	}
+
+	assert.ok(names.size > 100, `found only ${names.size} exported names`)
+	const missing = [...names].filter(
+		(name) => !new RegExp(`\\b${escapeRegExp(name)}\\b`).test(docs),
+	)
+	assert.deepEqual(missing, [], "api.mdx and types.mdx must name each export")
+})
+
+test("example pages claim only APIs that their snippets use", async () => {
+	let checked = 0
+
+	for (const { source: path } of pages) {
+		if (!path.startsWith("src/pages/examples/")) continue
+		const page = await readFile(new URL(path, siteRoot), "utf8")
+		const section = page.match(
+			/^## What this form demonstrates\n([\s\S]*?)(?=^## |(?![\s\S]))/m,
+		)?.[1]
+		if (!section) continue
+		let snippets = ""
+		for (const [, snippet] of page.matchAll(
+			/\/\/ \[!include ~\/snippets\/([^\]:]+)/g,
+		)) {
+			snippets += await readFile(
+				new URL(`src/snippets/${snippet}`, siteRoot),
+				"utf8",
+			)
+		}
+
+		for (const line of section.split("\n")) {
+			if (!line.startsWith("- ")) continue
+			for (const [, code] of line.matchAll(/`([^`]+)`/g)) {
+				const identifier = code.replace(/\(\)$/, "")
+				if (!/^[A-Za-z_$][\w$.]*$/.test(identifier)) continue
+				assert.ok(
+					snippets.includes(identifier),
+					`${path} claims \`${identifier}\`, but its snippet does not use it`,
+				)
+				checked++
+			}
+		}
+	}
+
+	assert.ok(checked > 0, "no example claims were checked")
 })
 
 function escapeRegExp(value) {

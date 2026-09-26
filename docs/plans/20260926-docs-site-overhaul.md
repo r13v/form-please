@@ -311,16 +311,17 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/src/pages/examples/mui-yup.mdx`, `docs-site/src/pages/form-kits.mdx`
 - Modify: `docs-site/src/pages/types.mdx`
 
-- [ ] create `docs-site/tests/pages.mjs` with the derived page list (see Technical Details)
-- [ ] replace the hand-written page list in `content.test.mjs:8-41` with the shared list; check each route against the sidebar links (this fixes the missing `testing.mdx`)
-- [ ] replace the hand-written Markdown list in `build-output.test.mjs:9-46` with the shared list (this fixes the missing `devtools.md`, `testing.md`, and `workflows.md`)
-- [ ] add the anchor gate to `build-output.test.mjs`
-- [ ] D8: change `examples/mui-yup.mdx:54` to `/api#material-ui-preset`, and `form-kits.mdx:364` to the correct `/api#native-controls` and `/api#default-slots` anchors
-- [ ] document the 17 undocumented exports in `types.mdx`, grouped by entry point: 8 MUI helper types, 3 native-controls types, 3 default-slots i18n types, `FormPleaseDevtoolsProps`, `UsePersistenceResult`, and `UseHistoryResult`; correct the intro at `types.mdx:9`
-- [ ] add the export-coverage gate (no allowlist) and the example-claims gate
-- [ ] add non-vacuity assertions to each gate (see Technical Details)
-- [ ] run the one-time mutation check and record the result under this task
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 6
+- [x] create `docs-site/tests/pages.mjs` with the derived page list (see Technical Details)
+- [x] replace the hand-written page list in `content.test.mjs:8-41` with the shared list; check each route against the sidebar links (this fixes the missing `testing.mdx`)
+- [x] replace the hand-written Markdown list in `build-output.test.mjs:9-46` with the shared list (this fixes the missing `devtools.md`, `testing.md`, and `workflows.md`)
+- [x] add the anchor gate to `build-output.test.mjs`
+- [x] D8: change `examples/mui-yup.mdx:54` to `/api#material-ui-preset`, and `form-kits.mdx:364` to the correct `/api#native-controls` and `/api#default-slots` anchors
+- [x] document the 17 undocumented exports in `types.mdx`, grouped by entry point: 8 MUI helper types, 3 native-controls types, 3 default-slots i18n types, `FormPleaseDevtoolsProps`, `UsePersistenceResult`, and `UseHistoryResult`; correct the intro at `types.mdx:9`
+- [x] add the export-coverage gate (no allowlist) and the example-claims gate
+- [x] add non-vacuity assertions to each gate (see Technical Details)
+- [x] run the one-time mutation check and record the result under this task (each gate failed on its scratch change and passed after the revert: a broken `#native-controls` href in the built `types/index.html` failed the anchor gate; a new `mutation-check.mdx` failed the sidebar gate and the Markdown output gate; a new root export failed the export gate; a `useWatch` claim on `research-grant.mdx` failed the example-claims gate)
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 6
+- ➕ the export and example-claims gates are source checks, so they live in `content.test.mjs`; the route-to-Markdown and anchor gates read the build, so they live in `build-output.test.mjs`
 
 ### Task 6: Organize the navigation by reader intent (I04)
 
