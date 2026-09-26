@@ -297,6 +297,8 @@ export type WhenHidden<Value> =
 			/** The value written to the field when it becomes hidden. */
 			readonly value: Value
 	  }
+/** How many validation messages a field or array shows. */
+export type ErrorDisplay = "all" | "first"
 /** A fixed value or a synchronous resolver that computes the value. */
 export type Resolvable<Value, Input, Context> =
 	| (Value extends (...args: never[]) => unknown ? never : Value)
@@ -404,6 +406,8 @@ type FieldNodeBase<Root, Context, FieldOptions, Grid extends number> = {
 	readonly className?: Resolvable<string, Root, Context>
 	/** Sets the field span in its parent grid. */
 	readonly span?: Resolvable<Grid | "full", Root, Context>
+	/** Overrides the form error display for this field. */
+	readonly errorDisplay?: Resolvable<ErrorDisplay, Root, Context>
 }
 /** Builds a field node for one path and its compatible controls. */
 type FieldNodeForPath<
@@ -611,6 +615,8 @@ type ArrayNodeForPath<
 	readonly className?: Resolvable<string, Root, Context>
 	/** Sets the array span in its parent grid. */
 	readonly span?: Resolvable<Grid | "full", Root, Context>
+	/** Overrides the form error display for this array. */
+	readonly errorDisplay?: Resolvable<ErrorDisplay, Root, Context>
 	/** A new item value or a factory that creates one for each append action. */
 	readonly itemDefault: ArrayItem<Scope, Path> | (() => ArrayItem<Scope, Path>)
 	/** Nodes rendered for each array item. */

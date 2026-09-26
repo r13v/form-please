@@ -401,6 +401,12 @@ cannot replace the resolver.
 
 Public issues contain only `message` and optional `path`.
 
+`errorDisplay` (`"all"` or `"first"`) limits the issues that generated field
+and array slots render. It resolves from the node, then `useForm`, then
+`createFormKit`, then `"all"`. It does not change validation, RHF error state,
+`onSubmit`, or the error summary. Error IDs and `aria-describedby` follow the
+rendered issues.
+
 ## Generated rendering
 
 `kit.Form` provides RHF and Form Please contexts and owns native submit and

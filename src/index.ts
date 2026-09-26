@@ -30,6 +30,7 @@ export type {
 	ControlValueOf,
 	DeepReadonly,
 	DefaultGridValue,
+	ErrorDisplay,
 	ErrorMessageSlotProps,
 	FieldNode,
 	FieldOptionsResolver,

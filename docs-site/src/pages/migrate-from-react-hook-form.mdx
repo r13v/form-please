@@ -162,7 +162,7 @@ field](/conditional-fields#reset-a-hidden-field).
 | `register` rules, such as `required` and `validate` | Not applied, because the form has a resolver. Put the rules in the schema. |
 | Async `defaultValues` or the `values` option | Not available. `defaultValues` is a required, complete, and synchronous schema input. Mount the form after the data loads. Read [Load an edit-form baseline](/recipes#load-an-edit-form-baseline). |
 | `shouldUnregister: true` | Not available. Form, Please sets `shouldUnregister: false`, so [hidden fields keep their values](/how-it-works#hidden-fields-keep-their-values). Read [If the form uses `shouldUnregister: true`](#if-the-form-uses-shouldunregister-true). |
-| `criteriaMode` | Set to `"all"`. |
+| `criteriaMode` | Set to `"all"`. To show one message for each field, set `errorDisplay: "first"` on the kit, the form, or the field. |
 | `mode`, `reValidateMode`, and `delayError` | The same options on `kit.useForm`. |
 | Other `useForm` options | Not available. See [`useForm`](/api#useform) for the complete list. |
 | `handleSubmit(onValid)` | The `onSubmit` option. A direct `form.api.handleSubmit` call does not call `onSubmit`. |

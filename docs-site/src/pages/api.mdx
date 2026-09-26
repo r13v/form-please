@@ -122,7 +122,7 @@ The function freezes the returned definition. It rejects `any`, `unknown`, and
 
 ## `createFormKit`
 
-`createFormKit({ controls, slots, grid? })` creates and freezes one complete
+`createFormKit({ controls, slots, grid?, errorDisplay? })` creates and freezes one complete
 design-system contract.
 
 ```tsx
@@ -134,6 +134,7 @@ design-system contract.
 | `controls` | A record of control definitions. Control names become definition values. |
 | `slots` | Components for fields, sections, arrays, array items, errors, and submit buttons. |
 | `grid` | Optional positive integer list. It must include `1` and contain no duplicates. |
+| `errorDisplay` | Optional `"all"` or `"first"`. Sets how many validation messages each field and array shows. Defaults to `"all"`. |
 
 The default grid is `[1, 2, 3, 4]`. The function sorts a custom grid and freezes
 copies of the controls, slots, and grid. Add all controls before this call. A
@@ -314,8 +315,8 @@ node kinds:
 Field, section, and array nodes support resolved labels or descriptions. They
 also support `visible`, `disabled`, `readOnly`, `className`, `span`, and typed
 `slotOptions`. Fields add `required`, typed control `props`, and selectable
-`options` when the control supports them. Sections add
-`title` and `columns`.
+`options` when the control supports them. Fields and arrays add
+`errorDisplay`. Sections add `title` and `columns`.
 
 Each supported property except field `options` accepts a static value or a synchronous resolver. An
 ordinary node resolver receives the complete deeply readonly schema input and
@@ -375,6 +376,7 @@ the current kit context.
 | `mode` | Optional RHF validation mode. Defaults to `onSubmit`. |
 | `reValidateMode` | Optional RHF revalidation mode. Defaults to `onChange`. |
 | `delayError` | Optional RHF error-display delay in milliseconds. |
+| `errorDisplay` | Optional `"all"` or `"first"`. Overrides the kit `errorDisplay` for this form. |
 | `onSubmit` | Receives parsed output, schema input, the current binding, and a submitter snapshot. |
 
 Use `FormSubmitDetails<Schema, Context>` from `form-please` when a reusable
@@ -397,6 +399,12 @@ receives four values](/how-it-works#onsubmit-receives-four-values).
 
 The definition schema is the only form-level resolver. Form, Please fixes
 `criteriaMode: "all"`, `shouldUnregister: false`, and RHF error focus.
+
+`errorDisplay` changes only the messages that a field or array slot shows.
+The node value applies first, then the `useForm` value, then the kit value.
+With `"first"`, the slot shows the first schema issue for the path, and the
+control `aria-describedby` references only that message. `formState.errors`,
+`onSubmit`, and the error summary keep all issues.
 
 `submitter` is a frozen `{ name, value }` snapshot or `null` for an implicit
 submit. It is captured before validation and does not expose the live DOM
