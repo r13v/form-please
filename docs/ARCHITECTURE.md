@@ -139,9 +139,13 @@ copied and frozen during definition creation.
 Applications may author that tree as a `{ ui }` object or with the schema-bound
 builder passed to `defineForm` and `defineFragment`. Builder helpers create the
 same ordinary field, section, array, and render objects consumed by
-normalization. An array helper supplies a nested builder bound to its item
-scope. Root and array-child builder callbacks execute synchronously once during
-definition creation; they are not value resolvers and add no runtime node kind.
+normalization. Their types also carry a phantom scope brand. Builder callbacks
+and builder section `children` accept only helper-created nodes from the same
+scope and fragment placements, so each helper call owns its option checks and
+list checks stay small. Object nodes belong in `{ ui }` sources. An array helper
+supplies a nested builder bound to its item scope. Root and array-child builder
+callbacks execute synchronously once during definition creation; they are not
+value resolvers and add no runtime node kind.
 
 - A field selects a schema input path and a compatible registered control.
 - A section groups nodes and supplies grid layout.

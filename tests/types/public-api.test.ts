@@ -165,6 +165,21 @@ kit.defineForm(arrayPathSchema, (ui) => [
 	}),
 ])
 
+kit.defineForm(arrayPathSchema, (ui) => [
+	ui.array("items", {
+		children: () => [
+			// @ts-expect-error Builder lists reject nodes from another path scope.
+			ui.render("root-render", { component: () => null }),
+		],
+		itemDefault: { name: "" },
+	}),
+])
+
+// @ts-expect-error Builder lists accept only helper nodes and fragment placements.
+kit.defineForm(arrayPathSchema, () => [
+	{ kind: "render", id: "literal", component: () => null },
+])
+
 type AddressInput = {
 	readonly city: string
 	readonly street: string
@@ -254,6 +269,23 @@ const fragmentHostSchema: StandardSchemaV1<FragmentHostInput> = {
 		},
 	},
 }
+
+kit.defineForm(fragmentHostSchema, (ui) => [
+	ui.section("shipping", {
+		children: [addressFragment.fields({ at: "shippingAddress" })],
+	}),
+	ui.array("addresses", {
+		itemDefault: { city: "", street: "" },
+		children: () => [addressFragment.fields()],
+	}),
+	ui.array("recipients", {
+		itemDefault: { address: { city: "", street: "" }, name: "" },
+		children: (item) => [
+			item.field("name", { control: "text" }),
+			addressFragment.fields({ at: "address" }),
+		],
+	}),
+])
 
 kit.defineForm(fragmentHostSchema, {
 	ui: [
