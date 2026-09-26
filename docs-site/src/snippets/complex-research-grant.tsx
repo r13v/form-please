@@ -18,107 +18,90 @@ import { createNativeControls } from "form-please/native-controls"
 import { useState } from "react"
 import { z } from "zod"
 
-const grantSchema = z
-	.object({
-		applicantKind: z.enum(["person", "collective"]),
-		contact: z.object({
-			name: z.string().min(2, "Enter the lead applicant's name"),
-			email: z.string().email("Enter a valid email"),
-		}),
-		jurisdiction: z.enum(["local", "international"]),
-		organization: z.object({
-			path: z.enum(["registered", "forming"]).optional(),
-			registryId: z.string().optional(),
+const organizationSchema = z.discriminatedUnion(
+	"path",
+	[
+		z.object({
+			path: z.literal("registered"),
+			registryId: z.string({ error: "Select a registry record" }),
 			name: z.string().optional(),
 			registrationCountry: z.string().optional(),
 		}),
-		project: z.object({
-			stream: z.enum(["research", "public-program", "education"]),
-			title: z.string().min(5, "Use a descriptive project title"),
-			abstract: z.string().min(80, "Write at least 80 characters"),
-			requestedFunds: z.number().min(1_000).max(250_000),
-			durationMonths: z.number().int().min(1).max(36),
+		z.object({
+			path: z.literal("forming"),
+			name: z
+				.string()
+				.trim()
+				.min(2, "Enter the collective's working name")
+				.prefault(""),
+			registrationCountry: z.string().optional(),
 		}),
-		payout: z.object({
-			method: z.enum(["bank", "digital-wallet"]),
-			bankAccount: z.string().optional(),
-			walletHandle: z.string().optional(),
-		}),
-		reporting: z.object({
-			status: z.enum(["registered", "exempt", "pending"]),
-			reference: z.string().optional(),
-		}),
-		confirmAccuracy: z.boolean(),
-	})
-	.superRefine((value, context) => {
-		if (value.applicantKind === "collective") {
-			if (value.organization.path === undefined) {
-				context.addIssue({
-					code: "custom",
-					path: ["organization", "path"],
-					message: "Choose how the collective is represented",
-				})
-			}
-			if (
-				value.organization.path === "registered" &&
-				value.organization.registryId === undefined
-			) {
-				context.addIssue({
-					code: "custom",
-					path: ["organization", "registryId"],
-					message: "Select a registry record",
-				})
-			}
-			if (
-				value.organization.path === "forming" &&
-				(value.organization.name ?? "").trim().length < 2
-			) {
-				context.addIssue({
-					code: "custom",
-					path: ["organization", "name"],
-					message: "Enter the collective's working name",
-				})
-			}
-		}
+	],
+	{ error: "Choose how the collective is represented" },
+)
 
-		if (
-			value.payout.method === "bank" &&
-			(value.payout.bankAccount ?? "").trim().length < 8
-		) {
-			context.addIssue({
-				code: "custom",
-				path: ["payout", "bankAccount"],
-				message: "Enter a valid settlement account",
-			})
-		}
-		if (
-			value.payout.method === "digital-wallet" &&
-			(value.payout.walletHandle ?? "").trim().length < 3
-		) {
-			context.addIssue({
-				code: "custom",
-				path: ["payout", "walletHandle"],
-				message: "Enter a wallet handle",
-			})
-		}
-		if (
-			value.reporting.status === "registered" &&
-			(value.reporting.reference ?? "").trim().length < 4
-		) {
-			context.addIssue({
-				code: "custom",
-				path: ["reporting", "reference"],
-				message: "Enter the reporting reference",
-			})
-		}
-		if (!value.confirmAccuracy) {
-			context.addIssue({
-				code: "custom",
-				path: ["confirmAccuracy"],
-				message: "Confirm the application before sending it",
-			})
-		}
-	})
+const payoutSchema = z.discriminatedUnion("method", [
+	z.object({
+		method: z.literal("bank"),
+		bankAccount: z
+			.string()
+			.trim()
+			.min(8, "Enter a valid settlement account")
+			.prefault(""),
+	}),
+	z.object({
+		method: z.literal("digital-wallet"),
+		walletHandle: z
+			.string()
+			.trim()
+			.min(3, "Enter a wallet handle")
+			.prefault(""),
+	}),
+])
+
+const reportingSchema = z.discriminatedUnion("status", [
+	z.object({
+		status: z.literal("registered"),
+		reference: z
+			.string()
+			.trim()
+			.min(4, "Enter the reporting reference")
+			.prefault(""),
+	}),
+	z.object({ status: z.literal(["exempt", "pending"]) }),
+])
+
+const applicationBase = z.object({
+	contact: z.object({
+		name: z.string().min(2, "Enter the lead applicant's name"),
+		email: z.string().email("Enter a valid email"),
+	}),
+	jurisdiction: z.enum(["local", "international"]),
+	project: z.object({
+		stream: z.enum(["research", "public-program", "education"]),
+		title: z.string().min(5, "Use a descriptive project title"),
+		abstract: z.string().min(80, "Write at least 80 characters"),
+		requestedFunds: z.number().min(1_000).max(250_000),
+		durationMonths: z.number().int().min(1).max(36),
+	}),
+	payout: payoutSchema,
+	reporting: reportingSchema,
+	confirmAccuracy: z
+		.boolean()
+		.refine(
+			(confirmed) => confirmed,
+			"Confirm the application before sending it",
+		),
+})
+
+const grantSchema = z
+	.discriminatedUnion("applicantKind", [
+		applicationBase.extend({ applicantKind: z.literal("person") }),
+		applicationBase.extend({
+			applicantKind: z.literal("collective"),
+			organization: organizationSchema,
+		}),
+	])
 	.transform((value) => ({
 		...value,
 		project: {
@@ -143,16 +126,17 @@ const registry: readonly RegistryRecord[] = [
 	{ id: "arc-319", name: "Public Signal Workshop", country: "NZ" },
 ]
 
+// A starting draft for the collective variant. The representation path select
+// shows its empty option until the user chooses a path.
+const collectiveDraft = {
+	organization: {},
+} satisfies { organization: Partial<z.input<typeof organizationSchema>> }
+
 const defaultValues = {
+	...collectiveDraft,
 	applicantKind: "person",
 	contact: { name: "Mina Park", email: "mina@example.test" },
 	jurisdiction: "local",
-	organization: {
-		path: undefined,
-		registryId: undefined,
-		name: undefined,
-		registrationCountry: undefined,
-	},
 	project: {
 		stream: "research",
 		title: "A public atlas of overlooked urban sounds",
@@ -161,12 +145,8 @@ const defaultValues = {
 		requestedFunds: 42_000,
 		durationMonths: 9,
 	},
-	payout: {
-		method: "bank",
-		bankAccount: "SETTLE-482910",
-		walletHandle: undefined,
-	},
-	reporting: { status: "pending", reference: undefined },
+	payout: { method: "bank", bankAccount: "SETTLE-482910" },
+	reporting: { status: "pending" },
 	confirmAccuracy: false,
 } satisfies GrantInput
 
@@ -283,27 +263,46 @@ const grantDefinition = kit.defineForm(grantSchema, (ui) => [
 					emptyOption: { label: "Choose a path", disabled: true },
 				},
 			}),
-			ui.field("organization.registryId", {
-				control: "text",
-				label: "Registry record ID",
-				visible: (values) => values.organization.path === "registered",
-				readOnly: true,
+			ui.section("registered-collective", {
+				columns: 2,
+				span: "full",
+				visible: (values) => organizationPath(values) === "registered",
+				children: [
+					ui.field("organization.registryId", {
+						control: "text",
+						label: "Registry record ID",
+						readOnly: true,
+					}),
+					ui.field("organization.name", {
+						id: "registered-name",
+						control: "text",
+						label: "Registered name",
+						readOnly: true,
+					}),
+					ui.field("organization.registrationCountry", {
+						id: "registered-country",
+						control: "text",
+						label: "Registration country",
+						readOnly: true,
+					}),
+				],
 			}),
-			ui.field("organization.name", {
-				control: "text",
-				label: (values) => {
-					if (values.organization.path === "registered")
-						return "Registered name"
-					return "Working name"
-				},
-				visible: (values) => values.organization.path !== undefined,
-				readOnly: (values) => values.organization.path === "registered",
-			}),
-			ui.field("organization.registrationCountry", {
-				control: "text",
-				label: "Registration country",
-				visible: (values) => values.organization.path !== undefined,
-				readOnly: (values) => values.organization.path === "registered",
+			ui.section("forming-collective", {
+				columns: 2,
+				span: "full",
+				visible: (values) => organizationPath(values) === "forming",
+				children: [
+					ui.field("organization.name", {
+						id: "working-name",
+						control: "text",
+						label: "Working name",
+					}),
+					ui.field("organization.registrationCountry", {
+						id: "working-country",
+						control: "text",
+						label: "Registration country",
+					}),
+				],
 			}),
 		],
 	}),
@@ -360,12 +359,12 @@ const grantDefinition = kit.defineForm(grantSchema, (ui) => [
 			ui.field("payout.bankAccount", {
 				control: "text",
 				label: "Settlement account",
-				visible: (values) => values.payout.method === "bank",
+				visible: ({ payout }) => payout.method === "bank",
 			}),
 			ui.field("payout.walletHandle", {
 				control: "text",
 				label: "Wallet handle",
-				visible: (values) => values.payout.method === "digital-wallet",
+				visible: ({ payout }) => payout.method === "digital-wallet",
 			}),
 			ui.field("reporting.status", {
 				control: "select",
@@ -379,7 +378,7 @@ const grantDefinition = kit.defineForm(grantSchema, (ui) => [
 			ui.field("reporting.reference", {
 				control: "text",
 				label: "Reporting reference",
-				visible: (values) => values.reporting.status === "registered",
+				visible: ({ reporting }) => reporting.status === "registered",
 			}),
 			ui.field("confirmAccuracy", {
 				control: "checkbox",
@@ -432,7 +431,10 @@ function ResearchGrantForm() {
 	if (preview.isPending) status = "Building preview…"
 	const values = form.api.watch()
 	let finder = null
-	if (values.organization.path === "registered") {
+	if (
+		values.applicantKind === "collective" &&
+		values.organization.path === "registered"
+	) {
 		finder = (
 			<OrganizationFinder
 				form={form}
@@ -475,6 +477,11 @@ function ResearchGrantForm() {
 			</kit.AutoForm>
 		</section>
 	)
+}
+
+function organizationPath(values: GrantInput) {
+	if (values.applicantKind === "collective") return values.organization.path
+	return undefined
 }
 
 function fakeRequest<Value>(value: Value, delay = 280): Promise<Value> {
