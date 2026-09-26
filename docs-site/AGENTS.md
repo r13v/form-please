@@ -37,3 +37,26 @@
   declaration files collected in `src/lib/playground-types.ts` through
   `import.meta.glob(..., { exhaustive: true })`. Add a `paths` entry there
   when a new package must resolve.
+- `src/pages/how-it-works.mdx` is the single home of the core rules:
+  `required` is UI-only, hidden fields keep their values, the schema parses
+  once on submit, the `onSubmit` values, server issues, and ownership. Other
+  pages keep one sentence and a link to the rule anchor. Move text; do not
+  copy it.
+- Use the terms in `src/pages/glossary.mdx`. Write "Form, Please" without
+  quotes, "React Hook Form (RHF)" at the first mention on each page, and
+  "managed update". `tests/content.test.mjs` denies "Form Please" and
+  "managed change" in prose (code, inline code, imports, and link targets are
+  ignored). Quote the devtools UI label `Form Please Devtools` in inline code.
+- End each guide page (Learn, Build, Advanced, and Troubleshooting) with a
+  `## Next steps` list of one or two task links. Reference pages have none.
+- Give each troubleshooting symptom its own `##` heading, not a `:::details`
+  block, because Vocs search indexes headings only.
+- Routes come from `src/pages/**/*.mdx` through `tests/pages.mjs`. Do not
+  copy a route list into a test. A new page must be in the sidebar; the
+  route, Markdown-output, anchor, export-coverage, and example-claims gates
+  then cover it. Document each new public export in `api.mdx` or `types.mdx`.
+- `postbuild` runs `scripts/fix-vocs-skip-links.mjs` and
+  `scripts/fix-vocs-llms-links.mjs`. The second script adds the base path to
+  root-relative links in `llms.txt`, `llms-full.txt`, and
+  `assets/md/**/*.md`. Keep `showAskAi: false` on all pages until Vocs fixes
+  its Ask AI base-path bug. Do not patch the `vocs` dependency.

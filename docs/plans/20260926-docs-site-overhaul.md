@@ -524,15 +524,15 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 
 ### Task 16: [Final] Update documentation
 
-- [ ] update `docs-site/AGENTS.md` with the new rules:
+- [x] update `docs-site/AGENTS.md` with the new rules:
   - `how-it-works.mdx` is the single home of the core rules.
   - The glossary terms and the denylist.
   - Each guide ends with `## Next steps`.
   - Routes come from `src/pages` through `tests/pages.mjs`.
   - The LLM postbuild script.
-- [ ] mark the done defects and ideas in `docs/ideas.md` (a status note under each section)
-- [ ] update the root `README.md` if it links to moved docs sections (`README.md:167` links to `profile-form.tsx`)
-- [ ] move this plan to `docs/plans/completed/`
+- [x] mark the done defects and ideas in `docs/ideas.md` (a status note under each section)
+- [x] update the root `README.md` if it links to moved docs sections (`README.md:167` links to `profile-form.tsx`) (no change: each README link still resolves, and `profile-form.tsx` is still the Get started program)
+- [x] move this plan to `docs/plans/completed/` (done by the orchestrator after the review phases)
 
 ## Post-Completion
 

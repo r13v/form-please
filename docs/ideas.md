@@ -58,12 +58,17 @@ first draft: Vite replaces `process.env.NODE_ENV` in client code, so
 | D12 | Tests do not cover all pages. `testing.mdx` is missing from `tests/content.test.mjs:8-41`. `devtools.md`, `testing.md`, and `workflows.md` are missing from `tests/build-output.test.mjs:9-46`. | test files |
 | D13 | The README alt text names the mascot "Hermes Conrad", a Futurama character. This can be an IP risk. Decide this as a project owner. | `README.md:4`, `docs-site/public/brand/form-please-logo.png` |
 
+**Status (2026-09-26):** D1 to D12 are fixed. Automated gates cover D1, D2,
+D4, D7, D8, D9, and D12. D3, D5, D6, D10, and D11 were one-time text or
+snippet fixes. D13 is open. It is a project owner decision.
+
 ## Top 20 Ideas
 
 Each idea has the verified problem, the refined proposal, the inspiration, the
 effort, and the verification result. Effort is S (1 to 2 days), M (3 to 5
 days), or L (more than 1 week). The ideas are in rank order. See
 [Scores](#scores) for the method.
+The ideas that the docs overhaul implemented have a status note.
 
 ### I04. Organize Navigation by Reader Intent
 
@@ -86,6 +91,10 @@ days), or L (more than 1 week). The ideas are in rank order. See
   Definitions goes both ways (`form-kits.mdx:171`, `definitions.mdx:414`), so
   the order is a choice. The native `::changelog` page needs the GitHub API
   at build time. An external link is safer.
+- **Status (2026-09-26):** Done. The `topNav` has Docs, Examples,
+  Playground, API, and a version dropdown that links to GitHub releases.
+  Guides are split into Learn, Build, and Advanced. New pages from I05, I13,
+  I14, and I17 went into these groups.
 
 ### I05. One "How It Works" Page as the Single Source for Core Rules
 
@@ -109,6 +118,9 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Verification:** Partly confirmed. All counts in the first draft were too
   low. Move each rule. Do not copy it, or the page becomes one more copy.
   Land it with the anchor test from I10.
+- **Status (2026-09-26):** Done. `/how-it-works` has the flow diagram and one
+  heading for each core rule. The FAQ and the other pages keep one sentence
+  and a link.
 
 ### I13. Troubleshooting Page and a Fixed FAQ
 
@@ -130,6 +142,10 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Effort:** S.
 - **Verification:** Partly confirmed. Do not copy the caveats. Link to
   them. Fix the FAQ parse answer (D6) at the same time.
+- **Status (2026-09-26):** Done. `/troubleshooting` has six symptoms. Each
+  symptom is a `##` heading, not a `:::details` block, because Vocs search
+  indexes headings only. A sixth entry covers the synchronous
+  `defaultValues` caveat.
 
 ### I14. Localization and Accessibility Guides
 
@@ -154,6 +170,9 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Effort:** S.
 - **Verification:** Partly confirmed. The first draft said no page lists the
   control contract. That was wrong: it exists, but it is hidden in Recipes.
+- **Status (2026-09-26):** Done. `/localization` and `/accessibility`
+  exist. The control contract moved to `/accessibility`. A source test checks
+  the i18n key table against the library.
 
 ### I16. A Get Started Page With a Visible Result
 
@@ -172,6 +191,10 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Effort:** S.
 - **Verification:** Partly confirmed. Merge `profile-form.tsx` and
   `playground-transform.tsx`, or they will drift.
+- **Status (2026-09-26):** Done, with one change. `profile-form.tsx` shows
+  the submitted value and renders live on Get started. It is not merged with
+  `playground-transform.tsx`, because that file carries Twoslash queries and
+  playground wiring.
 
 ### I20. Task Cards and "Next Steps" Links
 
@@ -190,6 +213,9 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Verification:** Partly confirmed. Vocs already ranks shallow pages
   higher (`vocs/src/internal/config.ts:971-983`). No multi-step page exists
   for a "Build a multi-step form" card; link to `/workflows`.
+- **Status (2026-09-26):** Done. The overview has six task cards. Each guide
+  ends with `## Next steps`. Core pages have `searchPriority` 2, and the
+  complex examples have 0.5.
 
 ### I17. Glossary and One Term for One Concept
 
@@ -213,6 +239,10 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Verification:** Partly confirmed. All counts in the first draft were
   too low. "Proposal" and "transaction" are public API terms
   (`types.mdx:227`). Define them. Do not retire them.
+- **Status (2026-09-26):** Done. `/glossary` defines the six terms. A source
+  test denies "Form Please" and "managed change" and checks "React Hook Form
+  (RHF)" at the first mention. The devtools UI label stays
+  `Form Please Devtools`; a library rename is an owner decision.
 
 ### I01. Fix the Hero and Show Code Earlier
 
@@ -355,6 +385,8 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Effort:** M.
 - **Verification:** Partly confirmed. The accessibility and testing
   sections are not duplicates; they have no other home yet (see I14).
+- **Status (2026-09-26):** Not started. The accessibility section now has
+  its home in `/accessibility` (I14).
 
 ### I15. Fix the LLM Files and Turn On Page Actions
 
@@ -377,6 +409,11 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Verification:** Partly confirmed. The first draft said 10 pages; the
   real count is 33. The base-path bug is the real blocker. The skill
   content is described on `ai-agents.mdx:9-11`.
+- **Status (2026-09-26):** Partly done. A postbuild script fixes the base
+  path in `llms.txt`, `llms-full.txt`, and the per-page Markdown.
+  `/ai-agents` has the copyable prompt and the LLM file URLs, and the LLM
+  links left the Reference group. Ask AI stays off until Vocs fixes its
+  base-path bug upstream. The Context7 submission waits for the deploy.
 
 ### I10. Automated Docs Accuracy Gates
 
@@ -398,6 +435,10 @@ days), or L (more than 1 week). The ideas are in rank order. See
 - **Verification:** Partly confirmed. A prototype of test 1 works and
   reports the 17 missing names. Test 4 catches D4. Tests 1 to 3 do not catch
   D4 or D6.
+- **Status (2026-09-26):** Done. The export, anchor, route, and
+  example-claims gates exist, and each has a non-vacuity assertion. The 17
+  missing names are documented in `types.mdx`. The shared page list is
+  `docs-site/tests/pages.mjs`.
 
 ### I03. Share Links for the Playground
 
