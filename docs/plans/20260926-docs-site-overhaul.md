@@ -259,11 +259,11 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/src/pages/_root.css`
 - Modify: `tests/browser/docs-site.spec.ts`
 
-- [ ] add a media query (`max-width: 48rem`) that sets `.form-please-overview-hero` to one column, puts the logo above or below the intro, and makes the logo smaller
-- [ ] check the layout at 375 px, 768 px, and 1440 px in the browser pane
-- [ ] add an e2e test at a 375 × 812 viewport: the hero `h1` has no horizontal overflow (`scrollWidth <= clientWidth`), and the intro is at least 300 px wide
-- [ ] add an e2e assertion at 1440 px: the logo stays next to the intro
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 3
+- [x] add a media query (`max-width: 48rem`) that sets `.form-please-overview-hero` to one column, puts the logo above or below the intro, and makes the logo smaller
+- [x] check the layout at 375 px, 768 px, and 1440 px in the browser pane (checked with a Playwright script on the preview build: at 375 px the intro is 343 px wide and the logo is 112 px above it; at 768 px the intro is 720 px wide; at 1440 px the 240 px logo is next to the 748 px intro; no page overflow at any width)
+- [x] add an e2e test at a 375 × 812 viewport: the hero `h1` has no horizontal overflow (`scrollWidth <= clientWidth`), and the intro is at least 300 px wide
+- [x] add an e2e assertion at 1440 px: the logo stays next to the intro
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 3
 
 ### Task 3: Correct the wrong claims in the prose (D3 to D7)
 

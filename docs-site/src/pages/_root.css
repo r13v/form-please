@@ -108,6 +108,22 @@ table {
 	inline-size: 100%;
 }
 
+@media (max-width: 48rem) {
+	.form-please-overview-hero {
+		gap: 1rem;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.form-please-overview-intro {
+		grid-row: 2;
+	}
+
+	.form-please-overview-logo {
+		grid-column: 1;
+		inline-size: 7rem;
+	}
+}
+
 .form-please-complex {
 	background: var(--fp-docs-panel);
 	border: 1px solid var(--fp-docs-border);

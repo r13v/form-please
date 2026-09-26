@@ -411,6 +411,36 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("fits the overview hero on phones and desktops", async ({ page }) => {
+		const hero = page.locator(".form-please-overview-hero")
+		const heading = hero.locator("h1")
+		const intro = hero.locator(".form-please-overview-intro")
+		const logo = hero.locator(".form-please-overview-logo")
+
+		await page.setViewportSize({ width: 375, height: 812 })
+		await page.goto("./")
+		await expect(heading).toBeVisible()
+		const phone = await heading.evaluate((element) => ({
+			clientWidth: element.clientWidth,
+			scrollWidth: element.scrollWidth,
+		}))
+		expect(phone.scrollWidth).toBeLessThanOrEqual(phone.clientWidth)
+		const phoneIntro = await intro.boundingBox()
+		expect(phoneIntro?.width).toBeGreaterThanOrEqual(300)
+
+		await page.setViewportSize({ width: 1440, height: 900 })
+		const desktopIntro = await intro.boundingBox()
+		const desktopLogo = await logo.boundingBox()
+		if (!desktopIntro || !desktopLogo) {
+			throw new Error("The overview hero did not render.")
+		}
+		expect(desktopLogo.x).toBeGreaterThanOrEqual(
+			desktopIntro.x + desktopIntro.width,
+		)
+		expect(desktopLogo.y).toBeLessThan(desktopIntro.y + desktopIntro.height)
+		expect(desktopLogo.y + desktopLogo.height).toBeGreaterThan(desktopIntro.y)
+	})
+
 	test("runs the product workflow tutorial", async ({ page }) => {
 		const errors = pageErrors(page)
 		await page.goto("./workflows")
