@@ -288,6 +288,14 @@ synchronous, cannot start nested managed updates, and use readonly transaction
 views rather than archival snapshots. A post-commit error does not roll values
 back.
 
+After `beforeUpdate`, the coordinator applies field `whenHidden` actions. It
+compares field visibility for `previousValues` and `nextValues` with the
+transaction context. For each field that the transaction hides, it adds the
+resolved write to the same transaction and keeps its `source`. The step repeats
+until no new field becomes hidden. History and persistence restores, context
+changes, and fields inside the array of an `array` source do not apply it. See
+[ADR 0027](adr/0027-reset-hidden-field-values-in-managed-updates.md).
+
 Generated controls and `form.update` publish final values through one RHF
 `setValues` call. RHF remains the sole state owner. Direct calls through
 `form.api`, initial values, and reset bypass middleware and managed update hooks

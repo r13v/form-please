@@ -32,6 +32,7 @@ import {
 } from "react-hook-form"
 import {
 	createFormFragment,
+	hasWhenHidden,
 	normalizeDefinition,
 	normalizeGrid,
 	type ResolvedArrayNode,
@@ -39,6 +40,7 @@ import {
 	type ResolvedFieldNode,
 	type ResolvedNode,
 	resolveDefinition,
+	resolveHiddenFieldWrites,
 } from "./definition.js"
 import {
 	formDiagnosticNow,
@@ -707,6 +709,14 @@ function assembleKit(
 				getContext: () => contextRef.current,
 				getValues: () => apiRef.current.getValues(),
 				middleware: fixedDefinition.middleware,
+				resolveHiddenFieldWrites: hasWhenHidden(fixedDefinition)
+					? (transaction) =>
+							resolveHiddenFieldWrites(
+								fixedDefinition,
+								transaction,
+								fixedDefaultValues,
+							)
+					: undefined,
 				restore: restoreRef.current,
 			})
 		}

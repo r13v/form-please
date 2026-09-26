@@ -62,6 +62,7 @@ export type {
 	UiResolver,
 	UiResolverDetails,
 	UiResolverValues,
+	WhenHidden,
 } from "./types.js"
 export { useSnapshot } from "./use-snapshot.js"
 export type {

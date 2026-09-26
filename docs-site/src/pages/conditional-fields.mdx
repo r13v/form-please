@@ -5,6 +5,7 @@ showAskAi: false
 ---
 
 import { AccountVariantsDemo } from "../components/account-variants-demo"
+import { WhenHiddenDemo } from "../components/when-hidden-demo"
 
 # Conditional fields
 
@@ -53,6 +54,7 @@ These field properties accept a static value or a synchronous resolver:
 | `required` | Passes required UI state to the control. | `false` |
 | `label`, `description` | Changes displayed content. | No content |
 | `props`, `slotOptions` | Changes control props or slot configuration. | Control-dependent |
+| `whenHidden` | Keeps, resets, or replaces the value when an edit hides the field. | `"keep"` |
 
 Layout properties such as `className` and `span` also accept resolvers. See
 [Definitions](/definitions#resolver-values) for the complete property reference.
@@ -183,6 +185,58 @@ key, such as `account.companyName`. A reusable fragment cannot be placed at a
 union scope, because the scope does not satisfy the input of one variant. Put
 the variant fields directly in the section.
 
+## Reset a hidden field
+
+A hidden field keeps its value. When the field becomes visible again, the user
+sees the old value. Set `whenHidden` to clear the value when an edit hides the
+field:
+
+```tsx
+// [!include ~/snippets/when-hidden.tsx:definition]
+```
+
+<WhenHiddenDemo />
+
+| Value | Result |
+| --- | --- |
+| `"keep"` | The field keeps its value. This is the default. |
+| `"reset"` | The field receives its value from `defaultValues`. |
+| `{ value }` | The field receives `value`. Use it to write the strings `"keep"` or `"reset"`. |
+
+`whenHidden` also accepts a resolver. The resolver receives the values after
+the edit and the runtime context:
+
+```tsx
+// [!include ~/snippets/when-hidden.tsx:context-resolver]
+```
+
+A resolver that returns `undefined` keeps the value. Do not repeat the
+`visible` condition in this resolver. The form calls it only when the field
+becomes hidden.
+
+The form applies `whenHidden` in the same managed update as the edit. Value
+middleware, history, and persistence receive one transaction. One undo
+restores the edit and the reset value.
+
+The form does not apply `whenHidden` in these cases:
+
+- The field is hidden when the form mounts.
+- The field was hidden before the edit.
+- A context change hides the field. Call `form.update` in the code that
+  changes the context.
+- History or persistence restores values.
+- `beforeUpdate` cancels the edit.
+
+`whenHidden` does not change submission or validation. The key stays in the
+values, and the schema still validates it. To remove the key from the output,
+use a schema transform.
+
+In an array item, `"reset"` needs a value at the same path in `defaultValues`.
+An appended item has no such value, so the form throws a `TypeError`. Use
+`{ value }` for fields in array items. A structural array edit, such as
+append, remove, or move, does not apply `whenHidden` to the fields of that
+array.
+
 ## Keep conditional validation in the schema
 
 `visible` and `required` do not change schema rules. See [`required` is
@@ -200,7 +254,8 @@ account type has its own set of fields, use a discriminated union instead. See
 [Split a form into variants](#split-a-form-into-variants).
 
 Use a schema transform when cleanup is part of the submission contract. Use
-value middleware when the source and cleared value must commit atomically. Use
+`whenHidden` to clear the editable value when an edit hides the field. Use
+value middleware when the cleared value depends on more than visibility. Use
 `form.update` for the same managed boundary in an application action. See
 [Value middleware](/middleware).
 

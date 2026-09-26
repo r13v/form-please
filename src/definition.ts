@@ -1,3 +1,5 @@
+import type { FieldValues } from "react-hook-form"
+
 import type {
 	ControlDefinitionRegistry,
 	FormDefinition,
@@ -7,6 +9,11 @@ import type {
 	RenderNodeComponent,
 	StandardSchema,
 } from "./types.js"
+import {
+	type HiddenFieldWrite,
+	readPatchTarget,
+	type ValueTransaction,
+} from "./value-middleware.js"
 
 /** A supported UI node discriminator. */
 type NodeKind = "array" | "field" | "render" | "section"
@@ -465,6 +472,12 @@ function normalizeNodes(
 			) {
 				throw new TypeError(`Unknown control "${String(candidate.control)}"`)
 			}
+			if (
+				candidate.whenHidden !== undefined &&
+				typeof candidate.whenHidden !== "function"
+			) {
+				readWhenHidden(candidate.whenHidden, String(path))
+			}
 		}
 		if (kind === "array" && !("itemDefault" in candidate)) {
 			throw new TypeError(`Array "${path}" requires itemDefault`)
@@ -818,6 +831,128 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 		nodes === previous.nodes
 		? previous
 		: Object.freeze({ ui, nodes })
+}
+
+/** A field with a `whenHidden` action and its visibility for one value set. */
+type WhenHiddenField = {
+	/** The normalized field node that declares `whenHidden`. */
+	readonly node: RuntimeNode
+	/** Whether the field and all its ancestors are visible. */
+	readonly visible: boolean
+	/** The value scope supplied to the field resolvers. */
+	readonly resolverValues: unknown
+	/** The array item path that contains the field, or an empty string. */
+	readonly pathPrefix: string
+}
+
+/** Reports whether any field in a definition declares `whenHidden`. */
+export function hasWhenHidden(definition: FormDefinition): boolean {
+	return (definition.nodes as readonly RuntimeNode[]).some(
+		(node) => node.kind === "field" && node.whenHidden !== undefined,
+	)
+}
+
+/** Resolves the `whenHidden` writes for fields that one transaction hides. */
+export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
+	definition: FormDefinition,
+	transaction: ValueTransaction<Input, Context>,
+	initialValues: unknown,
+): readonly HiddenFieldWrite[] {
+	const { context, source } = transaction
+	const previous = collectWhenHiddenFields(
+		definition,
+		transaction.previousValues,
+		context,
+	)
+	const next = collectWhenHiddenFields(
+		definition,
+		transaction.nextValues,
+		context,
+	)
+	const writes: HiddenFieldWrite[] = []
+	for (const [path, field] of next) {
+		if (field.visible || previous.get(path)?.visible !== true) continue
+		// Array paths use item positions, and a structural change moves items.
+		if (source.type === "array" && path.startsWith(`${source.path}.`)) continue
+
+		const action = readWhenHidden(
+			resolveOptional(
+				field.node.whenHidden,
+				field.resolverValues,
+				field.pathPrefix,
+				context,
+			),
+			path,
+		)
+		if (action === "keep") continue
+		if (action !== "reset") {
+			writes.push({ path, value: action.value })
+			continue
+		}
+		const initial = readPatchTarget(initialValues, path.split("."))
+		if (!initial.exists && field.pathPrefix.length > 0) {
+			throw new TypeError(
+				`Field "${path}" has no initial value for whenHidden "reset". Use whenHidden { value } instead.`,
+			)
+		}
+		writes.push({ path, value: initial.value })
+	}
+	return writes
+}
+
+/** Resolves the visibility of every field that declares `whenHidden`. */
+function collectWhenHiddenFields(
+	definition: FormDefinition,
+	values: unknown,
+	context: unknown,
+): ReadonlyMap<string, WhenHiddenField> {
+	const fields = new Map<string, WhenHiddenField>()
+	const visit = (
+		nodes: readonly RuntimeNode[],
+		pathPrefix: string,
+		parentVisible: boolean,
+	): void => {
+		for (const node of nodes) {
+			const resolverValues = getResolverValues(node, values, pathPrefix)
+			const visible =
+				parentVisible &&
+				resolveValue(node.visible, true, resolverValues, pathPrefix, context)
+			if (node.kind === "field" && node.whenHidden !== undefined) {
+				fields.set(joinPath(pathPrefix, String(node.path)), {
+					node,
+					visible,
+					resolverValues,
+					pathPrefix,
+				})
+			} else if (node.kind === "section") {
+				visit(node.children ?? [], pathPrefix, visible)
+			} else if (node.kind === "array") {
+				const path = joinPath(pathPrefix, String(node.path))
+				const items = getPathValue(values, path)
+				if (!Array.isArray(items)) continue
+				for (let index = 0; index < items.length; index++) {
+					visit(node.children ?? [], `${path}.${index}`, visible)
+				}
+			}
+		}
+	}
+	visit(definition.ui as readonly RuntimeNode[], "", true)
+	return fields
+}
+
+/** Validates one static or resolved `whenHidden` action. */
+function readWhenHidden(
+	value: unknown,
+	path: string,
+): "keep" | "reset" | { readonly value: unknown } {
+	if (value === undefined) return "keep"
+	if (value === "keep" || value === "reset") return value
+	if (isRecord(value) && Object.hasOwn(value, "value")) {
+		return value as { readonly value: unknown }
+	}
+	throw new TypeError(
+		`Field "${path}" whenHidden must be "keep", "reset", or an object with a value property`,
+	)
 }
 
 /** Reuses a frozen resolved list when each item retains its reference. */

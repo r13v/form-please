@@ -128,6 +128,7 @@ const canShowProfile: Visibility = (values, { context }) =>
 | `UiResolverValues<Input>` | Deeply readonly resolver values. |
 | `UiResolverDetails<Context>` | Object that contains deeply readonly `context`. |
 | `Resolvable<Value, Input, Context>` | Static `Value` or a `UiResolver` that returns it. |
+| `WhenHidden<Value>` | `"keep"`, `"reset"`, or `{ value }` for the field `whenHidden` property. |
 | `ReactUiContent` | A React element or string accepted by UI content properties. |
 
 `Resolvable` excludes a static function when `Value` is callable. This rule
