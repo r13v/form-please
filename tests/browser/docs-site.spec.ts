@@ -229,7 +229,7 @@ test.describe("Form, Please documentation", () => {
 		await page.goto("./middleware")
 
 		const derived = page.getByRole("region", {
-			name: "Derived total middleware preview",
+			name: "Derived total preview",
 		})
 		await expect(
 			page.locator('[data-middleware-preview="derived-total"]'),
@@ -241,7 +241,7 @@ test.describe("Form, Please documentation", () => {
 		await expect(derived.getByLabel("Total")).toHaveValue("90")
 
 		const cancellation = page.getByRole("region", {
-			name: "Cancellation middleware preview",
+			name: "Cancellation preview",
 		})
 		await expect(
 			page.locator('[data-middleware-preview="cancellation"]'),
@@ -260,7 +260,7 @@ test.describe("Form, Please documentation", () => {
 			"40",
 		)
 		await expect(
-			cancellation.getByText(/form\.api\.setValue bypassed middleware/),
+			cancellation.getByText(/form\.api\.setValue bypassed the hooks/),
 		).toBeVisible()
 
 		const complexEditing = page.getByRole("region", {
@@ -294,6 +294,24 @@ test.describe("Form, Please documentation", () => {
 		await page.goto("./resources")
 		await expect(
 			page.getByText("fromResource", { exact: true }).first(),
+		).toBeVisible()
+
+		const resource = page.getByRole("region", {
+			name: "Resource state preview",
+		})
+		await expect(
+			page.locator('[data-resource-preview="country"]'),
+		).toHaveAttribute("data-demo-client-ready", "true")
+		const country = resource.getByLabel("Country")
+		await expect(country).toBeDisabled()
+		await expect(resource.getByText("Loading countries…")).toBeVisible()
+		await resource.getByRole("button", { name: "Loaded" }).click()
+		await expect(country).toBeEnabled()
+		await expect(resource.getByText("2 countries available")).toBeVisible()
+		await resource.getByRole("button", { name: "Failed" }).click()
+		await expect(country).toBeDisabled()
+		await expect(
+			resource.getByText("Cannot load countries: Country service unavailable"),
 		).toBeVisible()
 		expect(errors).toEqual([])
 	})

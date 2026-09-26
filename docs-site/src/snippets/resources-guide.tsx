@@ -1,139 +1,174 @@
-// biome-ignore-all lint/correctness/noUnusedImports: Named regions are consumed independently by the documentation.
 // biome-ignore-all lint/correctness/noUnusedVariables: Named regions are consumed independently by the documentation.
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
-import {
-	fromResource,
-	matchResource,
-	type ResourceState,
-	type UiResolver,
-} from "form-please"
+import { type UseQueryResult, useQuery } from "@tanstack/react-query"
+import { fromResource, matchResource, type ResourceState } from "form-please"
 import { nativeFormKit } from "form-please/preset-native"
+import { useState } from "react"
 import { z } from "zod"
 
-import { queryToResource } from "./query-to-resource"
-
-type CountryOption = {
+type Country = {
 	readonly value: string
 	readonly label: string
 }
 
-type CountryResource = ResourceState<readonly CountryOption[], Error>
-
-// [!region create-states]
-const pendingCountries: CountryResource = { status: "pending" }
-
-const loadedCountries: CountryResource = {
-	status: "success",
-	value: [
-		{ value: "ca", label: "Canada" },
-		{ value: "jp", label: "Japan" },
-	],
-}
-
-const failedCountries: CountryResource = {
-	status: "error",
-	error: new Error("Country service unavailable"),
-}
-// [!endregion create-states]
-
-// [!region match-resource]
-function getCountryStatus(countries: CountryResource): string {
-	return matchResource(countries, {
-		pending: () => "Loading countries",
-		success: ({ value }) => `${value.length} countries available`,
-		error: ({ error }) => `Cannot load countries: ${error.message}`,
-	})
-}
-// [!endregion match-resource]
-
 const profileSchema = z.object({
-	plan: z.enum(["solo", "team"]),
 	country: z.string().optional(),
 })
 
-type ProfileInput = z.input<typeof profileSchema>
+// [!region resource-form]
 type ProfileContext = {
-	readonly countries: CountryResource
-	readonly savedCountryOptions: readonly CountryOption[]
+	readonly countries: ResourceState<readonly Country[], Error>
 }
-
-const savedCountryOptions: readonly CountryOption[] = [
-	{ value: "ca", label: "Canada" },
-]
-
-// [!region resource-resolvers]
-const selectCountries: UiResolver<
-	CountryResource,
-	ProfileInput,
-	ProfileContext
-> = (_values, { context }) => context.countries
-
-const countryDescription = fromResource(selectCountries, {
-	pending: () => "Loading countries",
-	success: ({ value }, values) =>
-		`${value.length} countries available for the ${values.plan} plan`,
-	error: ({ error }) => `Cannot load countries: ${error.message}`,
-})
-
-const countryOptions = ({ context }: { readonly context: ProfileContext }) =>
-	matchResource(context.countries, {
-		pending: () => context.savedCountryOptions,
-		success: ({ value }) => value,
-		error: () => context.savedCountryOptions,
-	})
-// [!endregion resource-resolvers]
 
 const profileKit = nativeFormKit.forContext<ProfileContext>()
 
-// [!region context-form]
 const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
-	ui.field("plan", {
-		control: "select",
-		label: "Plan",
-		options: [
-			{ value: "solo", label: "Solo" },
-			{ value: "team", label: "Team" },
-		],
-	}),
 	ui.field("country", {
 		control: "select",
 		label: "Country",
-		description: countryDescription,
-		options: countryOptions,
+		props: { emptyOption: { label: "Select a country" } },
+		options: ({ context }) =>
+			matchResource(context.countries, {
+				pending: () => [],
+				success: ({ value }) => value,
+				error: () => [],
+			}),
+		disabled: (_values, { context }) => context.countries.status !== "success",
+		description: (_values, { context }) =>
+			matchResource(context.countries, {
+				pending: () => "Loading countries…",
+				success: ({ value }) => `${value.length} countries available`,
+				error: ({ error }) => `Cannot load countries: ${error.message}`,
+			}),
+	}),
+])
+// [!endregion resource-form]
+
+declare function loadCountries(): Promise<readonly Country[]>
+
+// [!region query-context]
+function toResource<Value>(
+	query: UseQueryResult<Value, Error>,
+): ResourceState<Value, Error> {
+	if (query.isPending) return { status: "pending" }
+	if (query.isError) return { status: "error", error: query.error }
+	return { status: "success", value: query.data }
+}
+
+function ProfileForm() {
+	const countries = useQuery({
+		queryKey: ["countries"],
+		queryFn: loadCountries,
+	})
+	const form = profileKit.useForm(profileDefinition, {
+		defaultValues: { country: undefined },
+		context: { countries: toResource(countries) },
+	})
+
+	return <profileKit.AutoForm form={form} />
+}
+// [!endregion query-context]
+
+const previewStates = {
+	pending: { status: "pending" },
+	success: {
+		status: "success",
+		value: [
+			{ value: "ca", label: "Canada" },
+			{ value: "jp", label: "Japan" },
+		],
+	},
+	error: { status: "error", error: new Error("Country service unavailable") },
+} satisfies Record<string, ProfileContext["countries"]>
+
+export function ResourceStatePreview() {
+	const [status, setStatus] = useState<keyof typeof previewStates>("pending")
+	const form = profileKit.useForm(profileDefinition, {
+		defaultValues: { country: undefined },
+		context: { countries: previewStates[status] },
+	})
+
+	return (
+		<section
+			aria-label="Resource state preview"
+			className="form-please-complex"
+		>
+			<p className="form-please-complex__kicker">Live preview</p>
+			<p className="form-please-complex__summary">
+				Select a request state. The options, description, and disabled state
+				change together.
+			</p>
+			<div className="form-please-complex__actions">
+				<button onClick={() => setStatus("pending")} type="button">
+					Loading
+				</button>
+				<button onClick={() => setStatus("success")} type="button">
+					Loaded
+				</button>
+				<button onClick={() => setStatus("error")} type="button">
+					Failed
+				</button>
+			</div>
+			<profileKit.Form className="form-please-complex__form" form={form}>
+				<profileKit.Fields />
+			</profileKit.Form>
+		</section>
+	)
+}
+
+// [!region saved-options]
+type SavedCountriesContext = ProfileContext & {
+	readonly savedCountries: readonly Country[]
+}
+
+const savedCountriesKit = nativeFormKit.forContext<SavedCountriesContext>()
+
+const savedCountriesDefinition = savedCountriesKit.defineForm(
+	profileSchema,
+	(ui) => [
+		ui.field("country", {
+			control: "select",
+			label: "Country",
+			props: { emptyOption: { label: "Select a country" } },
+			options: ({ context }) =>
+				matchResource(context.countries, {
+					pending: () => context.savedCountries,
+					success: ({ value }) => value,
+					error: () => context.savedCountries,
+				}),
+		}),
+	],
+)
+// [!endregion saved-options]
+
+// [!region shared-selector]
+const selectCountries = (
+	_values: unknown,
+	{ context }: { readonly context: ProfileContext },
+) => context.countries
+
+const sharedSelectorDefinition = profileKit.defineForm(profileSchema, (ui) => [
+	ui.field("country", {
+		control: "select",
+		label: "Country",
+		props: { emptyOption: { label: "Select a country" } },
+		options: ({ context }) =>
+			matchResource(context.countries, {
+				pending: () => [],
+				success: ({ value }) => value,
+				error: () => [],
+			}),
 		disabled: fromResource(selectCountries, {
 			pending: () => true,
 			success: () => false,
 			error: () => true,
 		}),
+		description: fromResource(selectCountries, {
+			pending: () => "Loading countries…",
+			success: ({ value }) => `${value.length} countries available`,
+			error: ({ error }) => `Cannot load countries: ${error.message}`,
+		}),
 	}),
 ])
-
-function ProfileForm({ context }: { readonly context: ProfileContext }) {
-	const form = profileKit.useForm(profileDefinition, {
-		defaultValues: { plan: "solo", country: undefined },
-		context,
-	})
-
-	return <profileKit.AutoForm form={form} />
-}
-// [!endregion context-form]
-
-declare function loadCountries(): Promise<readonly CountryOption[]>
-
-// [!region query-context]
-function ProfileWithCountries() {
-	const countriesQuery = useQuery({
-		queryKey: ["countries"],
-		queryFn: loadCountries,
-	})
-
-	const context: ProfileContext = {
-		countries: queryToResource(countriesQuery),
-		savedCountryOptions,
-	}
-
-	return <ProfileForm context={context} />
-}
-// [!endregion query-context]
+// [!endregion shared-selector]

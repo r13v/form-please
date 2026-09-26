@@ -349,9 +349,10 @@ test("documents middleware with copyable examples and live previews", async () =
 	const normalizedMiddleware = middleware.replace(/\s+/g, " ")
 
 	for (const region of [
+		"derived-hook",
+		"bulk-order",
+		"guard-hooks",
 		"derived-value",
-		"derived-value-form",
-		"cancellation",
 		"async-after-next",
 	]) {
 		assert.match(middleware, new RegExp(`middleware-guide\\.tsx:${region}`))
@@ -381,7 +382,11 @@ test("documents middleware with copyable examples and live previews", async () =
 	]) {
 		assert.match(normalizedMiddleware, new RegExp(escapeRegExp(phrase), "i"))
 	}
-	assert.match(middleware, /api-reference\.tsx:update-hooks/)
+	assert.ok(
+		middleware.indexOf("<DerivedTotalMiddlewareDemo />") <
+			middleware.indexOf("## Reference"),
+		"The middleware page shows its first demo before the reference sections",
+	)
 
 	for (const path of [
 		"src/pages/recipes.mdx",

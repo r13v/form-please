@@ -15,13 +15,13 @@ A managed update is a value change that goes through the managed update hooks an
 Generated controls, generated array actions, `form.update`, history, and
 persistence restore make managed updates. Direct `form.api` calls and resets do
 not. Read
-[Know which changes enter middleware](/middleware#know-which-changes-enter-middleware).
+[Know which changes enter middleware](/middleware#changes-that-run-the-rules).
 
 ## Proposal
 
 A proposal is the value change that a managed update suggests before it commits. Middleware
 can forward the proposal, add dependent patches, or cancel it. Read
-[Cancel a managed update](/middleware#cancel-a-managed-update).
+[Cancel a managed update](/middleware#block-a-change-and-report-the-result).
 
 ## Publication
 
