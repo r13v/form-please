@@ -43,7 +43,7 @@ Use `form.update(recipe)` to make a managed update. See [Know which changes
 enter middleware](/middleware#know-which-changes-enter-middleware) and [Know
 what history records](/history#know-what-history-records).
 
-## `delayError` is ignored
+## `delayError` does not delay errors after a managed update
 
 A managed update validates through one RHF `trigger` call, and this call does
 not keep the `delayError` timing. See [Understand form state and
@@ -54,3 +54,8 @@ validation](/middleware#understand-form-state-and-validation).
 `kit.useForm` reads the synchronous `defaultValues` only once for each mount.
 Load the data first, and then mount the form component. See [Load an edit-form
 baseline](/recipes#load-an-edit-form-baseline) and [`useForm`](/api#useform).
+
+## Next steps
+
+- [Learn the rules that each form follows](/how-it-works)
+- [Find answers to common questions](/faqs)

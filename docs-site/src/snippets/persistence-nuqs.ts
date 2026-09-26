@@ -5,7 +5,7 @@ export type QueryStringDraftBridge = Readonly<{
 	write(value: string | null): unknown | Promise<unknown>
 }>
 
-/** Adapts a nuqs string state to the Form Please persistence transport. */
+/** Adapts a nuqs string state to the Form, Please persistence transport. */
 export function createNuqsPersistenceAdapter(
 	bridge: QueryStringDraftBridge,
 ): FormPersistenceAdapter {

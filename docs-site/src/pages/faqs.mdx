@@ -117,13 +117,8 @@ submission state do not automatically synchronize between two bindings.
 
 ### What happens after an invalid submit?
 
-RHF focuses the first registered invalid field, including manual fields. Focus
-order follows RHF registration order.
-
-If no invalid generated control can receive focus, `kit.AutoForm` focuses the
-first error-summary item. A manually composed `kit.Form` does not add that
-summary fallback. The application must render its own summary when it does not
-use `kit.AutoForm`.
+RHF focuses the first registered invalid field. Read [Focus the first
+issue](/validation#focus-the-first-issue).
 
 ## Definitions, kits, and lifetime
 

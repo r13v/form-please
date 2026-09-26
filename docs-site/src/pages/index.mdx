@@ -110,7 +110,7 @@ the same file one step at a time.
   </li>
   <li>
     <strong>Save a draft</strong>
-    <span>Keep the schema input in storage that you own and restore it when the reader returns.</span>
+    <span>Keep the schema input in storage that you own and restore it when the user returns.</span>
     <a href={`${import.meta.env.BASE_URL}persistence`}>Persistence</a>
   </li>
   <li>
@@ -168,13 +168,8 @@ Browse the [live examples](/examples) or the [API](/api).
 
 ## What stays explicit
 
-- Your Standard Schema owns the validation rules and transformed submit output.
-- Your definition owns generated UI and its managed-update policy.
-- Your controls and slots own the rendered design system.
-- React Hook Form owns editable state, runs validation, and exposes its
-  low-level API.
-
-See [Ownership](/how-it-works#ownership) for the complete rule.
+Each part of a form has one owner: the schema, React Hook Form, the definition,
+the kit, or your application. Read [Ownership](/how-it-works#ownership).
 
 Use RHF `register`, `Controller`, and hooks such as `useWatch` when a generated
 definition is not enough. `kit.Form` supplies `FormProvider`.

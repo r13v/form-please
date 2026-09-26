@@ -97,14 +97,17 @@ export default defineConfig({
 			// pages of the other tabs.
 			match: (path) =>
 				path !== undefined &&
-				!/^\/($|examples(\/|$)|playground\/?$|api\/?$|types\/?$)/.test(path),
+				!/^\/($|examples(\/|$)|playground\/?$|(api|types|glossary)\/?$)/.test(
+					path,
+				),
 		},
 		{ text: "Examples", link: "/examples", match: "/examples" },
 		{ text: "Playground", link: "/playground" },
 		{
 			text: "API",
 			link: "/api",
-			match: (path) => path !== undefined && /^\/(api|types)\/?$/.test(path),
+			match: (path) =>
+				path !== undefined && /^\/(api|types|glossary)\/?$/.test(path),
 		},
 		{
 			text: `v${version}`,

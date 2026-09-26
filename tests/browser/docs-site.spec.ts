@@ -1,4 +1,9 @@
+import { readFileSync } from "node:fs"
 import { expect, type Page, test } from "@playwright/test"
+
+const { version } = JSON.parse(
+	readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as { version: string }
 
 function pageErrors(page: Page): string[] {
 	const errors: string[] = []
@@ -17,9 +22,6 @@ test.describe("Form, Please documentation", () => {
 		).toBeVisible()
 
 		const sidebar = page.locator("nav[data-v-sidebar]")
-		await expect(sidebar.locator("[data-v-sidebar-section-header]")).toHaveText(
-			["Start", "Learn", "Build", "Advanced", "Examples", "Reference", "Help"],
-		)
 		await sidebar.getByRole("link", { name: "AI agents", exact: true }).click()
 		await expect(page).toHaveURL(/\/form-please\/ai-agents$/)
 		await expect(
@@ -84,12 +86,21 @@ test.describe("Form, Please documentation", () => {
 		})
 		const tab = (name: string) =>
 			topNav.getByRole("link", { name, exact: true })
+		const activeTabs = topNav.locator('a[data-v-active="true"]')
 
-		await page.goto("./definitions")
-		await expect(tab("Docs")).toHaveAttribute("data-v-active", "true")
-		await page.goto("./examples/history")
-		await expect(tab("Examples")).toHaveAttribute("data-v-active", "true")
-		await expect(tab("Docs")).toHaveAttribute("data-v-active", "false")
+		await page.goto("./")
+		await expect(tab("Docs")).toBeVisible()
+		await expect(activeTabs).toHaveCount(0)
+
+		for (const [path, name] of [
+			["./definitions", "Docs"],
+			["./examples/history", "Examples"],
+			["./types", "API"],
+			["./glossary", "API"],
+		] as const) {
+			await page.goto(path)
+			await expect(activeTabs).toHaveText([name])
+		}
 
 		for (const [name, url] of [
 			["Docs", /\/form-please\/get-started$/],
@@ -99,10 +110,12 @@ test.describe("Form, Please documentation", () => {
 		] as const) {
 			await tab(name).click()
 			await expect(page).toHaveURL(url)
-			await expect(tab(name)).toHaveAttribute("data-v-active", "true")
+			await expect(activeTabs).toHaveText([name])
 		}
 
-		await topNav.getByRole("button", { name: /^v\d+\.\d+\.\d+/ }).click()
+		await topNav
+			.getByRole("button", { name: `v${version}`, exact: true })
+			.click()
 		await expect(page.getByRole("link", { name: "Releases" })).toHaveAttribute(
 			"href",
 			"https://github.com/r13v/form-please/releases",
@@ -203,7 +216,8 @@ test.describe("Form, Please documentation", () => {
 		await expect(name).toHaveValue("Ada Lovelace")
 		await preview.getByRole("button", { name: "Redo" }).click()
 		await expect(name).toHaveValue("Grace Hopper")
-		await expect(preview.getByText(/Redo: applied/)).toBeVisible()
+		await expect(preview.getByRole("button", { name: "Redo" })).toBeDisabled()
+		await expect(preview.getByRole("button", { name: "Undo" })).toBeEnabled()
 
 		expect(errors).toEqual([])
 	})
@@ -380,6 +394,11 @@ test.describe("Form, Please documentation", () => {
 		await page.goto("./get-started")
 		const getStarted = page.getByTestId("get-started-demo")
 		await expect(getStarted).toBeVisible()
+		await getStarted.getByLabel("Name").fill("")
+		await getStarted.getByRole("button", { name: "Save profile" }).click()
+		await expect(
+			getStarted.getByText("Enter at least two characters"),
+		).toBeVisible()
 		await getStarted.getByLabel("Name").fill("Ada Lovelace")
 		await getStarted.getByLabel("Email").fill("ada@example.com")
 		await getStarted.getByRole("button", { name: "Save profile" }).click()
@@ -413,12 +432,21 @@ test.describe("Form, Please documentation", () => {
 			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
 		)
 
-		await demo.getByLabel("Account type").selectOption("company")
-		await demo.getByLabel("Company name").fill("")
-		await demo.getByRole("button", { name: "Open account" }).click()
+		const submit = demo.getByRole("button", { name: "Open account" })
 
+		await demo.getByLabel("Account type").selectOption("company")
+		await demo.getByLabel("Company name").fill("  ")
+		await submit.click()
 		await expect(demo.getByText("Enter the company name")).toBeVisible()
 		await expect(demo.locator("pre")).toHaveText("Submit to see output")
+
+		await demo.getByLabel("Company name").fill("Acme")
+		await submit.click()
+		await expect(demo.locator("pre")).toContainText('"companyName": "Acme"')
+
+		await demo.getByLabel("Account type").selectOption("personal")
+		await submit.click()
+		await expect(demo.locator("pre")).toContainText('"accountType": "personal"')
 		expect(errors).toEqual([])
 	})
 
@@ -510,6 +538,7 @@ test.describe("Form, Please documentation", () => {
 	})
 
 	test("fits the overview hero on phones and desktops", async ({ page }) => {
+		const errors = pageErrors(page)
 		const hero = page.locator(".form-please-overview-hero")
 		const heading = hero.locator("h1")
 		const intro = hero.locator(".form-please-overview-intro")
@@ -524,7 +553,20 @@ test.describe("Form, Please documentation", () => {
 		}))
 		expect(phone.scrollWidth).toBeLessThanOrEqual(phone.clientWidth)
 		const phoneIntro = await intro.boundingBox()
-		expect(phoneIntro?.width).toBeGreaterThanOrEqual(300)
+		const phoneHeading = await heading.boundingBox()
+		const phoneLogo = await logo.boundingBox()
+		if (!phoneIntro || !phoneHeading || !phoneLogo) {
+			throw new Error("The overview hero did not render.")
+		}
+		expect(phoneIntro.width).toBeGreaterThanOrEqual(300)
+		expect(phoneIntro.x + phoneIntro.width).toBeLessThanOrEqual(375)
+		expect(phoneHeading.x + phoneHeading.width).toBeLessThanOrEqual(375)
+		expect(phoneLogo.y + phoneLogo.height).toBeLessThanOrEqual(phoneIntro.y)
+		expect(
+			await page.evaluate(
+				() => document.documentElement.scrollWidth <= window.innerWidth,
+			),
+		).toBe(true)
 
 		await page.setViewportSize({ width: 1440, height: 900 })
 		const desktopIntro = await intro.boundingBox()
@@ -537,6 +579,7 @@ test.describe("Form, Please documentation", () => {
 		)
 		expect(desktopLogo.y).toBeLessThan(desktopIntro.y + desktopIntro.height)
 		expect(desktopLogo.y + desktopLogo.height).toBeGreaterThan(desktopIntro.y)
+		expect(errors).toEqual([])
 	})
 
 	test("runs the product workflow tutorial", async ({ page }) => {

@@ -201,17 +201,10 @@ Use `i18n` to replace any English array action label:
 // [!include ~/snippets/api-reference.tsx:default-slot-i18n]
 ```
 
-| Key | Callback data |
-| --- | --- |
-| `arrayAdd` | `{ label }` from the array node |
-| `arrayRemove` | Zero-based `index` and one-based `position` |
-| `arrayMoveUp` | Zero-based `index` and one-based `position` |
-| `arrayMoveDown` | Zero-based `index` and one-based `position` |
-
-Each value can be a string or a callback that returns a string. Import
-`DefaultSlotsI18n` and its related types from `form-please/default-slots`.
-Read [Localization](/localization#translate-the-form-kit-labels) for the
-complete localization steps.
+Import `DefaultSlotsI18n` and its related types from
+`form-please/default-slots`. Read
+[Localization](/localization#translate-the-form-kit-labels) for the keys and
+their callback data.
 
 ### Native preset
 
@@ -240,10 +233,8 @@ and a 12-column grid.
 // [!include ~/snippets/api-reference.tsx:mui-preset]
 ```
 
-The `i18n` object supports `addItem`, `removeItem`, `moveItemUp`,
-`moveItemDown`, and `chooseFile`. All properties are optional. Read
-[Localization](/localization#translate-the-form-kit-labels) for the key names of
-each preset.
+Read [Localization](/localization#translate-the-form-kit-labels) for the keys
+of the `i18n` option.
 
 The registry contains these controls:
 

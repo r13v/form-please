@@ -49,28 +49,24 @@ function useProfileHistory() {
 // [!endregion setup]
 
 // [!region navigate]
-type UndoRedoButtonsProps = {
+function UndoRedoButtons({
+	history,
+}: {
 	readonly history: UseHistoryResult<HistoryInput>
-	readonly onOperation: (
-		label: string,
-		operation: Promise<HistoryOperationResult>,
-	) => void
-}
-
-function UndoRedoButtons({ history, onOperation }: UndoRedoButtonsProps) {
+}) {
 	const { snapshot } = history
 	return (
 		<>
 			<button
 				disabled={!snapshot.canUndo}
-				onClick={() => onOperation("Undo", history.undo())}
+				onClick={() => void history.undo()}
 				type="button"
 			>
 				Undo
 			</button>
 			<button
 				disabled={!snapshot.canRedo}
-				onClick={() => onOperation("Redo", history.redo())}
+				onClick={() => void history.redo()}
 				type="button"
 			>
 				Redo
@@ -112,10 +108,7 @@ export function HistoryPreview() {
 			</p>
 			<nativeFormKit.AutoForm className="form-please-lab__form" form={form}>
 				<div className="form-please-lab__actions">
-					<UndoRedoButtons
-						history={history}
-						onOperation={(label, operation) => void navigate(label, operation)}
-					/>
+					<UndoRedoButtons history={history} />
 					<button
 						disabled={snapshot.index === 0}
 						onClick={() => void navigate("Seek", history.seek(0))}

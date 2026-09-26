@@ -502,12 +502,12 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 | D3 | Fixed | One-time text fix |
 | D4 | Fixed | Source gate "example pages claim only APIs that their snippets use" |
 | D5 | Fixed | One-time text fix |
-| D6 | Fixed | One-time text fix; the rule now has one home (`how-it-works#the-schema-parses-once-on-submit`), and the output test finds `/parses once/i` in `llms-full.txt` |
+| D6 | Fixed | One-time text fix; the rule now has one home (`how-it-works#the-schema-parses-once-on-submit`) |
 | D7 | Fixed | e2e "requires the company name in the conditional scenario" |
 | D8 | Fixed | Output gate "each internal anchor link matches an id on its target page" |
 | D9 | Fixed | Snippet typecheck (`npm run test:docs`) and e2e "runs the managed value history preview"; the region shape is a one-time fix |
 | D10 | Fixed | Snippet typecheck; one-time fix (the styling page renders no live demo of it) |
-| D11 | Fixed | Snippet typecheck; one-time fix |
+| D11 | Fixed | Snippet test: `vitest.docs.config.ts` runs the `testing-guide.ts` tests in `npm run test:docs` |
 | D12 | Fixed | `tests/pages.mjs` feeds the source gate "keeps every page route in navigation" and the output gate "Vocs emits the Markdown file of each page" |
 
 **Idea check:**

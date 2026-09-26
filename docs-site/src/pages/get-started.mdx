@@ -43,15 +43,15 @@ React 18 and React 19 are supported peer dependencies.
 
 ## Define the data contract
 
-Create a Standard Schema for the schema input. This schema keeps the schema
-input unchanged. It adds `slug` only to the successful submit output.
+Create a Standard Schema for the schema input. The schema output can contain
+more values than the schema input.
 
 ```tsx
 // [!include ~/snippets/profile-form.tsx:schema]
 ```
 
-The schema input is `{ name: string; email: string }`. The schema output also
-contains `slug`. Generated fields always edit the schema input.
+The schema input is `{ name: string; email: string }`. Generated fields always
+edit the schema input.
 
 ## Define the generated fields
 
@@ -77,7 +77,7 @@ input as `defaultValues`.
 `kit.AutoForm` renders the native `<form>`, an error summary, and the generated
 fields. Add `kit.Submit` as a child to render the submit button.
 
-After a valid submit, `value` contains the schema output, including `slug`.
+After a valid submit, `value` contains the schema output.
 The `onSubmit` callback keeps `value` in React state, and the `<pre>` element
 shows it. Use the `input` callback property when you also need the schema
 input.

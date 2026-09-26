@@ -59,7 +59,7 @@ first draft: Vite replaces `process.env.NODE_ENV` in client code, so
 | D13 | The README alt text names the mascot "Hermes Conrad", a Futurama character. This can be an IP risk. Decide this as a project owner. | `README.md:4`, `docs-site/public/brand/form-please-logo.png` |
 
 **Status (2026-09-26):** D1 to D12 are fixed. Automated gates cover D1, D2,
-D4, D7, D8, D9, and D12. D3, D5, D6, D10, and D11 were one-time text or
+D4, D7, D8, D11, and D12. D3, D5, D6, D9, and D10 were one-time text or
 snippet fixes. D13 is open. It is a project owner decision.
 
 ## Top 20 Ideas
@@ -261,6 +261,10 @@ The ideas that the docs overhaul implemented have a status note.
 - **Effort:** S.
 - **Verification:** Partly confirmed. The first draft cited the Zod and
   Valibot home pages as code-first. They are not.
+- **Status (2026-09-26):** Partly done. The D2 fix makes the hero one column
+  below 48 rem and makes the logo smaller. Open: the two-sentence paragraph,
+  the Standard Schema link, `InstallPackage`, and the moves of the playground
+  and the comparison table.
 
 ### I06. Examples Named by Technique
 
@@ -308,6 +312,9 @@ The ideas that the docs overhaul implemented have a status note.
 - **Verification:** Partly confirmed. `defineForm` and `useForm` are kit
   methods, not package exports. Keep runtime detail in the guides so the
   template does not bloat the page.
+- **Status (2026-09-26):** Partly done. The 17 names are documented,
+  `types.mdx:9` is correct, and D3 is fixed. Open: group the page by entry
+  point, and give each runtime export the same entry template.
 
 ### I12. Next.js App Router Guide
 

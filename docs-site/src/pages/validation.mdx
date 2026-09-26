@@ -78,8 +78,9 @@ Omit the issue path when the user cannot fix the issue in one field:
 // [!include ~/snippets/validation-guide.tsx:form-issue]
 ```
 
-Use `kit.Form` and `kit.Fields` for manual composition. In that case, the
-application must render its own summary for form-level and hidden-field issues.
+Use `kit.Form` and `kit.Fields` for manual composition. A manually composed
+`kit.Form` has no summary. The application must render its own summary for
+form-level and hidden-field issues.
 
 ## Focus the first issue
 
@@ -88,8 +89,7 @@ including an application-owned field. Focus order follows RHF registration
 order.
 
 If no generated control can receive focus, `kit.AutoForm` focuses the first
-error-summary item. A manually composed `kit.Form` has no automatic summary
-fallback.
+error-summary item.
 
 A custom control receives focus only when it attaches `input.ref`. Read
 [Accessibility](/accessibility) for the control contract.

@@ -14,7 +14,7 @@ control or slot must use them too.
 
 | Behavior | How it works | Source |
 | --- | --- | --- |
-| Focus on the first invalid field | After an invalid submit, React Hook Form (RHF) focuses the first registered invalid field through `input.ref`. When no field can receive focus, `kit.AutoForm` focuses the first error-summary item. Read [Focus the first issue](/validation#focus-the-first-issue). | `src/create-form-kit.tsx` |
+| Focus on the first invalid field | After an invalid submit, React Hook Form (RHF) focuses the first invalid field through `input.ref`. Read [Focus the first issue](/validation#focus-the-first-issue). | `src/create-form-kit.tsx` |
 | Label association | The field slot gets `labelProps.htmlFor`, which is equal to `input.id`. | `src/create-form-kit.tsx` |
 | Error and description association | `input["aria-describedby"]` contains the description ID and the ID of each visible error. | `src/create-form-kit.tsx` |
 | Invalid state | `meta.invalid` is `true` only when the form shows field errors. The shipped controls set `aria-invalid` from it. | `src/create-form-kit.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-mui/controls.tsx` |
@@ -39,17 +39,13 @@ Connect every applicable `input` property to the interactive element:
 | `input.name` | Set the element `name`. This also supports autofill and browser diagnostics. |
 | `input.ref` | Attach it to the focusable element. Invalid submission uses this ref for focus. |
 | `input["aria-describedby"]` | Set `aria-describedby`. It connects descriptions and visible errors. |
+| `meta.invalid` | Set `aria-invalid` from it. |
 
-Set `aria-invalid` from `meta.invalid`. The value becomes `true` only when the
-form displays field errors.
+A custom control must also:
 
-A custom control must:
-
-1. Attach `input.id`, `input.name`, and `input.ref`.
-2. Attach `input["aria-describedby"]` and expose `meta.invalid`.
-3. Call `setValue` after a valid control change.
-4. Call `blur` from its blur event.
-5. Honor `disabled`, `readOnly`, and `required`.
+1. Call `setValue` after a valid control change.
+2. Call `blur` from its blur event.
+3. Honor `disabled`, `readOnly`, and `required`.
 
 Native text inputs support a `readOnly` property. Some components do not.
 A custom select, checkbox, or file control must prevent changes when `readOnly`

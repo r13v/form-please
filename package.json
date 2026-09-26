@@ -129,7 +129,7 @@
 		"test:package": "npm run build && vitest run --config vitest.package.config.ts",
 		"test:registry": "node scripts/verify-shadcn-registry.mjs",
 		"test:smoke": "node scripts/verify-smoke-fixtures.mjs",
-		"test:docs": "npm run build && npm run typecheck --prefix docs-site",
+		"test:docs": "npm run build && npm run typecheck --prefix docs-site && vitest run --config vitest.docs.config.ts",
 		"site:dev": "npm run build && npm run dev --prefix docs-site",
 		"site:build": "npm run build && npm run build --prefix docs-site",
 		"site:test": "npm run test --prefix docs-site",

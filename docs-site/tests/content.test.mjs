@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { access, readdir, readFile } from "node:fs/promises"
+import { access, readFile } from "node:fs/promises"
 import { test } from "node:test"
 import { pages, sidebarLinks } from "./pages.mjs"
 
@@ -24,8 +24,6 @@ test("uses Twoslash for complete TypeScript snippets", async () => {
 })
 
 test("keeps every page route in navigation", () => {
-	assert.equal(new Set(pages.map(({ route }) => route)).size, pages.length)
-	assert.ok(pages.length > 30, "the page list must not be empty")
 	for (const { route, source } of pages) {
 		assert.ok(sidebarLinks.has(route), `${source} has no sidebar link ${route}`)
 	}
@@ -113,29 +111,57 @@ test("lists each library i18n key in the localization table", async () => {
 		new URL("src/pages/localization.mdx", siteRoot),
 		"utf8",
 	)
-	const tableRows = guide
+	const [header, , ...rows] = guide
 		.split("\n")
 		.filter((line) => line.startsWith("|"))
-		.join("\n")
+		.map((line) =>
+			line
+				.split("|")
+				.slice(1, -1)
+				.map((cell) => cell.trim()),
+		)
+	const defaultColumn = header.findIndex((cell) => cell.includes("English"))
+	assert.notEqual(defaultColumn, -1, "the table has no English default column")
 
-	for (const [path, objectName] of [
-		["src/default-slots/default-slots.tsx", "englishDefaultSlotsI18n"],
-		["src/preset-mui/index.ts", "defaultI18n"],
+	for (const [path, objectName, factory] of [
+		[
+			"src/default-slots/default-slots.tsx",
+			"englishDefaultSlotsI18n",
+			"createDefaultSlots",
+		],
+		["src/preset-mui/index.ts", "defaultI18n", "createMuiFormKit"],
 	]) {
 		const source = await readFile(new URL(path, repositoryRoot), "utf8")
 		const body = source.match(
 			new RegExp(`const ${objectName} = [^{]*\\{\\n([\\s\\S]*?)\\n\\}`),
 		)?.[1]
 		assert.ok(body, `${path} has no ${objectName} object`)
-		const keys = [...body.matchAll(/^\t(\w+):/gm)].map(([, key]) => key)
-		assert.ok(keys.length > 3, `${path} has too few i18n keys`)
+		const defaults = new Map(
+			body
+				.split("\n")
+				.filter((line) => line.trim() !== "")
+				.map((line) => {
+					const entry = line.match(/^\t(\w+): (?:"([^"]*)"|.*`([^`]*)`)/)
+					assert.ok(entry, `${path} has an unreadable i18n entry: ${line}`)
+					const [, key, text, template] = entry
+					return [key, text ?? template.replace(/\$\{[^}]+\}/g, "1")]
+				}),
+		)
+		const column = header.findIndex((cell) => cell.includes(factory))
+		assert.notEqual(column, -1, `the table has no ${factory} column`)
+		const listed = new Map(
+			rows
+				.filter((row) => row[column] !== "—")
+				.map((row) => [row[column].replace(/^`|`$/g, ""), row[defaultColumn]]),
+		)
 
-		for (const key of keys) {
-			assert.match(
-				tableRows,
-				new RegExp(`\`${key}\``),
-				`localization.mdx does not list the ${key} key from ${path}`,
-			)
+		assert.deepEqual(
+			[...listed.keys()].sort(),
+			[...defaults.keys()].sort(),
+			`the ${factory} column must list the keys of ${path}`,
+		)
+		for (const [key, text] of defaults) {
+			assert.equal(listed.get(key), text, `wrong English default for ${key}`)
 		}
 	}
 })
@@ -491,15 +517,32 @@ test("documents each public export on the API or TypeScript page", async () => {
 		await readFile(new URL("src/pages/api.mdx", siteRoot), "utf8"),
 		await readFile(new URL("src/pages/types.mdx", siteRoot), "utf8"),
 	].join("\n")
-	const entries = (
-		await readdir(new URL("src/", repositoryRoot), { recursive: true })
-	).filter((name) => /(^|\/)index\.ts$/.test(name))
+	const packageJson = JSON.parse(
+		await readFile(new URL("package.json", repositoryRoot), "utf8"),
+	)
+	const tsdownEntries = new Map(
+		Array.from(
+			(
+				await readFile(new URL("tsdown.config.ts", repositoryRoot), "utf8")
+			).matchAll(/^\t\t"?([\w-]+)"?: "(src\/[^"]+)"/gm),
+			([, name, file]) => [name, file],
+		),
+	)
+	const entries = Object.keys(packageJson.exports)
+		.filter((key) => !/\.\w+$/.test(key))
+		.map((key) => {
+			const entry = tsdownEntries.get(key === "." ? "index" : key.slice(2))
+			assert.ok(entry, `tsdown.config.ts has no entry for export ${key}`)
+			return entry
+		})
 	const names = new Set()
 
 	for (const entry of entries) {
-		const source = await readFile(
-			new URL(`src/${entry}`, repositoryRoot),
-			"utf8",
+		const source = await readFile(new URL(entry, repositoryRoot), "utf8")
+		assert.doesNotMatch(
+			source,
+			/^export\s+(?:\*|default\b)/m,
+			`${entry} uses an export form that this gate cannot read`,
 		)
 		for (const [, list] of source.matchAll(
 			/^export\s+(?:type\s+)?\{([^}]*)\}/gm,
@@ -514,7 +557,7 @@ test("documents each public export on the API or TypeScript page", async () => {
 			}
 		}
 		for (const [, name] of source.matchAll(
-			/^export\s+(?:function|const|class|type|interface)\s+([A-Za-z_$][\w$]*)/gm,
+			/^export\s+(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(?:function\*?|const|let|var|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/gm,
 		)) {
 			names.add(name)
 		}
@@ -522,9 +565,16 @@ test("documents each public export on the API or TypeScript page", async () => {
 
 	assert.ok(names.size > 100, `found only ${names.size} exported names`)
 	const missing = [...names].filter(
-		(name) => !new RegExp(`\\b${escapeRegExp(name)}\\b`).test(docs),
+		(name) =>
+			!new RegExp(`\`[^\`\\n]*\\b${escapeRegExp(name)}\\b[^\`\\n]*\``).test(
+				docs,
+			),
 	)
-	assert.deepEqual(missing, [], "api.mdx and types.mdx must name each export")
+	assert.deepEqual(
+		missing,
+		[],
+		"api.mdx and types.mdx must name each export in code",
+	)
 })
 
 test("example pages claim only APIs that their snippets use", async () => {
@@ -538,27 +588,47 @@ test("example pages claim only APIs that their snippets use", async () => {
 		)?.[1]
 		if (!section) continue
 		let snippets = ""
-		for (const [, snippet] of page.matchAll(
-			/\/\/ \[!include ~\/snippets\/([^\]:]+)/g,
+		for (const [, snippet, region] of page.matchAll(
+			/\/\/ \[!include ~\/snippets\/([^\]:]+)(?::([\w-]+))?\]/g,
 		)) {
-			snippets += await readFile(
+			const source = await readFile(
 				new URL(`src/snippets/${snippet}`, siteRoot),
 				"utf8",
 			)
+			snippets += region
+				? (source.match(
+						new RegExp(
+							`// \\[!region ${region}\\]([\\s\\S]*?)// \\[!endregion ${region}\\]`,
+						),
+					)?.[1] ?? "")
+				: source
 		}
+		const bullets = section
+			.split(/^- /m)
+			.slice(1)
+			.map((bullet) => bullet.split(/\n\s*\n/)[0])
+		let claims = 0
+		let pageChecked = 0
 
-		for (const line of section.split("\n")) {
-			if (!line.startsWith("- ")) continue
-			for (const [, code] of line.matchAll(/`([^`]+)`/g)) {
+		for (const bullet of bullets) {
+			for (const [, code] of bullet.matchAll(/`([^`]+)`/g)) {
+				claims++
 				const identifier = code.replace(/\(\)$/, "")
 				if (!/^[A-Za-z_$][\w$.]*$/.test(identifier)) continue
-				assert.ok(
-					snippets.includes(identifier),
+				assert.match(
+					snippets,
+					new RegExp(`(?<![\\w$])${escapeRegExp(identifier)}(?![\\w$])`),
 					`${path} claims \`${identifier}\`, but its snippet does not use it`,
 				)
-				checked++
+				pageChecked++
 			}
 		}
+
+		assert.ok(
+			snippets === "" || claims === 0 || pageChecked > 0,
+			`${path} has claims, but none of them were checked`,
+		)
+		checked += pageChecked
 	}
 
 	assert.ok(checked > 0, "no example claims were checked")

@@ -44,7 +44,7 @@ type UseFormWorkflowOptions<
 }>
 
 /**
- * Application-owned workflow navigation over one Form Please binding.
+ * Application-owned workflow navigation over one Form, Please binding.
  * The Standard Schema remains the only validation contract.
  */
 export function useFormWorkflow<

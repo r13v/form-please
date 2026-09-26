@@ -33,14 +33,9 @@ Standard Schema resolver                  issues, or transformed output
 onSubmit({ value, input, form, submitter })
 ```
 
-1. The Standard Schema defines the validation rules and the submitted output.
-2. The definition connects schema input paths to controls.
-3. `kit.useForm` creates one form binding. The binding creates one React Hook
-   Form (RHF) instance with the schema as its only resolver.
-4. RHF keeps the editable schema input and runs each validation.
-5. The resolver parses the input with the Standard Schema. It returns issues or
-   the transformed output.
-6. After a valid submit, Form, Please calls `onSubmit` with the output.
+The diagram does not show two facts. `kit.useForm` creates one form binding,
+and the binding creates one React Hook Form (RHF) instance. The schema is the
+only resolver of that instance.
 
 ## `required` is UI-only
 
@@ -49,8 +44,7 @@ does not add a validation rule. The Standard Schema must reject a missing or
 invalid value.
 
 The same rule applies to `visible`, `disabled`, and `readOnly`. These
-properties control the generated UI. They do not change the schema, and they do
-not remove values from submission.
+properties control the generated UI. They do not change the schema.
 
 `kit.Form` sets `noValidate` on the native form element. Browser constraints,
 such as `required` and `type="email"`, do not replace schema validation. Put
@@ -63,9 +57,8 @@ Standard Schema still receives that value during validation and submission.
 
 Match the schema condition to the visibility condition. If you do not, an
 invalid hidden value can block submission. A hidden field has no control to
-focus, so `kit.AutoForm` shows its issue in the error summary. A manually
-composed `kit.Form` has no summary. In that case, the application must render
-its own summary for hidden-field issues.
+focus, so `kit.AutoForm` shows its issue in the error summary. Read [Focus the
+first issue](/validation#focus-the-first-issue).
 
 To remove an inactive value from the submitted output, use a schema transform.
 To clear the editable value when the user changes another field, use
@@ -95,9 +88,8 @@ validation deterministic and free of side effects.
 - `form` is the current form binding.
 - `submitter` is `{ name, value }` for the native submit control, or `null`.
 
-Invalid input does not reach `onSubmit`. Use `value` for an API request. Use
-`input` when an operation needs the editable shape, for example to reset the
-form after a save. A string input can produce a number output.
+Use `value` for an API request. Use `input` when an operation needs the schema
+input, for example to reset the form after a save. A string input can produce a number output.
 
 The callback can return a promise. `form.api.formState.isSubmitting` stays true
 until the promise settles. `kit.Submit` is disabled while the form validates or
