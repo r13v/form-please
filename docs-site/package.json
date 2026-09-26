@@ -10,9 +10,9 @@
 	"scripts": {
 		"dev": "portless fp sh -c 'vocs dev --port \"$PORT\" --host \"$HOST\"'",
 		"build": "vocs build",
-		"postbuild": "node ../scripts/fix-vocs-skip-links.mjs",
+		"postbuild": "node ../scripts/fix-vocs-skip-links.mjs && node ../scripts/fix-vocs-llms-links.mjs",
 		"preview": "vocs preview",
-		"test": "node --test tests/content.test.mjs",
+		"test": "node --test tests/content.test.mjs tests/postbuild.test.mjs",
 		"typecheck": "tsc --project tsconfig.docs.json",
 		"test:output": "node --test tests/build-output.test.mjs",
 		"test:markdown": "vocs markdown-audit"

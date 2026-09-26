@@ -1,9 +1,11 @@
 import assert from "node:assert/strict"
-import { access, readFile } from "node:fs/promises"
+import { access, readdir, readFile } from "node:fs/promises"
 import { test } from "node:test"
+import { normalizeBasePath } from "../../scripts/fix-vocs-skip-links.mjs"
 
 const publicRoot = new URL("../dist/public/", import.meta.url)
 const expectProductionUrl = process.env.EXPECT_PRODUCTION_URL === "true"
+const basePath = normalizeBasePath(process.env.BASE_PATH ?? "/")
 
 test("Vocs emits every supported Markdown route and index artifact", async () => {
 	for (const file of [
@@ -65,6 +67,40 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /createHistoryMiddleware/)
 	assert.match(full, /createPersistenceMiddleware/)
 	assert.match(full, /Persistence restore \| `persistence`/)
+})
+
+test("LLM files link to built pages under the base path", async () => {
+	if (basePath === "") return
+	const markdownFiles = (
+		await readdir(new URL("assets/md/", publicRoot), { recursive: true })
+	)
+		.filter((name) => name.endsWith(".md"))
+		.map((name) => `assets/md/${name}`)
+	let checked = 0
+
+	for (const file of ["llms.txt", "llms-full.txt", ...markdownFiles]) {
+		const markdown = await readFile(new URL(file, publicRoot), "utf8")
+
+		for (const [, href] of markdown.matchAll(/\]\((\/[^)\s]*)/g)) {
+			assert.ok(
+				href.startsWith(`${basePath}/`),
+				`${file} links to ${href} without ${basePath}`,
+			)
+			const route = href
+				.slice(basePath.length)
+				.replace(/[#?].*$/, "")
+				.replace(/^\/+|\/+$/g, "")
+			await access(
+				new URL(
+					route === "" ? "index.html" : `${route}/index.html`,
+					publicRoot,
+				),
+			)
+			checked++
+		}
+	}
+
+	assert.ok(checked > 0, "no root-relative links were checked")
 })
 
 test("production metadata uses the GitHub Pages URL", async () => {

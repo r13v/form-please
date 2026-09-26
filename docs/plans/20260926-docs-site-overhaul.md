@@ -242,15 +242,16 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/package.json`
 - Create: `docs-site/tests/postbuild.test.mjs`
 - Modify: `docs-site/tests/build-output.test.mjs`
+- ➕ Modify: `package.json` (`site:verify:preview` and `site:verify:production` pass `BASE_PATH=/form-please` to `test:output`, so the output test knows the base path)
 
-- [ ] create `scripts/fix-vocs-llms-links.mjs` with `prefixMarkdownLinks(markdown, basePath)` and a main entry that patches `llms.txt`, `llms-full.txt`, and `assets/md/**/*.md` (see Technical Details)
-- [ ] import `normalizeBasePath` from `scripts/fix-vocs-skip-links.mjs`; do not copy it
-- [ ] change `postbuild` in `docs-site/package.json` to run both scripts
-- [ ] change the `test` script in `docs-site/package.json` to run `tests/content.test.mjs` and `tests/postbuild.test.mjs`
-- [ ] write tests for `prefixMarkdownLinks`: a root-relative link, a nested route (`/examples/history`), and `/index`
-- [ ] write edge-case tests: an already-prefixed link, an absolute URL, a `#anchor` link, a link inside a code fence, and base path `/` (no change)
-- [ ] add an output test: when `BASE_PATH` is set, each root-relative link in `llms.txt`, `llms-full.txt`, and `assets/md/**/*.md` resolves, after the base path is removed, to an existing file in `dist/public` (`<route>/index.html` or `index.html`); assert that more than 0 links are checked
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 2
+- [x] create `scripts/fix-vocs-llms-links.mjs` with `prefixMarkdownLinks(markdown, basePath)` and a main entry that patches `llms.txt`, `llms-full.txt`, and `assets/md/**/*.md` (see Technical Details)
+- [x] import `normalizeBasePath` from `scripts/fix-vocs-skip-links.mjs`; do not copy it
+- [x] change `postbuild` in `docs-site/package.json` to run both scripts
+- [x] change the `test` script in `docs-site/package.json` to run `tests/content.test.mjs` and `tests/postbuild.test.mjs`
+- [x] write tests for `prefixMarkdownLinks`: a root-relative link, a nested route (`/examples/history`), and `/index`
+- [x] write edge-case tests: an already-prefixed link, an absolute URL, a `#anchor` link, a link inside a code fence, and base path `/` (no change)
+- [x] add an output test: when `BASE_PATH` is set, each root-relative link in `llms.txt`, `llms-full.txt`, and `assets/md/**/*.md` resolves, after the base path is removed, to an existing file in `dist/public` (`<route>/index.html` or `index.html`); assert that more than 0 links are checked
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 2
 
 ### Task 2: Make the overview hero work on phones (D2)
 
