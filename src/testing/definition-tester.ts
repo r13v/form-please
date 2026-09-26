@@ -1,11 +1,13 @@
 import { type FieldValues, set } from "react-hook-form"
 
 import {
+	hasWhenHidden,
 	type ResolvedArrayNode,
 	type ResolvedDefinition,
 	type ResolvedFieldNode,
 	type ResolvedNode,
 	resolveDefinition,
+	resolveHiddenFieldWrites,
 } from "../definition.js"
 import { createFieldOptionsResolution } from "../field-options.js"
 import { cloneFormValue } from "../form-value.js"
@@ -425,6 +427,10 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 		getContext: () => state.context,
 		getValues: () => state.values,
 		middleware: updates.middleware,
+		resolveHiddenFieldWrites: hasWhenHidden(definition)
+			? (transaction) =>
+					resolveHiddenFieldWrites(definition, transaction, initialValues)
+			: undefined,
 	})
 
 	const createTransition = (

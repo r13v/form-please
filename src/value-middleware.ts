@@ -100,6 +100,19 @@ export type BeforeUpdate<Input extends FieldValues, Context = unknown> = (
 	transaction: ValueTransaction<Input, Context>,
 ) => BeforeUpdateResult
 
+/** One value write that a field `whenHidden` action adds to a transaction. */
+export type HiddenFieldWrite = {
+	/** The absolute React Hook Form path of the hidden field. */
+	readonly path: string
+	/** The value written to the field. */
+	readonly value: unknown
+}
+
+/** Resolves the `whenHidden` writes for fields that one transaction hides. */
+type HiddenFieldWriteResolver<Input extends FieldValues, Context> = (
+	transaction: ValueTransaction<Input, Context>,
+) => readonly HiddenFieldWrite[]
+
 /** Observes one final managed value transaction after commit. */
 export type AfterUpdate<Input extends FieldValues, Context = unknown> = (
 	transaction: ValueTransaction<Input, Context>,
@@ -134,6 +147,7 @@ type CoordinatorOptions<Input extends FieldValues, Context> = {
 	readonly getContext: () => Context
 	readonly beforeUpdate?: BeforeUpdate<Input, Context>
 	readonly afterUpdate?: AfterUpdate<Input, Context>
+	readonly resolveHiddenFieldWrites?: HiddenFieldWriteResolver<Input, Context>
 	readonly commit: ValueTransactionCommit<Input, Context>
 	readonly restore?: ValueTransactionCommit<Input, Context>
 }
@@ -463,6 +477,13 @@ export function createValueCoordinator<
 					options.beforeUpdate,
 					activeDispatch.allowTopLevelRemoval,
 				)
+				if (effectiveTransaction !== undefined) {
+					effectiveTransaction = applyHiddenFieldWrites(
+						effectiveTransaction,
+						options.resolveHiddenFieldWrites,
+						activeDispatch.allowTopLevelRemoval,
+					)
+				}
 			} catch (error) {
 				if (diagnosticToken !== undefined) {
 					publishFormDiagnosticEvent(capability, {
@@ -721,6 +742,81 @@ function applyBeforeUpdate<Input extends FieldValues, Context>(
 	)
 }
 
+/** Adds `whenHidden` writes until no additional field becomes hidden. */
+function applyHiddenFieldWrites<Input extends FieldValues, Context>(
+	transaction: ValueTransaction<Input, Context>,
+	resolveWrites: HiddenFieldWriteResolver<Input, Context> | undefined,
+	allowTopLevelRemoval: boolean,
+): ValueTransaction<Input, Context> | undefined {
+	const { source } = transaction
+	if (
+		resolveWrites === undefined ||
+		source.type === "history" ||
+		source.type === "persistence"
+	) {
+		return transaction
+	}
+
+	// Each field receives at most one write, so the loop ends.
+	const written = new Set<string>()
+	let current = transaction
+	for (;;) {
+		const writes = resolveWrites(current).filter(
+			(write) => !written.has(write.path),
+		)
+		if (writes.length === 0) return current
+
+		const [nextValues, writePatches] = valueImmer.produceWithPatches(
+			current.nextValues as Input,
+			(draft) => {
+				for (const write of writes) {
+					written.add(write.path)
+					writeDraftPath(draft, write.path, write.value)
+				}
+			},
+		)
+		if (writePatches.length === 0) continue
+
+		const combinedPatches = [
+			...current.patches,
+			...writePatches,
+		] as readonly ValuePatch[]
+		const patches =
+			source.type === "array"
+				? combinedPatches
+				: effectivePatches(
+						transaction.previousValues as Input,
+						nextValues,
+						combinedPatches,
+					)
+		if (patches.length === 0) return undefined
+		current = createTransaction(
+			transaction.previousValues as Input,
+			patches,
+			source,
+			transaction.context as Context,
+			allowTopLevelRemoval,
+		)
+	}
+}
+
+/** Writes one value at an RHF dot path and creates missing plain objects. */
+function writeDraftPath(draft: unknown, path: string, value: unknown): void {
+	const segments = path.split(".")
+	const key = segments.pop() as string
+	let target = draft as Record<string, unknown>
+	for (const segment of segments) {
+		const child = target[segment]
+		if (child === null || typeof child !== "object") {
+			if (value === undefined) return
+			target[segment] = {}
+		}
+		target = target[segment] as Record<string, unknown>
+	}
+	if (value === undefined && !Object.hasOwn(target, key)) return
+	target[key] = value
+}
+
 /** Removes superseded proposal operations and keeps only their final values. */
 function effectivePatches<Input extends FieldValues>(
 	previousValues: Input,
@@ -771,7 +867,7 @@ function compactPatchPaths(
 }
 
 /** Reads whether one Immer path exists and the value currently stored there. */
-function readPatchTarget(
+export function readPatchTarget(
 	root: unknown,
 	path: readonly (string | number)[],
 ): { readonly exists: boolean; readonly value: unknown } {

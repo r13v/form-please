@@ -121,6 +121,37 @@ Register each control with `defineControl` one time. Start with the controls
 that the first form uses, and add other controls when the next forms need
 them. Read [Form kits](/form-kits).
 
+### If the form uses `shouldUnregister: true`
+
+In React Hook Form, `shouldUnregister: true` removes a field value when the
+field unmounts. This one flag has three results. Form, Please gives each result
+its own tool, so the definition shows which results the form uses.
+
+**Do not submit the hidden value.** Before, RHF removed the key from the
+`handleSubmit` data. Now, a schema transform removes it:
+
+```tsx
+// [!include ~/snippets/when-hidden.tsx:transform]
+```
+
+**Do not validate the hidden value.** Before, RHF did not validate an
+unregistered field. Now, the schema uses the same condition as `visible`:
+
+```tsx
+// [!include ~/snippets/when-hidden.tsx:validate]
+```
+
+**Clear the value when the field is hidden.** Before, the field was empty when
+it mounted again. Now, `whenHidden` resets it in the same managed update:
+
+```tsx
+// [!include ~/snippets/when-hidden.tsx:definition]
+```
+
+Use all three tools to get the full RHF behavior. `whenHidden` alone keeps the
+key in the submitted values and in validation. Read [Reset a hidden
+field](/conditional-fields#reset-a-hidden-field).
+
 ## Reference
 
 ### Behavior changes
@@ -130,7 +161,7 @@ them. Read [Form kits](/form-kits).
 | `useForm({ resolver })` | The definition schema is the only resolver. Pass a Standard Schema, not a resolver. |
 | `register` rules, such as `required` and `validate` | Not applied, because the form has a resolver. Put the rules in the schema. |
 | Async `defaultValues` or the `values` option | Not available. `defaultValues` is a required, complete, and synchronous schema input. Mount the form after the data loads. Read [Load an edit-form baseline](/recipes#load-an-edit-form-baseline). |
-| `shouldUnregister: true` | Not available. Form, Please sets `shouldUnregister: false`, so [hidden fields keep their values](/how-it-works#hidden-fields-keep-their-values). |
+| `shouldUnregister: true` | Not available. Form, Please sets `shouldUnregister: false`, so [hidden fields keep their values](/how-it-works#hidden-fields-keep-their-values). Read [If the form uses `shouldUnregister: true`](#if-the-form-uses-shouldunregister-true). |
 | `criteriaMode` | Set to `"all"`. |
 | `mode`, `reValidateMode`, and `delayError` | The same options on `kit.useForm`. |
 | Other `useForm` options | Not available. See [`useForm`](/api#useform) for the complete list. |

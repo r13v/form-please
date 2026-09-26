@@ -289,6 +289,14 @@ export type UiResolver<Result, Input = unknown, Context = unknown> = (
 	values: UiResolverValues<Input>,
 	details: UiResolverDetails<Context>,
 ) => Result
+/** The action that a managed update applies when a field becomes hidden. */
+export type WhenHidden<Value> =
+	| "keep"
+	| "reset"
+	| {
+			/** The value written to the field when it becomes hidden. */
+			readonly value: Value
+	  }
 /** A fixed value or a synchronous resolver that computes the value. */
 export type Resolvable<Value, Input, Context> =
 	| (Value extends (...args: never[]) => unknown ? never : Value)
@@ -390,7 +398,7 @@ type FieldNodeBase<Root, Context, FieldOptions, Grid extends number> = {
 	readonly disabled?: Resolvable<boolean, Root, Context>
 	/** Prevents value changes without disabling the control. */
 	readonly readOnly?: Resolvable<boolean, Root, Context>
-	/** Controls whether the field is rendered. Hidden values remain registered. */
+	/** Controls whether the field is rendered. Hidden values remain registered. See `whenHidden`. */
 	readonly visible?: Resolvable<boolean, Root, Context>
 	/** Adds a class to the field slot root. */
 	readonly className?: Resolvable<string, Root, Context>
@@ -409,6 +417,12 @@ type FieldNodeForPath<
 > = FieldNodeBase<Root, Context, FieldOptions, Grid> & {
 	/** The field path relative to the current array scope. */
 	readonly path: Path
+	/** Keeps, resets, or replaces the value when a managed update hides the field. */
+	readonly whenHidden?: Resolvable<
+		WhenHidden<PathValue<Scope, Path>>,
+		Root,
+		Context
+	>
 } & {
 		[Name in CompatibleControlName<Scope, Controls, Context, Path>]: {
 			/** The registered control used to edit this field. */
