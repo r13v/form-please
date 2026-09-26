@@ -203,7 +203,10 @@ export default defineConfig({
 		{
 			text: "Help",
 			collapsed: false,
-			items: [{ text: "FAQs", link: "/faqs" }],
+			items: [
+				{ text: "FAQs", link: "/faqs" },
+				{ text: "Troubleshooting", link: "/troubleshooting" },
+			],
 		},
 	],
 })

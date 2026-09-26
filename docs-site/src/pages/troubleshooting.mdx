@@ -1,0 +1,55 @@
+---
+title: Troubleshooting
+description: Find the cause of a common problem, such as a submit that does not run, a rejected path, a missing transformed value, or a skipped change.
+showAskAi: false
+---
+
+# Troubleshooting
+
+Find your symptom on this page. Each entry gives the cause and a link to the
+section that explains the rule.
+
+## `onSubmit` is not called
+
+The schema rejects the input, often in a hidden field that keeps its value, so
+Form, Please does not call `onSubmit`. See [`onSubmit` receives four
+values](/how-it-works#onsubmit-receives-four-values) and [Hidden fields keep
+their values](/how-it-works#hidden-fields-keep-their-values).
+
+## TypeScript rejects a path or control
+
+A field path must exist in the schema input, and the control value type must
+match the value at that path. See [Field paths](/types#field-paths) and [Control
+types](/types#control-types).
+
+This program has both errors. `emial` is not a schema input path. The `text`
+control does not accept the boolean value of `newsletter`.
+
+```tsx twoslash
+// [!include ~/snippets/playground-typo.tsx]
+```
+
+## The transformed value is missing
+
+React Hook Form (RHF) state and the `input` argument hold the schema input. Only
+the `value` argument of `onSubmit` holds the transformed output. See [The schema
+parses once on submit](/how-it-works#the-schema-parses-once-on-submit).
+
+## Middleware or history skips a change
+
+Direct `form.api` mutations, such as `setValue`, bypass middleware and history.
+Use `form.update(recipe)` to make a managed update. See [Know which changes
+enter middleware](/middleware#know-which-changes-enter-middleware) and [Know
+what history records](/history#know-what-history-records).
+
+## `delayError` is ignored
+
+A managed update validates through one RHF `trigger` call, and this call does
+not keep the `delayError` timing. See [Understand form state and
+validation](/middleware#understand-form-state-and-validation).
+
+## Default values load too late
+
+`kit.useForm` reads the synchronous `defaultValues` only once for each mount.
+Load the data first, and then mount the form component. See [Load an edit-form
+baseline](/recipes#load-an-edit-form-baseline) and [`useForm`](/api#useform).

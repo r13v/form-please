@@ -387,18 +387,18 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Create: `docs-site/src/pages/troubleshooting.mdx`
 - Modify: `docs-site/vocs.config.ts`
 
-- [ ] give each symptom a `##` heading, so that search indexes it and it gets an anchor (Vocs search sections come from headings only, `search.ts:354`):
+- [x] give each symptom a `##` heading, so that search indexes it and it gets an anchor (Vocs search sections come from headings only, `search.ts:354`):
   - "`onSubmit` is not called"
   - "TypeScript rejects a path or control"
   - "The transformed value is missing"
   - "Middleware or history skips a change"
   - "`delayError` is ignored"
   - "Default values load too late"
-- [ ] under each heading, give the cause in one sentence and a link to the canonical section (`middleware.mdx`, `api.mdx`, `history.mdx`, `how-it-works.mdx`); do not copy the rules
-- [ ] show the mistyped-path error from the existing `playground-typo.tsx` snippet (its `// @errors:` codes stay in sync with `tsc`)
-- [ ] add the page to the Help group next to FAQs
-- [ ] the Task 5 gates cover the route and the links; add no text-restating tests
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 10
+- [x] under each heading, give the cause in one sentence and a link to the canonical section (`middleware.mdx`, `api.mdx`, `history.mdx`, `how-it-works.mdx`); do not copy the rules (the TypeScript entry links to `types.mdx`, and the default-values entry also links to `recipes.mdx#load-an-edit-form-baseline`, because those sections own the rules)
+- [x] show the mistyped-path error from the existing `playground-typo.tsx` snippet (its `// @errors:` codes stay in sync with `tsc`) (the full file is included, because region markers would show in the playground editor source)
+- [x] add the page to the Help group next to FAQs
+- [x] the Task 5 gates cover the route and the links; add no text-restating tests
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 10
 
 ### Task 10: Add the Localization guide (I14, part 1)
 
