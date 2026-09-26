@@ -28,7 +28,7 @@ export const CancellationMiddlewareDemo = Object.assign(
 	{
 		toMarkdown() {
 			return markdownFallback(
-				"The cancellation preview runs only in a browser. It compares a cancelled managed change with a raw React Hook Form update that bypasses middleware.",
+				"The cancellation preview runs only in a browser. It compares a cancelled managed update with a raw React Hook Form update that bypasses middleware.",
 				"docs-site/src/snippets/middleware-guide.tsx",
 			)
 		},

@@ -41,7 +41,7 @@ library integration.
 `StandardSchema<Input, Output>` is the common schema contract. Form, Please
 works with any library that implements this contract.
 
-`FormInput<Schema>` is the editable value stored in React Hook Form.
+`FormInput<Schema>` is the schema input type that React Hook Form (RHF) stores.
 `FormOutput<Schema>` is the parsed value passed to `onSubmit`. These types can
 be different when the schema transforms data.
 
@@ -200,7 +200,7 @@ component-local form instance.
 | `DefineFormOptions<Schema, Context>` | Definition-owned `beforeUpdate`, ordered middleware, and `afterUpdate`. |
 | `FormDefinitionUpdatePolicy<Schema, Context>` | Normalized readonly managed-update policy stored by a definition. |
 | `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, validation modes, and submit handler. |
-| `FormSubmitDetails<Schema, Context>` | Parsed output, editable input, form binding, and submitter snapshot passed to a submit handler. |
+| `FormSubmitDetails<Schema, Context>` | Parsed output, schema input, form binding, and submitter snapshot passed to a submit handler. |
 | `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
@@ -291,7 +291,7 @@ Import definition testing types from `form-please/testing`:
 | `ManagedDefinitionTransition<Definition>` | A definition transition plus commit status, final transaction, and middleware result. |
 | `DefinitionNodeSnapshot<Definition>` | Discriminated field, section, array, or render projection. |
 | `DefinitionChange<Definition>` | Added, removed, or property-level changed node. |
-| `DefinitionTestValues<Definition>` | Editable input inferred from the definition schema. |
+| `DefinitionTestValues<Definition>` | Schema input inferred from the definition schema. |
 | `DefinitionTestContext<Definition>` | Runtime context inferred from the definition's kit. |
 
 `DefinitionFieldSnapshot`, `DefinitionSectionSnapshot`,

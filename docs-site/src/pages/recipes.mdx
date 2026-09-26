@@ -23,7 +23,7 @@ matches the problem in your application.
 | Discard edits | A `type="reset"` button |
 | Save a new baseline without replacing later edits | `form.api.resetDefaultValues(input)` |
 | Keep dependent values atomic | `middleware` and `form.update(recipe)` |
-| Apply a raw RHF update to multiple fields | `form.api.setValues(values)` |
+| Apply a raw React Hook Form (RHF) update to multiple fields | `form.api.setValues(values)` |
 | Observe values without a form render subscription | `form.api.subscribe` |
 | Validate one wizard step | `form.api.trigger` and `form.api.setFocus` |
 | Build a complete product workflow | [`useFormWorkflow`](/workflows) as application code |
@@ -114,7 +114,7 @@ change the name. The new name stays in the field and the form stays dirty.
 <SavedBaselineRecipePreview />
 
 Use the submitted `input` when the server accepts that exact input. Use the
-server's canonical schema input when the server returns different editable
+server's canonical schema input when the server returns different
 values.
 
 ## Keep dependent values atomic
@@ -144,7 +144,8 @@ Forward the original patches, append dependent patches, or return without
 `next` to cancel the complete proposal. Code after synchronous `next` reads the
 committed final value.
 
-Generated controls and `form.update` make one RHF value publication. Generated
+Generated controls and `form.update` make one RHF value
+[publication](/glossary#publication). Generated
 array actions retain native `useFieldArray` row identity and promise one final
 React render, not one raw RHF publication. Direct `form.api` operations bypass
 middleware, so keep invariant-preserving application actions on `form.update`.
@@ -242,7 +243,7 @@ issues](/how-it-works#server-issues-are-not-schema-issues).
 The visible `kit.Submit` prevents normal duplicate clicks. If application code
 calls `form.api.handleSubmit(onValid, onInvalid)`, that code must also prevent
 concurrent calls. Raw `handleSubmit` does not invoke the configured
-"Form, Please" wrapper.
+Form, Please wrapper.
 
 ## Apply server field errors
 
@@ -270,7 +271,7 @@ authorization, or service failures into field errors.
 
 ## Send schema output and reset with schema input
 
-Standard Schema can transform data. In that case, editable input and submitted
+Standard Schema can transform data. In that case, schema input and submitted
 output are different contracts.
 
 ```tsx
@@ -281,7 +282,7 @@ output are different contracts.
 [`onSubmit` receives four values](/how-it-works#onsubmit-receives-four-values).
 
 Send `value` when the server expects parsed output. Pass schema input to
-`form.api.reset`. If the server returns only output, convert it to editable
+`form.api.reset`. If the server returns only output, convert it to schema
 input at the application boundary.
 
 Keep schema parsing deterministic and free of side effects. See [The schema
@@ -289,7 +290,7 @@ parses once on submit](/how-it-works#the-schema-parses-once-on-submit).
 
 ## Choose the transport format
 
-"Form, Please" does not serialize the submit value. Send JSON when the server
+Form, Please does not serialize the submit value. Send JSON when the server
 accepts the parsed object:
 
 ```ts

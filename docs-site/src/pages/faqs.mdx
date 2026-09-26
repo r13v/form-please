@@ -7,7 +7,7 @@ showAskAi: false
 # FAQs
 
 Use these answers to understand the boundaries between your application,
-React Hook Form, Standard Schema, and "Form, Please."
+React Hook Form (RHF), Standard Schema, and Form, Please.
 
 ## Validation and submission
 
@@ -27,7 +27,7 @@ No. Submission uses the values in React Hook Form state. Nested objects, arrays,
 and `File` values keep their JavaScript types.
 
 Your application owns transport serialization. Send JSON, construct
-`FormData`, or use another protocol in `onSubmit`. "Form, Please" does not
+`FormData`, or use another protocol in `onSubmit`. Form, Please does not
 select a transport format.
 
 ```ts
@@ -55,9 +55,9 @@ issues](/how-it-works#server-issues-are-not-schema-issues).
 No. A hidden field keeps its value, and the schema still validates it. See
 [Hidden fields keep their values](/how-it-works#hidden-fields-keep-their-values).
 
-### Does "Form, Please" fetch async options?
+### Does Form, Please fetch async options?
 
-Yes. A selectable field can use an async `options` function. "Form, Please"
+Yes. A selectable field can use an async `options` function. Form, Please
 invokes it, tracks the `values` and `context` properties it reads, aborts the
 previous signal when those dependencies change, and ignores stale results.
 The function still contains the application request:
@@ -83,7 +83,7 @@ Load data before or beside the form. Pass the current result through context.
 Resolvers can then derive labels, descriptions, control props, visibility, and
 interaction state synchronously.
 
-"Form, Please" resolves the complete UI tree after each form value change. Keep
+Form, Please resolves the complete UI tree after each form value change. Keep
 resolvers small and free of side effects.
 
 ## React Hook Form and manual UI
@@ -163,7 +163,7 @@ kit when the application needs a different registry or grid.
 
 ### Which schema libraries can I use?
 
-Use any schema that implements Standard Schema. "Form, Please" does not require
+Use any schema that implements Standard Schema. Form, Please does not require
 a library-specific adapter.
 
 The documentation includes complete examples for [Zod](/get-started),

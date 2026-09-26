@@ -74,7 +74,7 @@ The generated add action calls the function for each insertion. It then deeply
 clones the result while preserving browser values such as `File`. Nested
 objects in two generated rows do not share references.
 
-A manual React Hook Form operation does not use `itemDefault`. Supply the new
+A manual React Hook Form (RHF) operation does not use `itemDefault`. Supply the new
 item when you call `append()` or `insert()` from `useFieldArray`.
 
 ## Define nested arrays
@@ -107,7 +107,7 @@ example reports a duplicate email on the specific row that must change:
 // [!include ~/snippets/arrays-guide.tsx:array-validation]
 ```
 
-"Form, Please" converts numeric issue paths to dot notation. The duplicate
+Form, Please converts numeric issue paths to dot notation. The duplicate
 issue above resolves to a path such as `contacts.2.email`.
 
 After an invalid submit, the form focuses the first visible generated control

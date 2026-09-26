@@ -9,7 +9,7 @@ import { ProductWorkflowDemo } from "../components/product-workflow-demo"
 # Product workflows
 
 Use this tutorial when one form spans multiple product screens. You will keep
-one "Form, Please" binding and add application-owned workflow state around it.
+one Form, Please binding and add application-owned workflow state around it.
 
 At the end, the workflow will provide:
 
@@ -29,7 +29,7 @@ must change field visibility.
 
 | State | Owner |
 | --- | --- |
-| Editable domain input | React Hook Form and the Standard Schema |
+| Editable domain input | React Hook Form (RHF) and the Standard Schema |
 | Current screen and navigation history | Application state or the router |
 | Screen visibility | Form context and definition resolvers |
 | Draft storage | `form-please/persistence` and the application adapter |
@@ -56,7 +56,7 @@ Copy this complete controller and example into application code:
 
 | Input | Purpose |
 | --- | --- |
-| `form` | Uses the existing "Form, Please" binding and RHF API. |
+| `form` | Uses the existing Form, Please binding and RHF API. |
 | `screen` | Reads the current application-owned screen. |
 | `setScreen` | Changes the external screen state. |
 | `steps` | Defines labels, typed paths, and optional conditions. |
@@ -95,7 +95,7 @@ then **Review**. The controller opens the identity screen and focuses **Name**.
 
 ## 2. Reuse the binding for review
 
-Review shows the current editable input. It is not a saved confirmation. Keep
+Review shows the current schema input. It is not a saved confirmation. Keep
 the same binding and definition, set `readOnly`, and provide an **Edit** action.
 
 After a successful request, replace review with a confirmation that uses the
@@ -191,7 +191,7 @@ The value is `Readonly<{ name: string; value: string }> | null`.
 The submit sequence is:
 
 1. `kit.Form` prevents the native submit.
-2. It captures the editable input and native submit control.
+2. It captures the schema input and native submit control.
 3. The Standard Schema validates the captured input.
 4. A successful `onSubmit` receives `value`, `input`, `form`, and `submitter`.
 
@@ -206,7 +206,7 @@ The snapshot has these guarantees:
 
 Changing or removing the button while validation is pending does not change the
 snapshot. Direct `form.api.handleSubmit` calls remain raw React Hook Form calls
-and do not invoke the "Form, Please" `onSubmit` wrapper.
+and do not invoke the Form, Please `onSubmit` wrapper.
 
 Use `submitter` only to select a validated application action. Validate the
 action again at the server boundary. Do not use a button value as authorization.

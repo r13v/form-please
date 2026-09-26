@@ -1,6 +1,6 @@
 ---
 title: Value middleware
-description: Derive dependent values, cancel managed changes, inspect transactions, and run work after a synchronous commit.
+description: Derive dependent values, cancel managed updates, inspect transactions, and run work after a synchronous commit.
 showAskAi: false
 ---
 
@@ -13,12 +13,12 @@ import {
 # Value middleware
 
 Value middleware intercepts managed value proposals before Form, Please
-commits them to React Hook Form. Use it to derive dependent values, cancel a
+commits them to React Hook Form (RHF). Use it to derive dependent values, cancel a
 proposal, or run ordered work after a commit.
 
 Middleware policy belongs to a definition and initializes separately for every
 form binding. It does not create another form store. React Hook Form remains the
-owner of editable values and form state. See
+owner of the schema input and form state. See
 [Ownership](/how-it-works#ownership).
 
 | Need | Use |
@@ -92,7 +92,7 @@ managed commit. The button changes both source fields with one Immer recipe.
 
 <DerivedTotalMiddlewareDemo />
 
-The managed change has this sequence:
+The managed update has this sequence:
 
 1. Form, Please creates patches for the proposed source change.
 2. The middleware calculates the total from `transaction.nextValues`.
@@ -103,7 +103,7 @@ The transaction received by this middleware contains the value before its new
 total patch. The next middleware receives a new transaction with the recalculated
 `nextValues`.
 
-## Cancel a managed change
+## Cancel a managed update
 
 Return without calling `next` to cancel the complete proposal. No source patch
 or dependent patch commits.
@@ -119,7 +119,7 @@ button uses raw `form.api.setValue`, so it bypasses the limit.
 
 Use raw RHF operations only when bypassing middleware is intentional. A direct
 operation can violate an invariant that middleware enforces for managed
-changes.
+updates.
 
 ## Know which changes enter middleware
 

@@ -8,7 +8,7 @@ searchPriority: 2
 # Validation and submission
 
 Use the definition schema as the single form-level validation contract. The
-schema validates the complete React Hook Form input. It also produces the value
+schema validates the complete React Hook Form (RHF) input. It also produces the value
 that `onSubmit` receives.
 
 ## Build the validation schema
@@ -47,7 +47,7 @@ Form, Please configures this validation sequence:
 | Edit before the first submit | The form does not run change validation. |
 | Submit for the first time | React Hook Form validates the complete schema input. |
 | Edit after the first submit attempt | React Hook Form validates on each change. |
-| Submit valid input | The resolver returns transformed output and "Form, Please" calls `onSubmit`. |
+| Submit valid input | The resolver returns transformed output and Form, Please calls `onSubmit`. |
 
 The first submit attempt can be valid or invalid. After that attempt, each edit
 runs the complete form-level schema. `useForm` can override `mode`,

@@ -227,7 +227,7 @@ test.describe("Form, Please documentation", () => {
 			page.locator('[data-middleware-preview="cancellation"]'),
 		).toHaveAttribute("data-demo-client-ready", "true")
 		await cancellation
-			.getByRole("button", { name: "Try 40% as a managed change" })
+			.getByRole("button", { name: "Try 40% as a managed update" })
 			.click()
 		await expect(cancellation.getByLabel("Discount percentage")).toHaveValue(
 			"10",

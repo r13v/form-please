@@ -92,13 +92,13 @@ export function DevtoolsDemoClient() {
 
 	return (
 		<section
-			aria-label="Live Form Please devtools demo"
+			aria-label="Live Form, Please devtools demo"
 			className="form-please-complex form-please-lab"
 			data-testid="devtools-demo"
 		>
 			<p className="form-please-lab__kicker">Live demo</p>
 			<p className="form-please-lab__summary">
-				Edit the form, then open the Form Please launcher at the bottom-right.
+				Edit the form, then open FP Devtools at the bottom-right.
 			</p>
 			<kit.AutoForm className="form-please-lab__form" form={form}>
 				<div className="form-please-lab__actions">

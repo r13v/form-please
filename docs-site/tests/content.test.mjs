@@ -564,6 +564,53 @@ test("example pages claim only APIs that their snippets use", async () => {
 	assert.ok(checked > 0, "no example claims were checked")
 })
 
+test("prose uses one term for each concept", async () => {
+	const denied = [/\bForm Please\b/, /\bmanaged changes?\b/i]
+
+	for (const { source: path } of pages) {
+		const text = prose(await readFile(new URL(path, siteRoot), "utf8"))
+		for (const term of denied) {
+			assert.doesNotMatch(text, term, `${path} uses a denied term`)
+		}
+	}
+})
+
+test("prose writes React Hook Form (RHF) at the first mention", async () => {
+	let checked = 0
+
+	for (const { source: path } of pages) {
+		const source = await readFile(new URL(path, siteRoot), "utf8")
+		const text = prose(source.replace(/^---\n[\s\S]*?\n---\n/, ""))
+		const first = text.search(/React Hook Form|\bRHF\b/)
+		if (first === -1) continue
+		assert.ok(
+			text.startsWith("React Hook Form (RHF)", first),
+			`${path} must write "React Hook Form (RHF)" at the first mention`,
+		)
+		checked++
+	}
+
+	assert.ok(checked > 0, "no page mentions React Hook Form")
+})
+
+/** The page text without code fences, inline code, import lines, and link targets. */
+function prose(source) {
+	let fenced = false
+	return source
+		.split("\n")
+		.filter((line) => {
+			if (/^\s*```/.test(line)) {
+				fenced = !fenced
+				return false
+			}
+			return !fenced && !/^import\s/.test(line)
+		})
+		.join("\n")
+		.replace(/`[^`\n]*`/g, "")
+		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+		.replace(/\s+/g, " ")
+}
+
 function escapeRegExp(value) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }

@@ -10,8 +10,8 @@ searchPriority: 2
 A definition connects one Standard Schema to the UI and managed-update policy
 that govern its input. Call `kit.defineForm(schema, source, options?)` outside
 the component that uses the form. The schema-bound helpers keep paths,
-controls, options, and resolver values connected while hiding the runtime node
-discriminator.
+controls, options, and resolver values connected. They also set the internal
+node type, so you never write it.
 
 ```tsx
 import { nativeFormKit } from "form-please/preset-native"
@@ -233,7 +233,7 @@ const eventDefinition = nativeFormKit.defineForm(eventSchema, (ui) => [
 ])
 ```
 
-Generated field paths use React Hook Form dot syntax. The title above can resolve to
+Generated field paths use React Hook Form (RHF) dot syntax. The title above can resolve to
 `speakers.2.sessions.0.title`.
 
 `itemDefault` accepts a complete item or a function that returns one. Form,

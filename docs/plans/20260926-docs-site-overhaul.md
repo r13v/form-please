@@ -457,15 +457,15 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/vocs.config.ts`
 - Modify: `docs-site/tests/content.test.mjs`
 
-- [ ] write `glossary.mdx` with one heading per term: managed update, proposal, transaction, schema input, publication, and React Hook Form (RHF); give each one or two sentences and a link to the canonical section
-- [ ] replace `Form Please` in prose with Form, Please; put the devtools UI label in inline code; remove quotes around Form, Please in prose
-- [ ] write "React Hook Form (RHF)" at the first mention on each page
-- [ ] replace "managed change" with "managed update"; keep the `middleware.mdx:105` anchor valid by updating every link to it (the anchor gate checks this)
-- [ ] replace "editable input" and "editable values" with "schema input" where they mean the schema input (manual pass)
-- [ ] define "node discriminator" (`definitions.mdx:12-13`) and "publication" (`recipes.mdx:147`) in the glossary, or reword them; update `content.test.mjs:357`, which asserts "raw RHF publication"
-- [ ] add the page to the Reference group
-- [ ] add the exact-term denylist test and the RHF first-mention test (both ignore code fences, inline code, and import paths)
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 14
+- [x] write `glossary.mdx` with one heading per term: managed update, proposal, transaction, schema input, publication, and React Hook Form (RHF); give each one or two sentences and a link to the canonical section (alphabetical order; recipes links "publication" to the glossary)
+- [x] replace `Form Please` in prose with Form, Please; put the devtools UI label in inline code; remove quotes around Form, Please in prose (devtools.mdx names the `Form Please Devtools` drawer and the **FP Devtools** launcher; the devtools demo component text changed too)
+- [x] write "React Hook Form (RHF)" at the first mention on each page (22 pages; later full-name mentions stay)
+- [x] replace "managed change" with "managed update"; keep the `middleware.mdx:105` anchor valid by updating every link to it (the anchor gate checks this) (no page linked to `#cancel-a-managed-change`; the middleware demo labels and the e2e button name changed too)
+- [x] replace "editable input" and "editable values" with "schema input" where they mean the schema input (manual pass) (14 places; the singular "editable value" in how-it-works stays because it means one field value)
+- [x] define "node discriminator" (`definitions.mdx:12-13`) and "publication" (`recipes.mdx:147`) in the glossary, or reword them; update `content.test.mjs:357`, which asserts "raw RHF publication" ("node discriminator" is reworded; "publication" is defined, so the assertion stays unchanged)
+- [x] add the page to the Reference group
+- [x] add the exact-term denylist test and the RHF first-mention test (both ignore code fences, inline code, and import paths)
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 14
 
 ### Task 14: Make /ai-agents the agent hub (I15)
 
