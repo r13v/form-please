@@ -61,6 +61,13 @@ managed transaction source has `type: "history"` and an `undo`, `redo`, `seek`,
 or `import` action. `beforeUpdate` and middleware can cancel or transform the
 target, and `afterUpdate` observes the final commit.
 
+Call `undo()` and `redo()` from your own controls. Use `snapshot.canUndo` and
+`snapshot.canRedo` to disable a control that has no target:
+
+```tsx
+// [!include ~/snippets/history-guide.tsx:navigate]
+```
+
 Operations report `"applied"`, `"unavailable"`, `"cancelled"`, or
 `"transformed"`. A transformed restore becomes a new group and removes its
 redo branch. A post-commit failure rejects the operation without rolling back

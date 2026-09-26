@@ -293,13 +293,14 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/src/snippets/testing-guide.ts`, `docs-site/src/pages/testing.mdx` (if the text names the middleware)
 - Modify: `tests/browser/docs-site.spec.ts` (only if a live demo renders the changed code)
 
-- [ ] D9: change the regions in `history-guide.tsx` so that the setup region ends at a complete statement, and a shown region calls `undo()` and `redo()`
-- [ ] D10: render an `accountType` field in `styling-guide.tsx`, or change the class resolver to read a rendered field; the included region shows both the resolver and the field
-- [ ] D11: make `normalizeTaxId` normalize the value (for example trim and uppercase it in the patch), or rename it to what it does
-- [ ] run `npm run test:docs` for the changed snippets
-- [ ] if the styling page renders `styling-guide.tsx` live, add an e2e test: choose the company account and the root gets the `company-account` class; otherwise the typecheck covers the change
-- [ ] update the history e2e test if the preview behavior changed
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 5
+- [x] D9: change the regions in `history-guide.tsx` so that the setup region ends at a complete statement, and a shown region calls `undo()` and `redo()`
+- [x] D10: render an `accountType` field in `styling-guide.tsx`, or change the class resolver to read a rendered field; the included region shows both the resolver and the field
+- [x] D11: make `normalizeTaxId` normalize the value (for example trim and uppercase it in the patch), or rename it to what it does
+- [x] run `npm run test:docs` for the changed snippets
+- [x] if the styling page renders `styling-guide.tsx` live, add an e2e test: choose the company account and the root gets the `company-account` class; otherwise the typecheck covers the change (the styling page only includes the code; no live render, so the typecheck covers it)
+- [x] update the history e2e test if the preview behavior changed (behavior unchanged; the existing e2e test passes)
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 5
+- ➕ the `managed-lifecycle` test in `testing-guide.ts` called `setValue` on a definition with no fields, so it threw when run. The managed definition now renders `kind` and `taxId`. A one-off Vitest run passed both snippet tests.
 
 ### Task 5: Add the docs accuracy gates (I10, D8, D12)
 

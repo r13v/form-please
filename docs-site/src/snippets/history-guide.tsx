@@ -6,6 +6,7 @@ import {
 	type HistoryHandle,
 	type HistoryJournal,
 	type HistoryOperationResult,
+	type UseHistoryResult,
 	useHistory,
 } from "form-please/history"
 import { nativeFormKit } from "form-please/preset-native"
@@ -38,13 +39,50 @@ const historyDefinition = nativeFormKit.defineForm(
 	{ middleware: [historyFeature] },
 )
 
-export function HistoryPreview() {
+function useProfileHistory() {
 	const form = nativeFormKit.useForm(historyDefinition, {
 		defaultValues: { name: "Ada Lovelace", projects: [] },
 	})
 	const history = useHistory(form, historyFeature)
+	return { form, history }
+}
+// [!endregion setup]
+
+// [!region navigate]
+type UndoRedoButtonsProps = {
+	readonly history: UseHistoryResult<HistoryInput>
+	readonly onOperation: (
+		label: string,
+		operation: Promise<HistoryOperationResult>,
+	) => void
+}
+
+function UndoRedoButtons({ history, onOperation }: UndoRedoButtonsProps) {
 	const { snapshot } = history
-	// [!endregion setup]
+	return (
+		<>
+			<button
+				disabled={!snapshot.canUndo}
+				onClick={() => onOperation("Undo", history.undo())}
+				type="button"
+			>
+				Undo
+			</button>
+			<button
+				disabled={!snapshot.canRedo}
+				onClick={() => onOperation("Redo", history.redo())}
+				type="button"
+			>
+				Redo
+			</button>
+		</>
+	)
+}
+// [!endregion navigate]
+
+export function HistoryPreview() {
+	const { form, history } = useProfileHistory()
+	const { snapshot } = history
 	const [exported, setExported] = useState<HistoryJournal<HistoryInput>>()
 	const [message, setMessage] = useState("Edit the form to create history.")
 
@@ -74,20 +112,10 @@ export function HistoryPreview() {
 			</p>
 			<nativeFormKit.AutoForm className="form-please-lab__form" form={form}>
 				<div className="form-please-lab__actions">
-					<button
-						disabled={!snapshot.canUndo}
-						onClick={() => void navigate("Undo", history.undo())}
-						type="button"
-					>
-						Undo
-					</button>
-					<button
-						disabled={!snapshot.canRedo}
-						onClick={() => void navigate("Redo", history.redo())}
-						type="button"
-					>
-						Redo
-					</button>
+					<UndoRedoButtons
+						history={history}
+						onOperation={(label, operation) => void navigate(label, operation)}
+					/>
 					<button
 						disabled={snapshot.index === 0}
 						onClick={() => void navigate("Seek", history.seek(0))}

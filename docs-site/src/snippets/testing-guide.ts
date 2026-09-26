@@ -14,14 +14,12 @@ type Input = z.input<typeof schema>
 type Context = { readonly locale: string }
 
 const kit = nativeFormKit.forContext<Context>()
+const kindOptions = [
+	{ label: "Person", value: "person" },
+	{ label: "Company", value: "company" },
+] as const
 const definition = kit.defineForm(schema, (ui) => [
-	ui.field("kind", {
-		control: "select",
-		options: [
-			{ label: "Person", value: "person" },
-			{ label: "Company", value: "company" },
-		],
-	}),
+	ui.field("kind", { control: "select", options: kindOptions }),
 	ui.field("taxId", {
 		control: "text",
 		label: (_values, { context }) => `${context.locale}: Tax ID`,
@@ -61,26 +59,44 @@ test("shows every definition effect of changing kind", () => {
 
 // [!region managed-lifecycle]
 const normalizeTaxId: FormMiddleware<Input, Context> =
-	() => (next) => (transaction) =>
-		next(transaction.patches)
+	() => (next) => (transaction) => {
+		const taxId = transaction.nextValues.taxId.trim().toUpperCase()
+		if (taxId === transaction.nextValues.taxId) {
+			return next(transaction.patches)
+		}
+		return next([
+			...transaction.patches,
+			{ op: "replace", path: ["taxId"], value: taxId },
+		])
+	}
 
 test("runs the real managed update lifecycle", () => {
-	const managedDefinition = kit.defineForm(schema, () => [], {
-		beforeUpdate(draft, transaction) {
-			if (
-				transaction.source.type === "control" &&
-				transaction.source.path === "kind" &&
-				transaction.nextValues.kind === "person"
-			) {
-				draft.taxId = ""
-			}
+	const managedDefinition = kit.defineForm(
+		schema,
+		(ui) => [
+			ui.field("kind", { control: "select", options: kindOptions }),
+			ui.field("taxId", { control: "text", label: "Tax ID" }),
+		],
+		{
+			beforeUpdate(draft, transaction) {
+				if (
+					transaction.source.type === "control" &&
+					transaction.source.path === "kind" &&
+					transaction.nextValues.kind === "person"
+				) {
+					draft.taxId = ""
+				}
+			},
+			middleware: [normalizeTaxId],
 		},
-		middleware: [normalizeTaxId],
-	})
+	)
 	const tester = createDefinitionTester(managedDefinition, {
 		context: { locale: "en" },
 		values: { contacts: [], kind: "company", taxId: "GB123" },
 	})
+
+	const typed = tester.setValue("taxId", " gb456 ")
+	expect(typed.after.values.taxId).toBe("GB456")
 
 	const change = tester.setValue("kind", "person")
 
