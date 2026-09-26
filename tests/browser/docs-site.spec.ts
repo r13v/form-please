@@ -214,8 +214,10 @@ test.describe("Form, Please documentation", () => {
 
 		await preview.getByRole("button", { name: "Undo" }).click()
 		await expect(name).toHaveValue("Ada Lovelace")
+		await expect(preview.getByText(/Undo: applied/)).toBeVisible()
 		await preview.getByRole("button", { name: "Redo" }).click()
 		await expect(name).toHaveValue("Grace Hopper")
+		await expect(preview.getByText(/Redo: applied/)).toBeVisible()
 		await expect(preview.getByRole("button", { name: "Redo" })).toBeDisabled()
 		await expect(preview.getByRole("button", { name: "Undo" })).toBeEnabled()
 

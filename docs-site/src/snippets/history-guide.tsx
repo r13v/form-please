@@ -49,24 +49,44 @@ function useProfileHistory() {
 // [!endregion setup]
 
 // [!region navigate]
+async function describeOperation(
+	label: string,
+	operation: Promise<HistoryOperationResult>,
+): Promise<string> {
+	try {
+		return `${label}: ${await operation}`
+	} catch (error) {
+		if (error instanceof Error) {
+			return `${label} failed: ${error.message}`
+		}
+		return `${label} failed`
+	}
+}
+
 function UndoRedoButtons({
 	history,
+	onStatus,
 }: {
 	readonly history: UseHistoryResult<HistoryInput>
+	readonly onStatus: (status: string) => void
 }) {
 	const { snapshot } = history
 	return (
 		<>
 			<button
 				disabled={!snapshot.canUndo}
-				onClick={() => void history.undo()}
+				onClick={() =>
+					void describeOperation("Undo", history.undo()).then(onStatus)
+				}
 				type="button"
 			>
 				Undo
 			</button>
 			<button
 				disabled={!snapshot.canRedo}
-				onClick={() => void history.redo()}
+				onClick={() =>
+					void describeOperation("Redo", history.redo()).then(onStatus)
+				}
 				type="button"
 			>
 				Redo
@@ -82,21 +102,6 @@ export function HistoryPreview() {
 	const [exported, setExported] = useState<HistoryJournal<HistoryInput>>()
 	const [message, setMessage] = useState("Edit the form to create history.")
 
-	async function navigate(
-		label: string,
-		operation: Promise<HistoryOperationResult>,
-	) {
-		try {
-			setMessage(`${label}: ${await operation}`)
-		} catch (error) {
-			if (error instanceof Error) {
-				setMessage(error.message)
-			} else {
-				setMessage(`${label} failed`)
-			}
-		}
-	}
-
 	return (
 		<section
 			aria-label="Managed value history preview"
@@ -108,10 +113,12 @@ export function HistoryPreview() {
 			</p>
 			<nativeFormKit.AutoForm className="form-please-lab__form" form={form}>
 				<div className="form-please-lab__actions">
-					<UndoRedoButtons history={history} />
+					<UndoRedoButtons history={history} onStatus={setMessage} />
 					<button
 						disabled={snapshot.index === 0}
-						onClick={() => void navigate("Seek", history.seek(0))}
+						onClick={() =>
+							void describeOperation("Seek", history.seek(0)).then(setMessage)
+						}
 						type="button"
 					>
 						First position
@@ -130,7 +137,9 @@ export function HistoryPreview() {
 						disabled={exported === undefined}
 						onClick={() => {
 							if (exported !== undefined) {
-								void navigate("Import", history.import(exported))
+								void describeOperation("Import", history.import(exported)).then(
+									setMessage,
+								)
 							}
 						}}
 						type="button"

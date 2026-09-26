@@ -62,7 +62,8 @@ or `import` action. `beforeUpdate` and middleware can cancel or transform the
 target, and `afterUpdate` observes the final commit.
 
 Call `undo()` and `redo()` from your own controls. Use `snapshot.canUndo` and
-`snapshot.canRedo` to disable a control that has no target:
+`snapshot.canRedo` to disable a control that has no target. The example waits
+for each operation and shows its result or its rejection:
 
 ```tsx
 // [!include ~/snippets/history-guide.tsx:navigate]
