@@ -154,6 +154,10 @@ test("keeps form kits, API, and production guidance executable", async () => {
 		new URL("src/pages/styling.mdx", siteRoot),
 		"utf8",
 	)
+	const accessibility = await readFile(
+		new URL("src/pages/accessibility.mdx", siteRoot),
+		"utf8",
+	)
 
 	for (const region of [
 		"use-snapshot",
@@ -190,10 +194,10 @@ test("keeps form kits, API, and production guidance executable", async () => {
 		"multipart-body",
 		"context-resource",
 		"form-modes",
-		"accessible-control",
 	]) {
 		assert.match(recipes, new RegExp(`production-recipes\\.tsx:${region}`))
 	}
+	assert.match(accessibility, /production-recipes\.tsx:accessible-control/)
 	for (const preview of [
 		"SavedBaselineRecipePreview",
 		"AtomicValuesRecipePreview",

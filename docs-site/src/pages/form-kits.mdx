@@ -124,19 +124,10 @@ content.
 | `readOnly` | Show the value but prevent changes when this value is `true`. |
 | `required` | Expose the resolved UI requirement to the component. |
 
-Connect every applicable `input` property to the interactive element:
+Connect `input` and `meta.invalid` to the interactive element. Read [Connect a
+custom control](/accessibility#connect-a-custom-control) for the contract.
 
-| Input property | Required connection |
-| --- | --- |
-| `input.id` | Set the element `id`. The field label uses this ID. |
-| `input.name` | Set the element `name`. This also supports autofill and browser diagnostics. |
-| `input.ref` | Attach it to the focusable element. Invalid submission uses this ref for focus. |
-| `input["aria-describedby"]` | Set `aria-describedby`. It connects descriptions and visible errors. |
-
-Set `aria-invalid` from `meta.invalid`. The value becomes `true` only when the
-form displays field errors.
-
-The remaining metadata has these meanings:
+The metadata has these meanings:
 
 | Metadata | Meaning |
 | --- | --- |
@@ -146,10 +137,6 @@ The remaining metadata has these meanings:
 | `errors` | All normalized field issues. |
 | `displayErrors` | Issues that the form currently shows. |
 | `invalid` | `displayErrors` contains at least one issue. |
-
-Native text inputs support a `readOnly` property. Some components do not.
-A custom select, checkbox, or file control must prevent changes when `readOnly`
-is `true`.
 
 ### Option controls
 

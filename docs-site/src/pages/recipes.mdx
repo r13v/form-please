@@ -33,7 +33,7 @@ matches the problem in your application.
 | Load one remote option list | Async field `options` |
 | Coordinate request state with form UI | Form context and `fromResource` |
 | Lock the complete form | The `disabled` or `readOnly` option |
-| Add a design-system control | `defineControl` and the full `ControlProps` contract |
+| Add a design-system control | `defineControl` and the [accessibility contract](/accessibility#connect-a-custom-control) |
 
 Read [Ownership](/how-it-works#ownership) for the parts that React Hook Form
 and the application own.
@@ -345,25 +345,8 @@ states according to its platform semantics.
 
 ## Preserve the accessibility contract
 
-Generated field slots connect labels, descriptions, and issue output to a
-control. A custom control must attach the supplied properties to its
-interactive element.
-
-```tsx
-// [!include ~/snippets/production-recipes.tsx:accessible-control]
-```
-
-A custom control must:
-
-1. Attach `input.id`, `input.name`, and `input.ref`.
-2. Attach `input["aria-describedby"]` and expose `meta.invalid`.
-3. Call `setValue` after a valid control change.
-4. Call `blur` from its blur event.
-5. Honor `disabled`, `readOnly`, and `required`.
-
-Custom slots must preserve semantic groups, labels, issue output, and usable
-buttons. Test keyboard input, focus, invalid state, and read-only behavior for
-each reusable custom control.
+A custom control or slot must attach the supplied IDs, refs, and state to its
+elements. Read [Accessibility](/accessibility) for the complete contract.
 
 ## Test the public experience
 

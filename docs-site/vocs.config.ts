@@ -149,6 +149,7 @@ export default defineConfig({
 				{ text: "Persistence", link: "/persistence" },
 				{ text: "History", link: "/history" },
 				{ text: "Localization", link: "/localization" },
+				{ text: "Accessibility", link: "/accessibility" },
 			],
 		},
 		{

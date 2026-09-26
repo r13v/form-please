@@ -90,6 +90,9 @@ If no generated control can receive focus, `kit.AutoForm` focuses the first
 error-summary item. A manually composed `kit.Form` has no automatic summary
 fallback.
 
+A custom control receives focus only when it attaches `input.ref`. Read
+[Accessibility](/accessibility) for the control contract.
+
 A hidden field has no generated control, so `kit.AutoForm` shows its issue in
 the summary. See [Hidden fields keep their
 values](/how-it-works#hidden-fields-keep-their-values).

@@ -656,6 +656,7 @@ function ProfileByMode({
 }
 // [!endregion form-modes]
 
+// [!region accessible-control]
 type CurrencyProps = {
 	readonly currency: string
 }
@@ -698,7 +699,6 @@ function CurrencyControl({
 	)
 }
 
-// [!region accessible-control]
 const currency = defineControl<number | undefined, CurrencyProps>({
 	component: CurrencyControl,
 })

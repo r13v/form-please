@@ -424,15 +424,16 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 **Files:**
 - Create: `docs-site/src/pages/accessibility.mdx`
 - Modify: `docs-site/src/pages/recipes.mdx`, `form-kits.mdx`, `validation.mdx`
+- Modify: `docs-site/src/snippets/production-recipes.tsx` (wider `accessible-control` region)
 - Modify: `docs-site/vocs.config.ts`
 - Modify: `docs-site/tests/content.test.mjs`
 
-- [ ] list each guarantee that the library gives (focus on the first invalid field, error association, and required and invalid state) with the source file that implements it
-- [ ] move the custom-control contract from `recipes.mdx:352-372` and `form-kits.mdx:118-136` into the guide, together with the `production-recipes.tsx:accessible-control` region include; leave one sentence and a link in both places
-- [ ] update `content.test.mjs:204`, which requires that include in `recipes.mdx`, to point at `accessibility.mdx`
-- [ ] keep the old Recipes anchor if another page links to it (the Task 5 anchor gate reports it)
-- [ ] add the page to the Build group
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 12
+- [x] list each guarantee that the library gives (focus on the first invalid field, error association, and required and invalid state) with the source file that implements it
+- [x] move the custom-control contract from `recipes.mdx:352-372` and `form-kits.mdx:118-136` into the guide, together with the `production-recipes.tsx:accessible-control` region include; leave one sentence and a link in both places (the `accessible-control` region now also includes `CurrencyProps` and `CurrencyControl`, so the included code shows the contract; the Form kits `readOnly` note moved too)
+- [x] update `content.test.mjs:204`, which requires that include in `recipes.mdx`, to point at `accessibility.mdx`
+- [x] keep the old Recipes anchor if another page links to it (the Task 5 anchor gate reports it) (no page linked to `#preserve-the-accessibility-contract`; the heading stays with one sentence and a link)
+- [x] add the page to the Build group
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 12
 
 ### Task 12: Add task cards and "Next steps" links (I20)
 
