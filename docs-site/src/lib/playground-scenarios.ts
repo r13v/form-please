@@ -1,9 +1,11 @@
 export type ScenarioId =
 	| "basic"
+	| "layout"
 	| "transform"
 	| "conditional"
 	| "derived"
 	| "array"
+	| "rhf"
 	| "typo"
 
 export type Scenario = Readonly<{
@@ -11,6 +13,8 @@ export type Scenario = Readonly<{
 	title: string
 	summary: string
 	tryThis: string
+	/** Renders the preview under the code at the full panel width. */
+	previewWidth?: "full"
 }>
 
 export const scenarios: readonly Scenario[] = [
@@ -21,6 +25,15 @@ export const scenarios: readonly Scenario[] = [
 			"One Zod schema, one definition, one hook. Every path in the definition must exist in the schema.",
 		tryThis:
 			"Clear the email and submit. The Zod message appears next to the field.",
+	},
+	{
+		id: "layout",
+		title: "Grid layout",
+		summary:
+			"columns on a section and span on a field put the fields in a grid. The definition sets the layout, and form-please/layout.css makes it follow the section width. You write no grid CSS.",
+		tryThis:
+			"Make the browser window narrow. Each section changes to one column when it is narrower than 40rem.",
+		previewWidth: "full",
 	},
 	{
 		id: "transform",
@@ -53,6 +66,14 @@ export const scenarios: readonly Scenario[] = [
 			"Array rows get stable keys, reorder buttons, and per-row fields typed against the item schema.",
 		tryThis:
 			"Add a member, leave the email empty, and submit. The row error stays with its row.",
+	},
+	{
+		id: "rhf",
+		title: "React Hook Form",
+		summary:
+			"The generated fields and your React Hook Form code share one form. useWatch, useFormState, and register work next to the generated fields.",
+		tryThis:
+			"Type a message and watch the counter. Then enter a referral code and submit: the output includes it.",
 	},
 	{
 		id: "typo",

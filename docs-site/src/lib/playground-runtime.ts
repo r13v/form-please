@@ -5,6 +5,7 @@ import * as presetNative from "form-please/preset-native"
 import type { ComponentType } from "react"
 import * as React from "react"
 import * as jsxRuntime from "react/jsx-runtime"
+import * as reactHookForm from "react-hook-form"
 import { transform } from "sucrase"
 import * as zod from "zod"
 
@@ -16,6 +17,7 @@ const modules: Readonly<Record<string, ModuleNamespace>> = {
 	"form-please/native-controls": nativeControls,
 	"form-please/preset-native": presetNative,
 	react: React,
+	"react-hook-form": reactHookForm,
 	"react/jsx-runtime": jsxRuntime,
 	zod,
 }

@@ -1077,6 +1077,17 @@ table {
 	}
 }
 
+.form-please-playground__grid[data-preview-width="full"],
+.form-please-live__grid[data-preview-width="full"] {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.form-please-playground__grid[data-preview-width="full"]
+	.form-please-playground__preview,
+.form-please-live__grid[data-preview-width="full"] .form-please-live__preview {
+	position: static;
+}
+
 .form-please-playground__code .shiki {
 	font-size: 0.8rem;
 }

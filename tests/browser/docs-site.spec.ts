@@ -493,6 +493,50 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("puts fields in columns in the grid layout scenario", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		await page.goto("./")
+		const playground = page.getByTestId("scripted-playground")
+		await playground.getByRole("tab", { name: "Grid layout" }).click()
+		const demo = playground.locator(
+			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
+		)
+
+		const name = await demo.getByLabel("Name").boundingBox()
+		const email = await demo.getByLabel("Email").boundingBox()
+		const street = await demo.getByLabel("Street").boundingBox()
+		const city = await demo.getByLabel("City").boundingBox()
+		expect(name?.y).toBe(email?.y)
+		expect(email?.x).toBeGreaterThan(name?.x ?? 0)
+		expect(street?.width).toBeGreaterThan((city?.width ?? 0) * 1.5)
+
+		await demo.getByRole("button", { name: "Ship order" }).click()
+		await expect(demo.locator("pre")).toContainText('"postcode": "SW1Y 4LE"')
+		expect(errors).toEqual([])
+	})
+
+	test("shares one form with React Hook Form code", async ({ page }) => {
+		const errors = pageErrors(page)
+		await page.goto("./")
+		const playground = page.getByTestId("scripted-playground")
+		await playground.getByRole("tab", { name: "React Hook Form" }).click()
+		const demo = playground.locator(
+			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
+		)
+
+		await expect(demo.getByText("No changes")).toBeVisible()
+		await demo.getByLabel("Message").fill("Hello")
+		await expect(demo.getByText("5 of 80 characters")).toBeVisible()
+		await expect(demo.getByText("Unsaved changes")).toBeVisible()
+
+		await demo.getByLabel("Referral code").fill("ADA-1")
+		await demo.getByRole("button", { name: "Send invite" }).click()
+		await expect(demo.locator("pre")).toContainText('"referral": "ADA-1"')
+		expect(errors).toEqual([])
+	})
+
 	test("runs the live playground with IntelliSense", async ({ page }) => {
 		const errors = pageErrors(page)
 		await page.goto("./playground?scenario=transform")

@@ -57,6 +57,14 @@ inferred type. The form on the right is rendered by that exact code.
 
 </ScriptedPlayground.Scenario>
 
+<ScriptedPlayground.Scenario id="layout">
+
+```tsx twoslash
+// [!include ~/snippets/playground-layout.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
 <ScriptedPlayground.Scenario id="transform">
 
 ```tsx twoslash
@@ -89,6 +97,14 @@ inferred type. The form on the right is rendered by that exact code.
 
 </ScriptedPlayground.Scenario>
 
+<ScriptedPlayground.Scenario id="rhf">
+
+```tsx twoslash
+// [!include ~/snippets/playground-rhf.tsx]
+```
+
+</ScriptedPlayground.Scenario>
+
 <ScriptedPlayground.Scenario id="typo">
 
 ```tsx twoslash
@@ -117,6 +133,11 @@ the same file one step at a time.
     <a href={`${import.meta.env.BASE_URL}form-kits`}>Form kits</a>
   </li>
   <li>
+    <strong>Put fields in columns</strong>
+    <span>Set columns on a section and span on a field. The grid follows the section width, not the viewport, and you write no grid CSS.</span>
+    <a href={`${import.meta.env.BASE_URL}styling#configure-columns-and-spans`}>Columns and spans</a>
+  </li>
+  <li>
     <strong>Keep a total in sync</strong>
     <span>Write the rule once in the definition. It runs before each change commits, can cancel the change, and needs no effect.</span>
     <a href={`${import.meta.env.BASE_URL}middleware`}>Value middleware</a>
@@ -133,8 +154,8 @@ the same file one step at a time.
   </li>
   <li>
     <strong>Use React Hook Form directly</strong>
-    <span>Use register, Controller, useWatch, and useFieldArray next to the generated fields.</span>
-    <a href={`${import.meta.env.BASE_URL}recipes`}>Recipes</a>
+    <span>Use register, Controller, useWatch, and useFieldArray next to the generated fields, in the same form.</span>
+    <a href={`${import.meta.env.BASE_URL}recipes#compose-generated-and-custom-ui`}>Compose generated and custom UI</a>
   </li>
   <li>
     <strong>Set up my coding agent</strong>
@@ -152,6 +173,7 @@ the same file one step at a time.
 | Schema library | Any Standard Schema | Any, via resolvers | Any Standard Schema | Yup, or a validate function |
 | Field paths checked against the schema | Yes | Yes | Yes | No, string names |
 | Fields generated from a definition | Yes | No | No | No |
+| Grid layout declared in the definition | Yes, `columns` and `span` | No | No | No |
 | Conditional fields and arrays declared, not hand-wired | Yes | No | No | No |
 | Dependent values commit with their sources | Yes, `beforeUpdate` | No, `useEffect` and `setValue` | Field listeners, after the change | No, `useEffect` and `setFieldValue` |
 | Submit receives the transformed output type | Yes | With a resolver | No, input values only | No |
@@ -186,7 +208,8 @@ Each part of a form has one owner: the schema, React Hook Form, the definition,
 the kit, or your application. Read [Ownership](/how-it-works#ownership).
 
 Use RHF `register`, `Controller`, and hooks such as `useWatch` when a generated
-definition is not enough. `kit.Form` supplies `FormProvider`.
+definition is not enough. Read [You keep the React Hook Form
+API](/how-it-works#you-keep-the-react-hook-form-api).
 
 ## Kudos
 

@@ -104,16 +104,57 @@ fields to see the validation errors.
 
 </details>
 
-## Add the optional layout
+## Put fields in columns
 
-Import the optional structural stylesheet once if you want baseline spacing:
+Import the optional layout stylesheet once in your application entry point:
 
 ```ts
 import "form-please/layout.css"
 ```
 
-The native preset is intentionally unstyled. Replace it with your own controls
-and slots, or use the Material UI preset.
+Then put the fields in a section and set `columns`:
+
+```tsx
+const profileDefinition = kit.defineForm(profileSchema, (ui) => [
+	ui.section("profile", {
+		title: "Profile",
+		columns: 2,
+		children: [
+			ui.field("name", { control: "text", label: "Name", required: true }),
+			ui.field("email", {
+				control: "text",
+				label: "Email",
+				props: { type: "email", autoComplete: "email" },
+				required: true,
+			}),
+		],
+	}),
+])
+```
+
+The section puts `name` and `email` in one row. When the section is narrower
+than `40rem`, it shows one column. Set `span: "full"` on a field to give it the
+full row. See [Configure columns and spans](/styling#configure-columns-and-spans).
+
+The stylesheet adds only grid and spacing rules. The native preset has no
+visual theme. Replace it with your own controls and slots, or use the Material
+UI preset.
+
+## Use React Hook Form next to the fields
+
+The form binding keeps the complete RHF API in `form.api`. In `ProfileForm`,
+read a value with `useWatch` after the `kit.useForm` call:
+
+```tsx
+import { useWatch } from "react-hook-form"
+
+const name = useWatch({ control: form.api.control, name: "name" })
+```
+
+Render `name` as a child of `kit.AutoForm`. `register`, `Controller`, and
+`useFormState` also work there, because `kit.AutoForm` supplies RHF
+`FormProvider`. Read [You keep the React Hook Form
+API](/how-it-works#you-keep-the-react-hook-form-api).
 
 ## Next steps
 
