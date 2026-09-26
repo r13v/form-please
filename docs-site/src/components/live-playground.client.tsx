@@ -194,7 +194,10 @@ export function LivePlaygroundClient() {
 				<TypecheckStatusLine status={typecheck} errorCount={errorCount} />
 			</div>
 			<p className="form-please-live__summary">{scenario.summary}</p>
-			<div className="form-please-live__grid">
+			<div
+				className="form-please-live__grid"
+				data-preview-width={scenario.previewWidth}
+			>
 				<div className="form-please-live__editor-column">
 					<div
 						className="form-please-editor"

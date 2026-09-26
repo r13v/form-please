@@ -38,8 +38,9 @@
   `import.meta.glob(..., { exhaustive: true })`. Add a `paths` entry there
   when a new package must resolve.
 - `src/pages/how-it-works.mdx` is the single home of the core rules:
-  `required` is UI-only, hidden fields keep their values, the schema parses
-  once on submit, the `onSubmit` values, server issues, and ownership. Other
+  the React Hook Form API, `required` is UI-only, hidden fields keep their
+  values, the kit grid, the schema parses once on submit, the `onSubmit`
+  values, server issues, and ownership. Other
   pages keep one sentence and a link to the rule anchor. Move text; do not
   copy it.
 - `src/pages/accessibility.mdx` owns the custom control and slot accessibility

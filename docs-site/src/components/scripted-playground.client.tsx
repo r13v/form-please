@@ -6,6 +6,8 @@ import { TeamForm } from "../snippets/playground-array"
 import { SignupForm } from "../snippets/playground-basic"
 import { AccountForm } from "../snippets/playground-conditional"
 import { OrderForm } from "../snippets/playground-derived"
+import { DeliveryForm } from "../snippets/playground-layout"
+import { InviteForm } from "../snippets/playground-rhf"
 import { ProfileForm } from "../snippets/playground-transform"
 
 export type ScriptedPanel = Readonly<{
@@ -18,6 +20,8 @@ const previews: Readonly<Record<ScenarioId, (() => ReactNode) | null>> = {
 	basic: SignupForm,
 	conditional: AccountForm,
 	derived: OrderForm,
+	layout: DeliveryForm,
+	rhf: InviteForm,
 	transform: ProfileForm,
 	typo: null,
 }
@@ -100,7 +104,10 @@ export function ScriptedPlaygroundClient({
 						<p className="form-please-playground__summary">
 							{scenario.summary}
 						</p>
-						<div className="form-please-playground__grid">
+						<div
+							className="form-please-playground__grid"
+							data-preview-width={scenario.previewWidth}
+						>
 							<div className="form-please-playground__code">{panel.code}</div>
 							<div className="form-please-playground__preview">
 								<ScenarioPreview Preview={Preview} selected={selected} />

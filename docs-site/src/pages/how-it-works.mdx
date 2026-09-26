@@ -1,6 +1,6 @@
 ---
 title: How it works
-description: Follow the flow from schema to submit, follow a managed update, and learn the core rules for required state, hidden values, parsing, onSubmit, server issues, and ownership.
+description: Follow the flow from schema to submit, follow a managed update, and learn the core rules for the React Hook Form API, required state, hidden values, the grid layout, parsing, onSubmit, server issues, and ownership.
 showAskAi: false
 searchPriority: 2
 ---
@@ -65,6 +65,23 @@ reach RHF, and `afterUpdate` does not run for it.
 `defaultValues`, resets, and direct `form.api` calls do not run the rules. See
 [Value middleware](/middleware) for examples and the complete list of changes.
 
+## You keep the React Hook Form API
+
+`form.api` is the complete RHF API of the form binding. Use its methods, such
+as `setValue`, `trigger`, and `setError`, in application code.
+
+`kit.Form` and `kit.AutoForm` supply `form.api` through RHF `FormProvider`.
+Inside them, `register`, `Controller`, `useController`, `useWatch`,
+`useFormState`, `useFieldArray`, and `useFormContext` share the state of the
+generated fields. The path of an application-owned field must exist in the
+schema, but the field does not need a node in the definition. The schema
+validates its value, and `onSubmit` receives its output.
+
+An application-owned field supplies its own label, description, issue output,
+and focus behavior. Direct `form.api` writes do not run the definition rules.
+Use `form.update` when a change must run them. See [Compose generated and
+custom UI](/recipes#compose-generated-and-custom-ui) for an example.
+
 ## `required` is UI-only
 
 The `required` property changes the control UI and its accessibility state. It
@@ -93,6 +110,21 @@ To clear the editable value when the user changes another field, use
 [value middleware](/middleware). See [Conditional
 fields](/conditional-fields#keep-conditional-validation-in-the-schema) for an
 example.
+
+## The kit grid limits the layout
+
+The definition sets the layout. `columns` on a section sets the number of
+columns for its children. `span` on a field, section, or array sets the width
+of that node in its parent grid. `span: "full"` gives the node the full row.
+
+The kit owns the grid scale. The default grid is `[1, 2, 3, 4]`. The type
+checker and `kit.defineForm` reject grid values that are not in the kit grid,
+and `kit.defineForm` rejects a `span` that is larger than the parent `columns`.
+
+The optional `form-please/layout.css` stylesheet implements the default grid.
+The grid follows the width of each section, not the viewport width. A section
+that is narrower than `40rem` shows one column. See [Configure columns and
+spans](/styling#configure-columns-and-spans).
 
 ## The schema parses once on submit
 
@@ -149,8 +181,8 @@ Each part of a form has one owner:
 | --- | --- |
 | Validation rules and transformed output | The Standard Schema |
 | Schema input, form state, and validation runs | React Hook Form, through the schema resolver |
-| Generated UI and its managed-update policy | The definition |
-| Rendered design system | The controls and slots of the kit |
+| Generated UI, its layout, and its managed-update policy | The definition |
+| Rendered design system and grid scale | The controls, slots, and grid of the kit |
 | Requests, caches, persistence storage, navigation, permissions, and workflow state | The application |
 
 Form, Please resolves definitions and renders controls. It does not keep a

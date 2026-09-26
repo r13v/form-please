@@ -4,6 +4,8 @@ import arraySource from "../snippets/playground-array.tsx?raw"
 import basicSource from "../snippets/playground-basic.tsx?raw"
 import conditionalSource from "../snippets/playground-conditional.tsx?raw"
 import derivedSource from "../snippets/playground-derived.tsx?raw"
+import layoutSource from "../snippets/playground-layout.tsx?raw"
+import rhfSource from "../snippets/playground-rhf.tsx?raw"
 import transformSource from "../snippets/playground-transform.tsx?raw"
 import typoSource from "../snippets/playground-typo.tsx?raw"
 import type { ScenarioId } from "./playground-scenarios"
@@ -14,6 +16,8 @@ export const scenarioSources: Readonly<Record<ScenarioId, string>> = {
 	basic: editorSource(basicSource),
 	conditional: editorSource(conditionalSource),
 	derived: editorSource(derivedSource),
+	layout: editorSource(layoutSource),
+	rhf: editorSource(rhfSource),
 	transform: editorSource(transformSource),
 	typo: editorSource(typoSource),
 }
