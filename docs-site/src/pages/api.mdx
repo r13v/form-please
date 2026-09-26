@@ -286,9 +286,7 @@ the schema input type, before schema transformations.
 
 `array.children` receives another builder bound to the item scope. The root
 builder and each array child callback run once while the definition is created;
-they are not value resolvers. The object form
-`defineForm(schema, { ui: [...] })` remains supported and produces the same
-normalized definition.
+they are not value resolvers.
 
 The optional third argument owns the complete managed-update policy:
 

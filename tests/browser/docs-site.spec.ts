@@ -324,6 +324,26 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("requires the company name in the conditional scenario", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		await page.goto("./")
+		const playground = page.getByTestId("scripted-playground")
+		await playground.getByRole("tab", { name: "Conditional field" }).click()
+		const demo = playground.locator(
+			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
+		)
+
+		await demo.getByLabel("Account type").selectOption("company")
+		await demo.getByLabel("Company name").fill("")
+		await demo.getByRole("button", { name: "Open account" }).click()
+
+		await expect(demo.getByText("Enter the company name")).toBeVisible()
+		await expect(demo.locator("pre")).toHaveText("Submit to see output")
+		expect(errors).toEqual([])
+	})
+
 	test("runs the live playground with IntelliSense", async ({ page }) => {
 		const errors = pageErrors(page)
 		await page.goto("./playground?scenario=transform")

@@ -4,11 +4,24 @@ import { nativeFormKit as kit } from "form-please/preset-native"
 import { useState } from "react"
 import { z } from "zod"
 
-const accountSchema = z.object({
-	accountType: z.enum(["personal", "company"]),
-	companyName: z.string().optional(),
-	email: z.string().email("Enter a valid email"),
-})
+const accountSchema = z
+	.object({
+		accountType: z.enum(["personal", "company"]),
+		companyName: z.string().optional(),
+		email: z.string().email("Enter a valid email"),
+	})
+	.superRefine((value, context) => {
+		if (
+			value.accountType === "company" &&
+			(value.companyName ?? "").trim() === ""
+		) {
+			context.addIssue({
+				code: "custom",
+				message: "Enter the company name",
+				path: ["companyName"],
+			})
+		}
+	})
 
 const accountForm = kit.defineForm(accountSchema, (ui) => [
 	ui.field("accountType", {

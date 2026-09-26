@@ -274,16 +274,16 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/src/snippets/playground-conditional.tsx`, `docs-site/src/lib/playground-scenarios.ts` (if the summary changes)
 - Modify: `tests/browser/docs-site.spec.ts`
 
-- [ ] D3: remove the object-form sentence at `api.mdx:288-290`
-- [ ] D4: replace `useWatch` with `form.api.watch()` in the five example pages
-- [ ] D5: correct `examples/index.mdx:34-35`: the active stage is React state that the form reads through context
-- [ ] D6: change "a second time" (`examples/index.mdx:50-51`) and "twice" (`examples/shadcn-valibot.mdx:37`) to "once", to match `src/create-form-kit.tsx:803`
-- [ ] D7: in `playground-conditional.tsx`, require the company name for company accounts with `superRefine` (or `.check`). Do not use a discriminated union, because it can break `FieldPath` for `ui.field("companyName")`. Keep the scenario summary true.
-- [ ] keep the Twoslash directives in `playground-conditional.tsx` valid and run `npm run test:docs`
-- [ ] add an e2e test: in the "Conditional field" scenario, choose company, clear the company name, and submit; the Zod message shows and no output shows
-- [ ] check that `build-output.test.mjs:59` still finds `useWatch` in `llms-full.txt` (other pages use it); update it if it only matched the example claims
-- [ ] no new source test for D3 to D6: the Task 5 example-claims gate covers D4; D3, D5, and D6 are one-time text fixes
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 4
+- [x] D3: remove the object-form sentence at `api.mdx:288-290`
+- [x] D4: replace `useWatch` with `form.api.watch()` in the five example pages (`makerspace-launch.mdx:27` keeps `useWatch`, because its snippet calls `useWatch`)
+- [x] D5: correct `examples/index.mdx:34-35`: the active stage is React state that the form reads through context
+- [x] D6: change "a second time" (`examples/index.mdx:50-51`) and "twice" (`examples/shadcn-valibot.mdx:37`) to "once", to match `src/create-form-kit.tsx:803`
+- [x] D7: in `playground-conditional.tsx`, require the company name for company accounts with `superRefine` (or `.check`). Do not use a discriminated union, because it can break `FieldPath` for `ui.field("companyName")`. Keep the scenario summary true.
+- [x] keep the Twoslash directives in `playground-conditional.tsx` valid and run `npm run test:docs`
+- [x] add an e2e test: in the "Conditional field" scenario, choose company, clear the company name, and submit; the Zod message shows and no output shows
+- [x] check that `build-output.test.mjs:59` still finds `useWatch` in `llms-full.txt` (other pages use it); update it if it only matched the example claims (still passes: `makerspace-launch.mdx`, `recipes.mdx`, `faqs.mdx`, `api.mdx`, and `index.mdx` keep it; no change)
+- [x] no new source test for D3 to D6: the Task 5 example-claims gate covers D4; D3, D5, and D6 are one-time text fixes
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 4
 
 ### Task 4: Fix the snippet defects (D9 to D11)
 
