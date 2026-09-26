@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import { access, readFile } from "node:fs/promises"
 import { test } from "node:test"
+import { proseSegments } from "../../scripts/fix-vocs-llms-links.mjs"
 import { pages, sidebarLinks } from "./pages.mjs"
 
 const siteRoot = new URL("../", import.meta.url)
@@ -665,18 +666,8 @@ test("prose writes React Hook Form (RHF) at the first mention", async () => {
 
 /** The page text without code fences, inline code, import lines, and link targets. */
 function prose(source) {
-	let fenced = false
-	return source
-		.split("\n")
-		.filter((line) => {
-			if (/^\s*```/.test(line)) {
-				fenced = !fenced
-				return false
-			}
-			return !fenced && !/^import\s/.test(line)
-		})
-		.join("\n")
-		.replace(/`[^`\n]*`/g, "")
+	return [...proseSegments(source.replace(/^import\s.*$/gm, ""))]
+		.join(" ")
 		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
 		.replace(/\s+/g, " ")
 }

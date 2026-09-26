@@ -1,10 +1,7 @@
 import assert from "node:assert/strict"
 import { access, readdir, readFile } from "node:fs/promises"
 import { test } from "node:test"
-import {
-	mapOutsideInlineCode,
-	mapProseLines,
-} from "../../scripts/fix-vocs-llms-links.mjs"
+import { proseSegments } from "../../scripts/fix-vocs-llms-links.mjs"
 import { normalizeBasePath } from "../../scripts/fix-vocs-skip-links.mjs"
 import { pages } from "./pages.mjs"
 
@@ -95,16 +92,13 @@ test("LLM files link to built pages under the base path", async () => {
 		const markdown = await readFile(new URL(file, publicRoot), "utf8")
 		assert.doesNotMatch(markdown, /import\.meta\.env/, `${file} has a template`)
 		const hrefs = []
-		mapProseLines(markdown, (line) =>
-			mapOutsideInlineCode(line, (text) => {
-				for (const [, href] of text.matchAll(
-					/(?:\]\(|\]:\s*|href=")(\/(?!\/)[^)\s"]*)/g,
-				)) {
-					hrefs.push(href)
-				}
-				return text
-			}),
-		)
+		for (const text of proseSegments(markdown)) {
+			for (const [, href] of text.matchAll(
+				/(?:\]\(|\]:\s*|href=")(\/(?!\/)[^)\s"]*)/g,
+			)) {
+				hrefs.push(href)
+			}
+		}
 
 		for (const href of hrefs) {
 			assert.ok(

@@ -1,4 +1,6 @@
 // biome-ignore-all lint/correctness/noUnusedVariables: Named regions are consumed independently by the documentation.
+"use client"
+
 import { createFormKit } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"

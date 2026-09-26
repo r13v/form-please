@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { prefixMarkdownLinks } from "../../scripts/fix-vocs-llms-links.mjs"
+import {
+	prefixMarkdownLinks,
+	proseSegments,
+} from "../../scripts/fix-vocs-llms-links.mjs"
 
 const basePath = "/form-please"
 
@@ -121,4 +124,21 @@ test("prefixMarkdownLinks changes nothing for base path /", () => {
 
 	assert.equal(prefixMarkdownLinks(markdown, "/"), markdown)
 	assert.equal(prefixMarkdownLinks(markdown, ""), markdown)
+})
+
+test("proseSegments yields only the text outside code", () => {
+	const markdown = [
+		"Use `form.submit()` to send.",
+		"````md",
+		"```ts",
+		"hidden",
+		"```",
+		"````",
+		"~~~",
+		"hidden",
+		"~~~",
+		"Done.",
+	].join("\n")
+
+	assert.deepEqual([...proseSegments(markdown)], ["Use ", " to send.", "Done."])
 })
