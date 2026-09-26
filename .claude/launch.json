@@ -1,0 +1,14 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "docs",
+			"runtimeExecutable": "sh",
+			"runtimeArgs": [
+				"-c",
+				"cd docs-site && npx vocs dev --port 5174 --host 127.0.0.1"
+			],
+			"port": 5174
+		}
+	]
+}
