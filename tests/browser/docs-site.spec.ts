@@ -17,6 +17,9 @@ test.describe("Form, Please documentation", () => {
 		).toBeVisible()
 
 		const sidebar = page.locator("nav[data-v-sidebar]")
+		await expect(sidebar.locator("[data-v-sidebar-section-header]")).toHaveText(
+			["Start", "Learn", "Build", "Advanced", "Examples", "Reference", "Help"],
+		)
 		await sidebar.getByRole("link", { name: "AI agents", exact: true }).click()
 		await expect(page).toHaveURL(/\/form-please\/ai-agents$/)
 		await expect(
@@ -69,6 +72,41 @@ test.describe("Form, Please documentation", () => {
 				name: "Compose generated and custom UI",
 			}),
 		).toBeVisible()
+		expect(errors).toEqual([])
+	})
+
+	test("opens each top navigation tab and marks the active tab", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		const topNav = page.locator("nav:not([data-v-sidebar])").filter({
+			has: page.getByRole("link", { name: "API", exact: true }),
+		})
+		const tab = (name: string) =>
+			topNav.getByRole("link", { name, exact: true })
+
+		await page.goto("./definitions")
+		await expect(tab("Docs")).toHaveAttribute("data-v-active", "true")
+		await page.goto("./examples/history")
+		await expect(tab("Examples")).toHaveAttribute("data-v-active", "true")
+		await expect(tab("Docs")).toHaveAttribute("data-v-active", "false")
+
+		for (const [name, url] of [
+			["Docs", /\/form-please\/get-started$/],
+			["Examples", /\/form-please\/examples$/],
+			["Playground", /\/form-please\/playground$/],
+			["API", /\/form-please\/api$/],
+		] as const) {
+			await tab(name).click()
+			await expect(page).toHaveURL(url)
+			await expect(tab(name)).toHaveAttribute("data-v-active", "true")
+		}
+
+		await topNav.getByRole("button", { name: /^v\d+\.\d+\.\d+/ }).click()
+		await expect(page.getByRole("link", { name: "Releases" })).toHaveAttribute(
+			"href",
+			"https://github.com/r13v/form-please/releases",
+		)
 		expect(errors).toEqual([])
 	})
 

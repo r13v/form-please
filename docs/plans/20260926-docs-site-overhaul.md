@@ -329,17 +329,17 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/vocs.config.ts`
 - Modify: `tests/browser/docs-site.spec.ts`
 
-- [ ] add `topNav` items:
-  - Docs: `/get-started`. Its `match` is an inline function that returns true for the guide routes. Write it without outer variables, because `config-serializer.ts` serializes functions with `toString()`.
+- [x] add `topNav` items:
+  - Docs: `/get-started`. Its `match` is an inline function that returns true for the guide routes. Write it without outer variables, because `config-serializer.ts` serializes functions with `toString()`. (Done as an exclusion: it matches each page except `/`, `/examples/**`, `/playground`, `/api`, and `/types`, so the new pages of Tasks 8 to 13 need no config change.)
   - Examples: `/examples`, with a string `match` prefix.
   - Playground: `/playground`.
-  - API: `/api`.
+  - API: `/api`. (Its `match` also covers `/types`, the TypeScript reference.)
   - A version dropdown with the text from the root `package.json` version, linking to <https://github.com/r13v/form-please/releases>.
-- [ ] split the Guides group into Learn (Get started, Definitions, Form kits, Validation, Styling), Build (Conditional fields, Arrays, Recipes, Workflows, Persistence, History), and Advanced (Middleware, Resources, Devtools, Testing); keep the Start group for Overview, Playground, and AI agents
-- [ ] keep every existing page in the sidebar; add no page in this task
-- [ ] update the e2e navigation test (`docs-site.spec.ts:10`) for the new groups
-- [ ] add an e2e test: click each topNav item, check the URL, and check that the matching tab is active on a guide page and an example page
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 7
+- [x] split the Guides group into Learn (Get started, Definitions, Form kits, Validation, Styling), Build (Conditional fields, Arrays, Recipes, Workflows, Persistence, History), and Advanced (Middleware, Resources, Devtools, Testing); keep the Start group for Overview, Playground, and AI agents
+- [x] keep every existing page in the sidebar; add no page in this task
+- [x] update the e2e navigation test (`docs-site.spec.ts:10`) for the new groups
+- [x] add an e2e test: click each topNav item, check the URL, and check that the matching tab is active on a guide page and an example page
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 7
 
 ### Task 7: Rewrite Get started with a visible result (I16)
 

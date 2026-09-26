@@ -1,9 +1,13 @@
+import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { defineConfig } from "vocs/config"
 import { findScenario } from "#lib/playground-scenarios"
 
 const basePath = process.env.BASE_PATH ?? "/"
 const assetBasePath = basePath.replace(/\/$/, "")
+const { version } = JSON.parse(
+	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string }
 
 type MarkdownNode = {
 	attributes?: readonly { name?: string; value?: unknown }[]
@@ -84,33 +88,73 @@ export default defineConfig({
 		link: "https://github.com/r13v/form-please/edit/main/docs-site/:path",
 		text: "Edit this page",
 	},
+	topNav: [
+		{
+			text: "Docs",
+			link: "/get-started",
+			// Vocs serializes this function with toString(), so it must not read
+			// outer variables. It matches each page except the overview and the
+			// pages of the other tabs.
+			match: (path) =>
+				path !== undefined &&
+				!/^\/($|examples(\/|$)|playground\/?$|api\/?$|types\/?$)/.test(path),
+		},
+		{ text: "Examples", link: "/examples", match: "/examples" },
+		{ text: "Playground", link: "/playground" },
+		{
+			text: "API",
+			link: "/api",
+			match: (path) => path !== undefined && /^\/(api|types)\/?$/.test(path),
+		},
+		{
+			text: `v${version}`,
+			items: [
+				{
+					text: "Releases",
+					link: "https://github.com/r13v/form-please/releases",
+				},
+			],
+		},
+	],
 	sidebar: [
 		{
 			text: "Start",
 			collapsed: false,
 			items: [
 				{ text: "Overview", link: "/" },
-				{ text: "Get started", link: "/get-started" },
 				{ text: "Playground", link: "/playground" },
 				{ text: "AI agents", link: "/ai-agents" },
 			],
 		},
 		{
-			text: "Guides",
+			text: "Learn",
 			collapsed: false,
 			items: [
-				{ text: "Form kits", link: "/form-kits" },
+				{ text: "Get started", link: "/get-started" },
 				{ text: "Definitions", link: "/definitions" },
+				{ text: "Form kits", link: "/form-kits" },
 				{ text: "Validation & submission", link: "/validation" },
 				{ text: "Styling", link: "/styling" },
+			],
+		},
+		{
+			text: "Build",
+			collapsed: false,
+			items: [
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
 				{ text: "Recipes", link: "/recipes" },
 				{ text: "Product workflows", link: "/workflows" },
-				{ text: "Resources", link: "/resources" },
-				{ text: "Middleware", link: "/middleware" },
 				{ text: "Persistence", link: "/persistence" },
 				{ text: "History", link: "/history" },
+			],
+		},
+		{
+			text: "Advanced",
+			collapsed: false,
+			items: [
+				{ text: "Middleware", link: "/middleware" },
+				{ text: "Resources", link: "/resources" },
 				{ text: "Devtools", link: "/devtools" },
 				{ text: "Testing", link: "/testing" },
 			],
