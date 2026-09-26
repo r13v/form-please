@@ -341,10 +341,13 @@ test.describe("Form, Please documentation", () => {
 		).toHaveCount(2)
 
 		await page.goto("./get-started")
-		await expect(page.getByTestId("lab")).toBeVisible()
-		await page.getByRole("button", { name: "Save profile" }).click()
-		await expect(page.getByTestId("lab-submission")).toContainText(
-			"Saved Ada Lovelace with 1 contact",
+		const getStarted = page.getByTestId("get-started-demo")
+		await expect(getStarted).toBeVisible()
+		await getStarted.getByLabel("Name").fill("Ada Lovelace")
+		await getStarted.getByLabel("Email").fill("ada@example.com")
+		await getStarted.getByRole("button", { name: "Save profile" }).click()
+		await expect(getStarted.locator("pre")).toContainText(
+			'"slug": "ada-lovelace"',
 		)
 
 		await page.goto("./examples/async-multiselect")

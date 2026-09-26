@@ -351,15 +351,15 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/tests/content.test.mjs`
 - Modify: `tests/browser/docs-site.spec.ts`
 
-- [ ] put the three steps in `:::steps`
-- [ ] put the install command in `:::code-group` with npm, pnpm, yarn, and bun tabs
-- [ ] change `profile-form.tsx` to keep the submitted value in `useState` and show it in a `<pre>`, as `playground-transform.tsx` does; keep the region names that `content.test.mjs:222-229` and `:496-509` use, or update those assertions
-- [ ] create `get-started-demo.tsx` and `.client.tsx` that render the exported component of `profile-form.tsx`; give the server component `toMarkdown` with the `markdown-fallback` pattern from `interactive-lab.tsx`
-- [ ] render the demo after step 3
-- [ ] remove the interactive lab from Get started and link to `/playground`; keep `lab-profile-form.tsx`, because four pages include its regions
-- [ ] if `InteractiveLab` has no other user, delete it and its CSS, and remove the assertions in `content.test.mjs:443-456` that read `interactive-lab.client.tsx`
-- [ ] update the e2e test: submit the Get started form and see the transformed output; remove the lab assertions (`docs-site.spec.ts` about lines 305-309)
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 8
+- [x] put the three steps in `:::steps`
+- [x] put the install command in `:::code-group` with npm, pnpm, yarn, and bun tabs
+- [x] change `profile-form.tsx` to keep the submitted value in `useState` and show it in a `<pre>`, as `playground-transform.tsx` does; keep the region names that `content.test.mjs:222-229` and `:496-509` use, or update those assertions
+- [x] create `get-started-demo.tsx` and `.client.tsx` that render the exported component of `profile-form.tsx`; give the server component `toMarkdown` with the `markdown-fallback` pattern from `interactive-lab.tsx`
+- [x] render the demo after step 3
+- [x] remove the interactive lab from Get started and link to `/playground`; keep `lab-profile-form.tsx`, because four pages include its regions
+- [x] if `InteractiveLab` has no other user, delete it and its CSS, and remove the assertions in `content.test.mjs:443-456` that read `interactive-lab.client.tsx` (Deleted. Only the lab-only CSS went: inspector, submit state, panel, and state list. `__kicker`, `__summary`, and `__actions` stay, because other demos use them. The whole FormData test went, because its subject was the lab snapshot.)
+- [x] update the e2e test: submit the Get started form and see the transformed output; remove the lab assertions (`docs-site.spec.ts` about lines 305-309)
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 8
 
 ### Task 8: Add "How it works" as the single source for core rules (I05)
 

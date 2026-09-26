@@ -403,21 +403,6 @@ test("documents persistence with query string and storage adapters", async () =>
 	assert.match(example, /usePersistence\(form, feature\)/)
 })
 
-test("does not present native FormData as the submission source", async () => {
-	const sources = await Promise.all([
-		readFile(new URL("src/pages/get-started.mdx", siteRoot), "utf8"),
-		readFile(
-			new URL("src/components/interactive-lab.client.tsx", siteRoot),
-			"utf8",
-		),
-		readFile(new URL("src/snippets/lab-profile-form.tsx", siteRoot), "utf8"),
-	])
-	const source = sources.join("\n")
-	assert.doesNotMatch(source, /Form, Please keeps it in FormData/)
-	assert.match(source, /Submission uses (?:the )?React Hook Form values/)
-	assert.match(source, /File stays in the React Hook Form input/)
-})
-
 test("keeps the shadcn adapter installable and release-version agnostic", async () => {
 	const registry = JSON.parse(
 		await readFile(new URL("registry.json", repositoryRoot), "utf8"),
