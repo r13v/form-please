@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/r13v/form-please/compare/v1.7.1...v1.8.0) (2026-09-26)
+
+
+### Features
+
+* reset hidden field values with whenHidden ([#33](https://github.com/r13v/form-please/issues/33)) ([ed75375](https://github.com/r13v/form-please/commit/ed75375ede9567e52b12d1bc65b00f39a52770a6))
+
 ## [1.7.1](https://github.com/r13v/form-please/compare/v1.7.0...v1.7.1) (2026-09-26)
 
 
