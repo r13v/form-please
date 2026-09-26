@@ -474,13 +474,13 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/vocs.config.ts`
 - Modify: `docs-site/tests/content.test.mjs`
 
-- [ ] add one copyable prompt block that tells an agent to read `llms.txt` and follow its links
-- [ ] list `llms.txt`, `llms-full.txt`, and the per-page Markdown URL pattern (`/form-please/assets/md/<page>.md`), all with the base path
-- [ ] say in one sentence how the skill differs from `llms.txt`
-- [ ] remove the repeated install and update commands, but keep one `--global` example and one `npx skills update form-please` command, which `content.test.mjs:77-85` asserts
-- [ ] move the two LLM links from the Reference group to the AI agents page; keep `showAskAi: false`
-- [ ] the Task 1 output test covers the link targets; add no text-restating tests
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 15
+- [x] add one copyable prompt block that tells an agent to read `llms.txt` and follow its links
+- [x] list `llms.txt`, `llms-full.txt`, and the per-page Markdown URL pattern (`/form-please/assets/md/<page>.md`), all with the base path (a "Documentation files" table with absolute URLs; the overview maps to `index.md`)
+- [x] say in one sentence how the skill differs from `llms.txt`
+- [x] remove the repeated install and update commands, but keep one `--global` example and one `npx skills update form-please` command, which `content.test.mjs:77-85` asserts (the two install commands are now one `:::code-group` with "This project" and "All projects" tabs; the skill section no longer repeats the training-data sentence)
+- [x] move the two LLM links from the Reference group to the AI agents page; keep `showAskAi: false`
+- [x] the Task 1 output test covers the link targets; add no text-restating tests (the existing skill lifecycle test in `content.test.mjs` still passes unchanged)
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 15
 
 ### Task 15: Verify acceptance criteria
 

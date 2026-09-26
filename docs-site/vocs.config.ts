@@ -193,14 +193,6 @@ export default defineConfig({
 				{ text: "API", link: "/api" },
 				{ text: "TypeScript", link: "/types" },
 				{ text: "Glossary", link: "/glossary" },
-				{
-					text: "LLM documentation index",
-					link: "https://r13v.github.io/form-please/llms.txt",
-				},
-				{
-					text: "Full documentation for LLMs",
-					link: "https://r13v.github.io/form-please/llms-full.txt",
-				},
 			],
 		},
 		{
