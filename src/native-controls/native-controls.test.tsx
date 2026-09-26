@@ -24,6 +24,7 @@ describe("createNativeControls", () => {
 			"text",
 			"textarea",
 			"select",
+			"radio",
 			"checkbox",
 			"number",
 			"date",
@@ -230,6 +231,70 @@ describe("createNativeControls", () => {
 		const checkbox = screen.getByRole("checkbox") as HTMLInputElement
 		await user.click(checkbox)
 		expect(setValue).not.toHaveBeenCalled()
+	})
+
+	it("writes the checked radio value and labels the group", async () => {
+		const controls = createNativeControls()
+		const setValue = vi.fn()
+		const user = userEvent.setup()
+
+		render(
+			<>
+				<span id="plan-id-label">Plan</span>
+				<controls.radio.component
+					{...controlProps<
+						string | undefined,
+						Record<string, never>,
+						NativeSelectOption
+					>({
+						props: {},
+						name: "plan",
+						options: [
+							{ label: "Basic", value: "basic" },
+							{ label: "Pro", value: "pro" },
+						],
+						setValue,
+						value: undefined,
+					})}
+				/>
+			</>,
+		)
+
+		expect(screen.getByRole("radiogroup", { name: "Plan" })).toBeTruthy()
+		await user.click(screen.getByRole("radio", { name: "Pro" }))
+		expect(setValue).toHaveBeenCalledWith("pro")
+	})
+
+	it("does not write radio state when the form is read-only", async () => {
+		const controls = createNativeControls()
+		const setValue = vi.fn()
+		const user = userEvent.setup()
+
+		render(
+			<controls.radio.component
+				{...controlProps<
+					string | undefined,
+					Record<string, never>,
+					NativeSelectOption
+				>({
+					props: {},
+					name: "plan",
+					options: [
+						{ label: "Basic", value: "basic" },
+						{ label: "Pro", value: "pro" },
+					],
+					readOnly: true,
+					setValue,
+					value: "basic",
+				})}
+			/>,
+		)
+
+		const pro = screen.getByRole("radio", { name: "Pro" }) as HTMLInputElement
+		await user.click(pro)
+		await user.keyboard("{ArrowUp}")
+		expect(setValue).not.toHaveBeenCalled()
+		expect(pro.checked).toBe(false)
 	})
 
 	it("binds a selected file and clears the native input when state clears", async () => {

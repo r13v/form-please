@@ -426,6 +426,24 @@ test.describe("Form, Please documentation", () => {
 			'"slug": "ada-lovelace"',
 		)
 
+		await page.goto("./conditional-fields")
+		const accountVariants = page.getByTestId("account-variants-demo")
+		await expect(accountVariants).toBeVisible()
+		await accountVariants.getByRole("radio", { name: "Company" }).check()
+		await expect(accountVariants.getByLabel("First name")).toHaveCount(0)
+		await accountVariants.getByRole("button", { name: "Open account" }).click()
+		await expect(
+			accountVariants.getByText("Enter the company name"),
+		).toBeVisible()
+		await accountVariants.getByLabel("Company name").fill("Compiler Labs")
+		await accountVariants.getByLabel("VAT ID").fill("GB123")
+		await accountVariants.getByLabel("Email").fill("ada@example.com")
+		await accountVariants.getByRole("button", { name: "Open account" }).click()
+		await expect(accountVariants.locator("pre")).toContainText(
+			'"companyName": "Compiler Labs"',
+		)
+		await expect(accountVariants.locator("pre")).not.toContainText("firstName")
+
 		await page.goto("./examples/async-multiselect")
 		await expect(page.getByTestId("async-multiselect-demo")).toBeVisible()
 		await page.getByRole("button", { name: "Save selection" }).click()

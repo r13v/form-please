@@ -73,6 +73,7 @@ tester.field("name").control satisfies
 	| "date"
 	| "file"
 	| "number"
+	| "radio"
 	| "select"
 	| "text"
 	| "textarea"

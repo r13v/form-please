@@ -1,8 +1,10 @@
 ---
 title: Conditional fields
-description: Derive visibility, interaction state, content, and control props from values and context.
+description: Derive visibility, interaction state, content, and control props from values and context, and split a form into variants.
 showAskAi: false
 ---
+
+import { AccountVariantsDemo } from "../components/account-variants-demo"
 
 # Conditional fields
 
@@ -113,6 +115,74 @@ Keep row and cross-row validation in the Standard Schema. Use custom array UI
 when the UI condition must depend on the current row index. See [Arrays](/arrays)
 for custom operations and array slots.
 
+## Split a form into variants
+
+Some forms have variants with different fields. A personal account needs a
+first name and a last name. A company account needs a company name and a VAT ID.
+One flat schema with optional fields mixes the two variants. Each field then
+needs its own `visible` and `required` resolvers, and all variant fields are
+optional in the output type.
+
+Write one object schema for each variant. Join the variants with
+`z.discriminatedUnion`:
+
+```tsx
+// [!include ~/snippets/account-variants.tsx:schema]
+```
+
+- `accountBase` contains the fields that all variants share.
+- Each variant extends `accountBase` with its own fields.
+- The discriminator `accountType` has a different literal value in each variant.
+- `.prefault("")` validates a missing value as an empty string. The fields of
+  the other variant are not in `defaultValues`, so they are `undefined` after a
+  switch. Without `.prefault("")`, the schema shows `Invalid input: expected
+  string, received undefined` instead of your messages. Do not use
+  `.default("")`, because it skips the `.min(1)` rule.
+- `defaultValues` need only the shared fields and the discriminator, such as
+  `{ accountType: "personal", email: "" }`.
+
+Put the fields of each variant in one section. Show the section only when the
+discriminator selects its variant:
+
+```tsx
+// [!include ~/snippets/account-variants.tsx:definition]
+```
+
+<AccountVariantsDemo />
+
+Select **Company** and submit the empty form. The form shows issues only for the
+company fields and the email. Complete the fields and submit again. The output
+contains only the company variant.
+
+The definition has these parts:
+
+- The `accountType` field selects the variant. The `radio` control writes one
+  of the literal values.
+- Each section has one `visible` resolver. The variant fields do not need
+  resolvers, so they use a static `required: true`.
+
+Hidden fields keep their values. See [Hidden fields keep their
+values](/how-it-works#hidden-fields-keep-their-values). The schema validates
+only the selected variant. `z.object` removes unknown keys by default, so the
+output does not contain the fields of the other variant. Do not use
+`z.looseObject` for a variant, because it keeps those keys.
+
+`onSubmit` receives a union value. Compare `value.accountType` to narrow it to
+one variant. Resolvers receive the same union input, and the same comparison
+narrows it.
+
+| Concern | One object with optional fields | Discriminated union |
+| --- | --- | --- |
+| Schema | Optional fields and a `superRefine` rule for each condition. | One object schema for each variant. |
+| Definition | `visible` and `required` resolvers on each variant field. | One `visible` resolver on each variant section. |
+| Output type | All variant fields are optional. | A union that `accountType` narrows. |
+| Values of the other variant | A transform must remove them. | The selected variant schema removes them. |
+
+The union can also be at a nested path. Then field paths include the parent
+key, such as `account.companyName`. A reusable fragment cannot be placed at a
+union scope, because the scope does not satisfy the input of one variant. Put
+the variant fields directly in the section.
+
 ## Keep conditional validation in the schema
 
 `visible` and `required` do not change schema rules. See [`required` is
@@ -125,7 +195,9 @@ Express the same condition in the Standard Schema:
 ```
 
 This schema requires `companyName` only for a company account. Its transform
-also removes a stale `companyName` from personal-account output.
+also removes a stale `companyName` from personal-account output. When each
+account type has its own set of fields, use a discriminated union instead. See
+[Split a form into variants](#split-a-form-into-variants).
 
 Use a schema transform when cleanup is part of the submission contract. Use
 value middleware when the source and cleared value must commit atomically. Use
