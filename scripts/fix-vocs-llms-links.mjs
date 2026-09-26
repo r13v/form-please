@@ -46,17 +46,17 @@ export function prefixMarkdownLinks(markdown, basePathValue) {
 	const basePath = normalizeBasePath(basePathValue)
 
 	return mapProseLines(markdown, (line) =>
-		mapOutsideInlineCode(
-			line.replace(baseUrlPattern, (_template, path) => {
+		mapOutsideInlineCode(line, (text) => {
+			const replaced = text.replace(baseUrlPattern, (_template, path) => {
 				return `"${basePath}/${path}"`
-			}),
-			(text) =>
-				basePath === ""
-					? text
-					: text.replace(rootLinkPattern, (_link, href) => {
-							return `](${prefixHref(href, basePath)}`
-						}),
-		),
+			})
+
+			return basePath === ""
+				? replaced
+				: replaced.replace(rootLinkPattern, (_link, href) => {
+						return `](${prefixHref(href, basePath)}`
+					})
+		}),
 	)
 }
 
@@ -108,9 +108,34 @@ function* markdownLines(markdown) {
 	}
 }
 
-/** Splits a line so that the odd indexes are inline code spans. */
+/**
+ * Splits a line so that the odd indexes are inline code spans. A span opens
+ * with a run of backticks and closes with a run of the same length. An MDX base
+ * URL template stays in the text, although it contains backticks.
+ */
 function inlineCodeParts(line) {
-	return line.split(/(`[^`]*`)/)
+	const token = new RegExp(`${baseUrlPattern.source}|\`+`, "g")
+	const parts = []
+	let textStart = 0
+
+	for (let match = token.exec(line); match !== null; match = token.exec(line)) {
+		const run = match[0]
+
+		if (run[0] === "`") {
+			const close = new RegExp(`(?<!\`)${run}(?!\`)`, "g")
+			close.lastIndex = token.lastIndex
+
+			if (close.exec(line) !== null) {
+				parts.push(line.slice(textStart, match.index))
+				parts.push(line.slice(match.index, close.lastIndex))
+				textStart = close.lastIndex
+				token.lastIndex = close.lastIndex
+			}
+		}
+	}
+
+	parts.push(line.slice(textStart))
+	return parts
 }
 
 function prefixHref(href, basePath) {

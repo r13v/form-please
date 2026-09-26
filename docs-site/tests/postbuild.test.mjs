@@ -88,6 +88,24 @@ test("prefixMarkdownLinks replaces the MDX base URL template", () => {
 	)
 })
 
+test("prefixMarkdownLinks keeps the MDX base URL template in inline code", () => {
+	const markdown = [
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: the input is MDX output text.
+		"Write `` {`${import.meta.env.BASE_URL}workflows`} `` in MDX.",
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: the input is MDX output text.
+		"<a href={`${import.meta.env.BASE_URL}workflows`}>Go</a> and ``[Docs](/api)``",
+	].join("\n")
+
+	assert.equal(
+		prefixMarkdownLinks(markdown, basePath),
+		[
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: the expected output keeps the template.
+			"Write `` {`${import.meta.env.BASE_URL}workflows`} `` in MDX.",
+			'<a href="/form-please/workflows">Go</a> and ``[Docs](/api)``',
+		].join("\n"),
+	)
+})
+
 test("prefixMarkdownLinks skips code fences", () => {
 	const markdown = [
 		"[Before](/api)",

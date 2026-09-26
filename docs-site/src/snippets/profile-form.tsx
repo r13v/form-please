@@ -51,7 +51,9 @@ export function ProfileForm() {
 			<kit.AutoForm form={form}>
 				<kit.Submit>Save profile</kit.Submit>
 			</kit.AutoForm>
-			<pre>{output}</pre>
+			<pre>
+				<output aria-live="polite">{output}</output>
+			</pre>
 		</>
 	)
 }
