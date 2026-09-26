@@ -70,7 +70,7 @@ export type NativeTimeProps = {
 	readonly step?: number | "any"
 }
 
-/** One selectable value in a native select control. */
+/** One selectable value in a native select or radio control. */
 export type NativeSelectOption<Value extends string | undefined = string> = {
 	/** The non-undefined field value represented by this option. */
 	readonly value: OptionValue<Exclude<Value, undefined>>
@@ -375,6 +375,77 @@ function NativeSelectControl({
 	)
 }
 
+/** Renders a native radio group for one string value. */
+function NativeRadioControl({
+	value,
+	setValue,
+	blur,
+	input,
+	meta,
+	options,
+	disabled,
+	readOnly,
+	required,
+}: ControlProps<
+	string | undefined,
+	Record<string, never>,
+	unknown,
+	NativeSelectOption
+>): ReactElement {
+	// Focus the checked radio, or the first radio when none is checked.
+	const focusIndex = Math.max(
+		0,
+		options.findIndex((option) => option.value === value),
+	)
+
+	return (
+		<div
+			aria-describedby={input["aria-describedby"]}
+			aria-invalid={meta.invalid || undefined}
+			aria-labelledby={`${input.id}-label`}
+			aria-readonly={readOnly || undefined}
+			aria-required={required || undefined}
+			id={input.id}
+			role="radiogroup"
+		>
+			{options.map((option, index) => (
+				<label key={option.value}>
+					<input
+						checked={option.value === value}
+						disabled={disabled || option.disabled}
+						name={input.name}
+						onBlur={blur}
+						onChange={(event) => {
+							if (readOnly) {
+								event.preventDefault()
+								event.currentTarget.checked = false
+								return
+							}
+
+							setValue(option.value)
+						}}
+						onClick={(event) => {
+							if (readOnly) {
+								preventReadOnlyEvent(event)
+							}
+						}}
+						onKeyDown={(event) => {
+							if (readOnly && isRadioMutationKey(event.key)) {
+								preventReadOnlyEvent(event)
+							}
+						}}
+						ref={index === focusIndex ? input.ref : undefined}
+						required={required}
+						type="radio"
+						value={option.value}
+					/>
+					{option.label}
+				</label>
+			))}
+		</div>
+	)
+}
+
 /** Renders the native boolean checkbox control. */
 function NativeCheckboxControl({
 	value,
@@ -532,6 +603,15 @@ export function createNativeControls() {
 		component: NativeSelectControl,
 	})
 
+	const radio = defineControl<
+		string | undefined,
+		Record<string, never>,
+		unknown,
+		NativeSelectOption
+	>({
+		component: NativeRadioControl,
+	})
+
 	const checkbox = defineControl<boolean>({
 		component: NativeCheckboxControl,
 	})
@@ -544,6 +624,7 @@ export function createNativeControls() {
 		text,
 		textarea,
 		select,
+		radio,
 		checkbox,
 		number,
 		date,
@@ -575,6 +656,11 @@ function isSelectMutationKey(key: string): boolean {
 		"PageDown",
 		"PageUp",
 	].includes(key)
+}
+
+/** Tests whether a keyboard key can change a native radio group value. */
+function isRadioMutationKey(key: string): boolean {
+	return [" ", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp"].includes(key)
 }
 
 /** Tests whether a keyboard key activates a button-like control. */

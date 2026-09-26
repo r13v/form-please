@@ -195,7 +195,7 @@ table {
 	font-weight: 650;
 }
 
-.form-please-complex input:not([type="checkbox"]),
+.form-please-complex input:not([type="checkbox"], [type="radio"]),
 .form-please-complex select,
 .form-please-complex textarea {
 	background: var(--fp-docs-surface);
@@ -208,7 +208,20 @@ table {
 	width: 100%;
 }
 
-.form-please-complex input[type="checkbox"] {
+.form-please-complex [role="radiogroup"] {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1.25rem;
+}
+
+.form-please-complex [role="radiogroup"] label {
+	align-items: center;
+	display: inline-flex;
+	font-weight: 400;
+	gap: 0.5rem;
+}
+
+.form-please-complex input:is([type="checkbox"], [type="radio"]) {
 	block-size: 1rem;
 	inline-size: 1rem;
 }

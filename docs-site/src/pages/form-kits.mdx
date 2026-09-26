@@ -169,10 +169,12 @@ Read [Option values](/definitions#option-values) for definition examples.
 | `date` | `string \| undefined` | `min`, `max` |
 | `time` | `string \| undefined` | `min`, `max`, `step` |
 | `select` | `string \| undefined` | Optional `emptyOption`; items come from field `options`. |
+| `radio` | `string \| undefined` | No props; items come from field `options`. |
 | `checkbox` | `boolean` | No props. |
 | `file` | `File \| undefined` | `accept` |
 
-The `select` control requires field `options`. Add `props.emptyOption` when the
+The `select` and `radio` controls require field `options`. The `radio`
+control represents `undefined` as a group with no checked item. Add `props.emptyOption` when the
 current value can be `undefined`. Do not combine `emptyOption` with an item
 whose value is an empty string.
 

@@ -13,6 +13,7 @@ describe("nativeFormKit preset", () => {
 			"text",
 			"textarea",
 			"select",
+			"radio",
 			"checkbox",
 			"number",
 			"date",
