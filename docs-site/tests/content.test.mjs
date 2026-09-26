@@ -108,6 +108,38 @@ test("keeps validation guidance executable and complete", async () => {
 	}
 })
 
+test("lists each library i18n key in the localization table", async () => {
+	const guide = await readFile(
+		new URL("src/pages/localization.mdx", siteRoot),
+		"utf8",
+	)
+	const tableRows = guide
+		.split("\n")
+		.filter((line) => line.startsWith("|"))
+		.join("\n")
+
+	for (const [path, objectName] of [
+		["src/default-slots/default-slots.tsx", "englishDefaultSlotsI18n"],
+		["src/preset-mui/index.ts", "defaultI18n"],
+	]) {
+		const source = await readFile(new URL(path, repositoryRoot), "utf8")
+		const body = source.match(
+			new RegExp(`const ${objectName} = [^{]*\\{\\n([\\s\\S]*?)\\n\\}`),
+		)?.[1]
+		assert.ok(body, `${path} has no ${objectName} object`)
+		const keys = [...body.matchAll(/^\t(\w+):/gm)].map(([, key]) => key)
+		assert.ok(keys.length > 3, `${path} has too few i18n keys`)
+
+		for (const key of keys) {
+			assert.match(
+				tableRows,
+				new RegExp(`\`${key}\``),
+				`localization.mdx does not list the ${key} key from ${path}`,
+			)
+		}
+	}
+})
+
 test("keeps form kits, API, and production guidance executable", async () => {
 	const api = await readFile(new URL("src/pages/api.mdx", siteRoot), "utf8")
 	const formKits = await readFile(

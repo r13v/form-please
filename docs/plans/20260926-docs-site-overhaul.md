@@ -408,15 +408,16 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/src/pages/validation.mdx`, `form-kits.mdx`, `api.mdx` (links to the guide)
 - Modify: `docs-site/vocs.config.ts`
 - Modify: `docs-site/tests/content.test.mjs`
+- Delete: `docs-site/src/snippets/zod-error-messages.ts` (its `z.config` code moved into the `zod-messages` region)
 
-- [ ] write one typechecked snippet with named regions: `context.locale` labels, Zod `z.config` locales, Valibot `setGlobalMessage`, Yup `setLocale`, `createDefaultSlots` i18n, and `createMuiFormKit` i18n
-- [ ] use the builder factory and public imports only
-- [ ] add a table of the i18n keys for each preset, and say that the names differ (`arrayAdd` in `src/default-slots/default-slots.tsx:48`, `addItem` in `src/preset-mui/index.ts:9-15`)
-- [ ] replace the Zod messages section in `validation.mdx:139` with one sentence and a link; update any `content.test.mjs` validation assertion that reads that section; keep the API tables in `api.mdx` as reference and link to the guide
-- [ ] add the page to the Build group
-- [ ] run `npm run test:docs`
-- [ ] add a source test that reads the i18n keys from `src/default-slots/default-slots.tsx` and `src/preset-mui/index.ts` and checks that the guide table lists each key; this catches new keys in the library
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 11
+- [x] write one typechecked snippet with named regions: `context.locale` labels, Zod `z.config` locales, Valibot `setGlobalMessage`, Yup `setLocale`, `createDefaultSlots` i18n, and `createMuiFormKit` i18n
+- [x] use the builder factory and public imports only
+- [x] add a table of the i18n keys for each preset, and say that the names differ (`arrayAdd` in `src/default-slots/default-slots.tsx:48`, `addItem` in `src/preset-mui/index.ts:9-15`)
+- [x] replace the Zod messages section in `validation.mdx:139` with one sentence and a link; update any `content.test.mjs` validation assertion that reads that section; keep the API tables in `api.mdx` as reference and link to the guide
+- [x] add the page to the Build group
+- [x] run `npm run test:docs`
+- [x] add a source test that reads the i18n keys from `src/default-slots/default-slots.tsx` and `src/preset-mui/index.ts` and checks that the guide table lists each key; this catches new keys in the library
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 11
 
 ### Task 11: Add the Accessibility guide (I14, part 2)
 

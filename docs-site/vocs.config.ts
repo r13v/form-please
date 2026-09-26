@@ -148,6 +148,7 @@ export default defineConfig({
 				{ text: "Product workflows", link: "/workflows" },
 				{ text: "Persistence", link: "/persistence" },
 				{ text: "History", link: "/history" },
+				{ text: "Localization", link: "/localization" },
 			],
 		},
 		{

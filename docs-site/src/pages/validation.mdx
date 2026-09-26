@@ -119,16 +119,7 @@ actions and the complete snapshot contract.
 The example keeps request failures in application state. See [Server issues
 are not schema issues](/how-it-works#server-issues-are-not-schema-issues).
 
-## Set default Zod messages
+## Translate validation messages
 
-"Form, Please" displays the messages that the Standard Schema returns. Configure
-Zod once, before form validation runs, when the application needs global
-defaults:
-
-```ts twoslash
-// [!include ~/snippets/zod-error-messages.ts]
-```
-
-Return `undefined` for issue types that must use the Zod default. A schema-level
-message has priority over `customError`. Do not call `z.config()` during a
-component render because it changes global Zod configuration.
+To translate the Zod, Valibot, or Yup messages, read
+[Localization](/localization#translate-validation-messages).
