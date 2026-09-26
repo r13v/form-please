@@ -2,6 +2,7 @@ export type ScenarioId =
 	| "basic"
 	| "transform"
 	| "conditional"
+	| "derived"
 	| "array"
 	| "typo"
 
@@ -36,6 +37,14 @@ export const scenarios: readonly Scenario[] = [
 			"Visibility and required state are functions of the typed input. Hidden fields keep their values.",
 		tryThis:
 			"Switch the account type to Company. A required company name appears.",
+	},
+	{
+		id: "derived",
+		title: "Dependent values",
+		summary:
+			"beforeUpdate in the definition keeps the total in sync and can cancel a change. The total commits with its sources, without an effect or a second render.",
+		tryThis:
+			"Change the quantity and watch the total. Then enter 60: the hook cancels the change, and the quantity stays.",
 	},
 	{
 		id: "array",

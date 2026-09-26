@@ -1,6 +1,6 @@
 ---
 title: How it works
-description: Follow the flow from schema to submit, and learn the core rules for required state, hidden values, parsing, onSubmit, server issues, and ownership.
+description: Follow the flow from schema to submit, follow a managed update, and learn the core rules for required state, hidden values, parsing, onSubmit, server issues, and ownership.
 showAskAi: false
 searchPriority: 2
 ---
@@ -36,6 +36,34 @@ onSubmit({ value, input, form, submitter })
 The diagram does not show two facts. `kit.useForm` creates one form binding,
 and the binding creates one React Hook Form (RHF) instance. The schema is the
 only resolver of that instance.
+
+## Managed updates run the definition rules
+
+A generated control does not write to RHF directly. It sends a managed update
+through the rules of the definition:
+
+```text
+generated control, generated array, or form.update
+      │  proposed values
+      ▼
+beforeUpdate(draft)                       change the draft, or return false
+      │
+      ▼
+middleware                                ordered rules, in list order
+      │  patches
+      ▼
+React Hook Form                           one commit; validation can finish later
+      │
+      ▼
+afterUpdate(transaction)                  code after the commit
+```
+
+A dependent value, such as an order total, commits together with its source
+values. React does not render the old total first. A cancelled change does not
+reach RHF, and `afterUpdate` does not run for it.
+
+`defaultValues`, resets, and direct `form.api` calls do not run the rules. See
+[Value middleware](/middleware) for examples and the complete list of changes.
 
 ## `required` is UI-only
 

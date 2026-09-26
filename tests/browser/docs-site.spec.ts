@@ -470,6 +470,29 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("keeps the total in sync in the dependent values scenario", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		await page.goto("./")
+		const playground = page.getByTestId("scripted-playground")
+		await playground.getByRole("tab", { name: "Dependent values" }).click()
+		const demo = playground.locator(
+			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
+		)
+
+		await demo.getByLabel("Quantity").fill("4")
+		await expect(demo.getByLabel("Total")).toHaveValue("60")
+
+		await demo.getByLabel("Quantity").fill("60")
+		await expect(demo.getByLabel("Total")).toHaveValue("60")
+
+		await demo.getByRole("button", { name: "Place order" }).click()
+		await expect(demo.locator("pre")).toContainText('"quantity": 4')
+		await expect(demo.locator("pre")).toContainText('"total": 60')
+		expect(errors).toEqual([])
+	})
+
 	test("runs the live playground with IntelliSense", async ({ page }) => {
 		const errors = pageErrors(page)
 		await page.goto("./playground?scenario=transform")
