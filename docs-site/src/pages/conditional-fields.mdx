@@ -24,10 +24,10 @@ When `accountType` changes, "Form, Please" resolves the UI tree again. The
 
 - A hidden node does not render.
 - A hidden section or array does not render its descendants.
-- A hidden field keeps its value in React Hook Form state.
-- The Standard Schema still receives the hidden value during submission.
+- A hidden field keeps its value, and the schema still validates it.
 
-`visible` does not clear a value or change schema validation.
+See [Hidden fields keep their
+values](/how-it-works#hidden-fields-keep-their-values).
 
 ## Derive field properties
 
@@ -115,8 +115,8 @@ for custom operations and array slots.
 
 ## Keep conditional validation in the schema
 
-`visible` and `required` control the rendered UI. They do not add, remove, or
-change schema rules.
+`visible` and `required` do not change schema rules. See [`required` is
+UI-only](/how-it-works#required-is-ui-only).
 
 Express the same condition in the Standard Schema:
 

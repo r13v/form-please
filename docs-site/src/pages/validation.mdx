@@ -32,11 +32,8 @@ Pass the schema to `kit.defineForm`. The generated fields edit the schema input.
 // [!include ~/snippets/validation-guide.tsx:definition]
 ```
 
-The `required` property changes the rendered control and its accessibility
-state. It does not add a schema rule. The schema must reject a missing value.
-
-`kit.Form` sets `noValidate` on the native form element. Browser constraints,
-such as `required` and `type="email"`, do not replace schema validation.
+The `required` property does not add a schema rule. See [`required` is
+UI-only](/how-it-works#required-is-ui-only).
 
 ## Understand validation timing
 
@@ -93,26 +90,18 @@ If no generated control can receive focus, `kit.AutoForm` focuses the first
 error-summary item. A manually composed `kit.Form` has no automatic summary
 fallback.
 
-Hidden fields keep their values and remain part of schema validation. A hidden
-field has no generated control, so its issue appears in the `kit.AutoForm`
-summary. The schema must match the form's visibility rules when a hidden value
-must not block submission.
-
-## Transformed output
-
-The internal RHF resolver validates and produces `FormOutput<Schema>` in one
-Standard Schema parse. Editable `FormInput<Schema>` remains in RHF state;
-transformed output is passed only to a successful submit callback. No custom
-validation cache is required.
+A hidden field has no generated control, so `kit.AutoForm` shows its issue in
+the summary. See [Hidden fields keep their
+values](/how-it-works#hidden-fields-keep-their-values).
 
 ## Submit input and output
 
-`onSubmit` receives four values:
+The schema parses once, and the same parse gives the transformed output. See
+[The schema parses once on
+submit](/how-it-works#the-schema-parses-once-on-submit).
 
-- `value` is the transformed `FormOutput<Schema>`.
-- `input` is the editable `FormInput<Schema>`.
-- `form` is the current form binding.
-- `submitter` is the captured submit control `name` and `value`, or `null`.
+`onSubmit` receives `value`, `input`, `form`, and `submitter`. See [`onSubmit`
+receives four values](/how-it-works#onsubmit-receives-four-values).
 
 This example sends the transformed `value` to the server. It resets the editable
 baseline with `input` after a successful request.
@@ -121,20 +110,14 @@ baseline with `input` after a successful request.
 // [!include ~/snippets/validation-guide.tsx:submission]
 ```
 
-`submitter` is captured before validation. It is not a live DOM element and it
-does not contain request metadata. `onSubmit` can return a promise.
-`form.api.formState.isSubmitting` remains true until the promise settles.
-`kit.Submit` is disabled while the form validates or submits.
-
 Use `FormSubmitDetails<Schema, Context>` from `form-please` to type an extracted
 submit handler without repeating the `{ value, input, form, submitter }` object
 shape.
 Read [Product workflows](/workflows#understand-submitter) for multiple submit
 actions and the complete snapshot contract.
 
-Server validation is still required. A request failure is not a Standard Schema
-issue and does not appear in the form summary. Store and render request failures
-in application state, as the example does.
+The example keeps request failures in application state. See [Server issues
+are not schema issues](/how-it-works#server-issues-are-not-schema-issues).
 
 ## Set default Zod messages
 

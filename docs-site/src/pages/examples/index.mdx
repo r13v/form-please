@@ -43,10 +43,5 @@ the browser with React Hook Form as its state and validation runtime.
 
 ## Runtime ownership
 
-"Form, Please" resolves definitions and renders controls. React Hook Form owns
-editable state, array operations, validation, and submission. TanStack Query
-owns request state in the examples that load or save data.
-
-Hidden fields preserve their values. Conditional schemas decide which values
-are required for the active branch. Successful submission parses the schema once
-and passes transformed output to the submit callback.
+TanStack Query owns request state in the examples that load or save data. Each
+example follows the core rules in [How it works](/how-it-works).

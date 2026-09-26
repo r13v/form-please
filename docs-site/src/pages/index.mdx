@@ -168,10 +168,13 @@ Browse the [live examples](/examples) or the [API](/api).
 
 ## What stays explicit
 
-- Your Standard Schema owns validation and transformed submit output.
+- Your Standard Schema owns the validation rules and transformed submit output.
 - Your definition owns generated UI and its managed-update policy.
 - Your controls and slots own the rendered design system.
-- React Hook Form owns editable state and its low-level API.
+- React Hook Form owns editable state, runs validation, and exposes its
+  low-level API.
+
+See [Ownership](/how-it-works#ownership) for the complete rule.
 
 Use RHF `register`, `Controller`, and hooks such as `useWatch` when a generated
 definition is not enough. `kit.Form` supplies `FormProvider`.

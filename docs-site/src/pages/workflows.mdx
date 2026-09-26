@@ -33,6 +33,8 @@ must change field visibility.
 | Current screen and navigation history | Application state or the router |
 | Screen visibility | Form context and definition resolvers |
 | Draft storage | `form-please/persistence` and the application adapter |
+
+Read [Ownership](/how-it-works#ownership) for the general rule.
 | Requests and confirmation receipts | Application request state |
 
 Put a workflow value in the schema only when the server must store that value
@@ -148,8 +150,9 @@ The `satisfies` checks make both maps exhaustive. If the server adds a path or
 the form renames a field, TypeScript requires a mapping update.
 
 Apply all errors before focus navigation. Then open the screen for the first
-mapped path and focus after that screen renders. Keep network, authorization,
-and form-level failures in application request state.
+mapped path and focus after that screen renders. Keep other failures in
+application state. See [Server issues are not schema
+issues](/how-it-works#server-issues-are-not-schema-issues).
 
 ## 5. Separate draft and validated actions
 

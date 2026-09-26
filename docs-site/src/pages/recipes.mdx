@@ -35,8 +35,8 @@ matches the problem in your application.
 | Lock the complete form | The `disabled` or `readOnly` option |
 | Add a design-system control | `defineControl` and the full `ControlProps` contract |
 
-React Hook Form owns editable form state. The application owns requests, caches,
-persistence, navigation, permissions, and product workflow state.
+Read [Ownership](/how-it-works#ownership) for the parts that React Hook Form
+and the application own.
 
 ## Compose generated and custom UI
 
@@ -203,7 +203,8 @@ mutation methods from the subscription callback.
 Requires React Hook Form 7.76.1 or newer, which is the package peer minimum.
 
 Use `trigger` with the paths for the current step. Use `setFocus` when the step
-contains an invalid field. Hidden fields keep their values when the next step
+contains an invalid field. Hidden fields [keep their
+values](/how-it-works#hidden-fields-keep-their-values) when the next step
 renders.
 
 ```tsx
@@ -235,9 +236,8 @@ Clear an old request error before each attempt. Render the new failure from
 application state. Reset the form only after the server returns a successful,
 canonical input.
 
-A transport failure is not a schema issue. Keep it out of the form error
-summary. If the server identifies invalid field values, adapt that response to
-the schema or RHF `setError`.
+A transport failure is not a schema issue. See [Server issues are not schema
+issues](/how-it-works#server-issues-are-not-schema-issues).
 
 The visible `kit.Submit` prevents normal duplicate clicks. If application code
 calls `form.api.handleSubmit(onValid, onInvalid)`, that code must also prevent
@@ -277,21 +277,15 @@ output are different contracts.
 // [!include ~/snippets/production-recipes.tsx:parsed-output]
 ```
 
-`onSubmit` receives these values:
-
-- `input` is the current `FormInput<Schema>`.
-- `value` is the parsed `FormOutput<Schema>`.
-- `form` is the current form binding.
-- `submitter` is the native submit control snapshot or `null`.
+`onSubmit` receives the parsed `value` and the editable `input`. See
+[`onSubmit` receives four values](/how-it-works#onsubmit-receives-four-values).
 
 Send `value` when the server expects parsed output. Pass schema input to
 `form.api.reset`. If the server returns only output, convert it to editable
 input at the application boundary.
 
-Keep schema parsing deterministic. Form, Please parses once for validation and
-returns the transformed output from that parse. The schema must still be free
-of side effects because React Hook Form can validate it again after later user
-actions.
+Keep schema parsing deterministic and free of side effects. See [The schema
+parses once on submit](/how-it-works#the-schema-parses-once-on-submit).
 
 ## Choose the transport format
 

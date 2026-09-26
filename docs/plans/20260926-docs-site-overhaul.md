@@ -370,16 +370,16 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: `docs-site/tests/content.test.mjs`
 - Modify: `docs-site/tests/build-output.test.mjs` (only if a phrase moves out of `llms-full.txt`)
 
-- [ ] write `how-it-works.mdx` with a text diagram of the flow: schema → definition → `kit.useForm` binding → React Hook Form → resolver → `onSubmit`
-- [ ] give each core rule one heading: `required` is UI-only, hidden fields keep their values, the schema parses once on submit, the `onSubmit` arguments (one fixed order), server issues, and ownership
-- [ ] resolve the ownership drift: `examples/index.mdx:45` and `index.mdx:171` must agree on who validates
-- [ ] move the rule answers from `faqs.mdx` to the new page; keep the FAQ questions with one sentence and a link
-- [ ] replace the other copies in the location table with one sentence and a link to the rule anchor
-- [ ] add the page to the Learn group after Get started
-- [ ] update the page-specific phrase assertions that the move breaks: `content.test.mjs` validation (`:143-151`), middleware (`:348-363`), workflows (`:278-289`), and persistence (`:423-431`); move each assertion to `how-it-works.mdx` or delete it if it only restated text
-- [ ] check that the `llms-full.txt` phrases in `build-output.test.mjs` (for example `/Hidden fields preserve/i`, `/parses once/i`) still match
-- [ ] the Task 5 gates cover the new route and the new anchors; add no "heading exists" tests
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 9
+- [x] write `how-it-works.mdx` with a text diagram of the flow: schema → definition → `kit.useForm` binding → React Hook Form → resolver → `onSubmit`
+- [x] give each core rule one heading: `required` is UI-only, hidden fields keep their values, the schema parses once on submit, the `onSubmit` arguments (one fixed order), server issues, and ownership
+- [x] resolve the ownership drift: `examples/index.mdx:45` and `index.mdx:171` must agree on who validates (the Standard Schema owns the rules; React Hook Form runs validation through the schema resolver; `examples/index.mdx` now links to the Ownership section)
+- [x] move the rule answers from `faqs.mdx` to the new page; keep the FAQ questions with one sentence and a link
+- [x] replace the other copies in the location table with one sentence and a link to the rule anchor (kept without a change: `resources.mdx` request ownership, the `examples/async-multiselect.mdx` layer table, the `learning-cohort.mdx` claim bullet, and `faqs.mdx:162`, because they state task-specific facts; `workflows.mdx` keeps its submitter sequence, the canonical submitter contract)
+- [x] add the page to the Learn group after Get started
+- [x] update the page-specific phrase assertions that the move breaks: `content.test.mjs` validation (`:143-151`), middleware (`:348-363`), workflows (`:278-289`), and persistence (`:423-431`); move each assertion to `how-it-works.mdx` or delete it if it only restated text (only the validation list broke: its `FormInput<Schema>`, `FormOutput<Schema>`, and "Server validation is still required" phrases restated moved text and were deleted; the middleware, workflows, and persistence assertions still match; a new FAQ link keeps the `[Value middleware](/middleware)` check)
+- [x] check that the `llms-full.txt` phrases in `build-output.test.mjs` (for example `/Hidden fields preserve/i`, `/parses once/i`) still match (`/Hidden fields preserve/i` became `/Hidden fields keep their values/i`, because the examples overview no longer has that text; `/parses once/i` matches the new heading)
+- [x] the Task 5 gates cover the new route and the new anchors; add no "heading exists" tests
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 9
 
 ### Task 9: Add a Troubleshooting page (I13)
 

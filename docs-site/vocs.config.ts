@@ -131,6 +131,7 @@ export default defineConfig({
 			collapsed: false,
 			items: [
 				{ text: "Get started", link: "/get-started" },
+				{ text: "How it works", link: "/how-it-works" },
 				{ text: "Definitions", link: "/definitions" },
 				{ text: "Form kits", link: "/form-kits" },
 				{ text: "Validation & submission", link: "/validation" },

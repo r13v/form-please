@@ -103,13 +103,7 @@ test("keeps validation guidance executable and complete", async () => {
 		assert.match(validation, new RegExp(`validation-guide\\.tsx:${region}`))
 	}
 
-	for (const phrase of [
-		"first submit attempt",
-		"FormInput<Schema>",
-		"FormOutput<Schema>",
-		"kit.AutoForm",
-		"Server validation is still required",
-	]) {
+	for (const phrase of ["first submit attempt", "kit.AutoForm"]) {
 		assert.match(validation, new RegExp(escapeRegExp(phrase)))
 	}
 })

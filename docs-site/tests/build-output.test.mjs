@@ -70,7 +70,7 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /Controller/)
 	assert.match(full, /useFormState/)
 	assert.match(full, /complete schema input/i)
-	assert.match(full, /Hidden fields preserve/i)
+	assert.match(full, /Hidden fields keep their values/i)
 	assert.match(full, /stable field-array ID/i)
 	assert.match(full, /useWatch/)
 	assert.match(full, /fromResource/)

@@ -328,8 +328,8 @@ A request that rejects renders an empty collection. A resolver that successfully
 returns a non-array value violates its contract and throws a `TypeError` through
 React.
 
-Hidden fields keep their React Hook Form values. The `required` property changes
-the UI state only. Put every data rule in the schema.
+Hidden fields [keep their values](/how-it-works#hidden-fields-keep-their-values),
+and [`required` is UI-only](/how-it-works#required-is-ui-only).
 
 An array child path is relative to one item. `itemDefault` accepts a complete
 item or a function that returns one. Form, Please clones the value before each
@@ -392,13 +392,8 @@ type.
 // [!include ~/snippets/api-reference.tsx:use-form]
 ```
 
-Submission has this sequence:
-
-1. `kit.Form` captures the editable input and native submitter snapshots.
-2. The internal RHF resolver parses that input once with the Standard Schema.
-3. `onSubmit` receives `{ value, input, form, submitter }` after parsing succeeds.
-4. A returned promise keeps `form.api.formState.isSubmitting` true until it
-   settles.
+`onSubmit` runs only after the Standard Schema parse succeeds. See [`onSubmit`
+receives four values](/how-it-works#onsubmit-receives-four-values).
 
 The definition schema is the only form-level resolver. "Form, Please" fixes
 `criteriaMode: "all"`, `shouldUnregister: false`, and RHF error focus.
