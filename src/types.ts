@@ -848,6 +848,81 @@ type OmitNodeKeys<Node, Keys extends PropertyKey> = Node extends unknown
 	? Omit<Node, Keys>
 	: never
 
+/** A private key that carries the builder scope of a helper-created node. */
+declare const builtNodeScope: unique symbol
+/**
+ * Marks a node created by a builder helper for one path scope and kit contract.
+ * Builder lists accept this brand instead of the full node union, so each
+ * helper checks its own options once and list membership stays cheap.
+ */
+type BuiltNode<
+	Root,
+	Scope,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+> = {
+	readonly [builtNodeScope]: {
+		/** Makes the scope contract invariant so nodes cannot cross scopes. */
+		readonly scope: (
+			types: [
+				Root,
+				Scope,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid,
+			],
+		) => [
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+		]
+	}
+}
+
+/** Helper-created nodes and fragment placements accepted in one builder scope. */
+type BuiltNodeList<
+	Root,
+	Scope,
+	Controls extends ControlDefinitionRegistry,
+	Context,
+	FieldOptions,
+	SectionOptions,
+	ArrayOptions,
+	Grid extends number,
+> = readonly (
+	| BuiltNode<
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+	  >
+	| FragmentPlacementInScope<
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+	  >
+)[]
+
 /** Schema-bound helpers that create UI nodes in one path scope. */
 type UiBuilder<
 	Root,
@@ -882,7 +957,17 @@ type UiBuilder<
 		FieldOptions,
 		Path,
 		Grid
-	>
+	> &
+		BuiltNode<
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+		>
 	/** Creates a section node whose children stay in the current path scope. */
 	readonly section: (
 		id: string,
@@ -898,8 +983,20 @@ type UiBuilder<
 				Grid,
 				true
 			>,
-			"id" | "kind"
-		>,
+			"children" | "id" | "kind"
+		> & {
+			/** Nodes created by helpers in the current path scope. */
+			readonly children: BuiltNodeList<
+				Root,
+				Scope,
+				Controls,
+				Context,
+				FieldOptions,
+				SectionOptions,
+				ArrayOptions,
+				Grid
+			>
+		},
 	) => SectionNodeInScope<
 		Root,
 		Scope,
@@ -910,7 +1007,17 @@ type UiBuilder<
 		ArrayOptions,
 		Grid,
 		true
-	>
+	> &
+		BuiltNode<
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+		>
 	/** Creates an array node and supplies helpers bound to its item scope. */
 	readonly array: <const Path extends ArrayFieldPath<Scope>>(
 		path: Path,
@@ -941,7 +1048,7 @@ type UiBuilder<
 					ArrayOptions,
 					Grid
 				>,
-			) => readonly UiSourceNodeInScope<
+			) => BuiltNodeList<
 				Root,
 				ArrayItem<Scope, Path>,
 				Controls,
@@ -950,7 +1057,7 @@ type UiBuilder<
 				SectionOptions,
 				ArrayOptions,
 				Grid
-			>[]
+			>
 		},
 	) => ArrayNodeForPath<
 		Root,
@@ -963,12 +1070,32 @@ type UiBuilder<
 		Grid,
 		Path,
 		true
-	>
+	> &
+		BuiltNode<
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+		>
 	/** Creates a custom render node. */
 	readonly render: (
 		id: string,
 		options: OmitNodeKeys<RenderNode<Root, Context>, "id" | "kind">,
-	) => RenderNode<Root, Context>
+	) => RenderNode<Root, Context> &
+		BuiltNode<
+			Root,
+			Scope,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid
+		>
 }
 
 /** Builds schema-owned UI content with helpers bound to the root path scope. */
@@ -991,7 +1118,7 @@ export type FormDefinitionBuilder<
 		ArrayOptions,
 		Grid
 	>,
-) => readonly UiSourceNodeInScope<
+) => BuiltNodeList<
 	FormInput<Schema>,
 	FormInput<Schema>,
 	Controls,
@@ -1000,7 +1127,7 @@ export type FormDefinitionBuilder<
 	SectionOptions,
 	ArrayOptions,
 	Grid
->[]
+>
 
 /** Any typed node that a form definition can contain at its root. */
 export type UiNode<

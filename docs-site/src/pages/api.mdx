@@ -284,6 +284,10 @@ the schema input type, before schema transformations.
 builder and each array child callback run once while the definition is created;
 they are not value resolvers.
 
+A builder list accepts only nodes from the helpers of its own scope and
+fragment placements. A root helper inside `array.children` causes a type
+error. Use the `{ ui }` object form to write nodes as objects.
+
 The optional third argument owns the complete managed-update policy:
 
 | Option | Effect |
