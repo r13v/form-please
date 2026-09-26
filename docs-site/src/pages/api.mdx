@@ -7,7 +7,7 @@ showAskAi: false
 # API
 
 Use this page to find public imports, configuration, return values, and runtime
-behavior. Form, Please adds typed UI definitions to React Hook Form. Each form
+behavior. Form, Please adds typed UI definitions to React Hook Form (RHF). Each form
 binding exposes the complete React Hook Form API as `form.api`.
 
 For exported TypeScript types and their relationships, read the
@@ -36,7 +36,7 @@ import "form-please/layout.css"
 | --- | --- | --- |
 | `form-please` | `defineControl`, `createFormKit`, `fromResource`, `matchResource`, `useSnapshot` | Build kits, controls, definitions, resource resolvers, and external-store adapters. |
 | `form-please/default-slots` | `createDefaultSlots` | Create accessible, unstyled structural slots. |
-| `form-please/devtools` | `FormPleaseDevtools` | Mount RHF DevTools and inspect Form Please UI, updates, options, and optional features. |
+| `form-please/devtools` | `FormPleaseDevtools` | Mount RHF DevTools and inspect Form, Please UI, updates, options, and optional features. |
 | `form-please/history` | `createHistoryMiddleware`, `useHistory` | Add optional managed value history and journal transfer. |
 | `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
 | `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec`, `usePersistence` | Restore and autosave editable drafts through application storage. |
@@ -60,7 +60,7 @@ executor.
 
 | Member | Result |
 | --- | --- |
-| `current`, `values` | Current readonly resolution and complete editable input. |
+| `current`, `values` | Current readonly resolution and complete schema input. |
 | `field(path)`, `array(path)`, `node(id)` | Strict selectors with candidate-rich errors. |
 | `setValue(path, value)`, `update(recipe)` | Managed control or imperative proposals through hooks and middleware. |
 | `append(path)`, `remove(path, index)`, `move(path, from, to)` | Managed generated-array proposals. |
@@ -201,15 +201,10 @@ Use `i18n` to replace any English array action label:
 // [!include ~/snippets/api-reference.tsx:default-slot-i18n]
 ```
 
-| Key | Callback data |
-| --- | --- |
-| `arrayAdd` | `{ label }` from the array node |
-| `arrayRemove` | Zero-based `index` and one-based `position` |
-| `arrayMoveUp` | Zero-based `index` and one-based `position` |
-| `arrayMoveDown` | Zero-based `index` and one-based `position` |
-
-Each value can be a string or a callback that returns a string. Import
-`DefaultSlotsI18n` and its related types from `form-please/default-slots`.
+Import `DefaultSlotsI18n` and its related types from
+`form-please/default-slots`. Read
+[Localization](/localization#translate-the-form-kit-labels) for the keys and
+their callback data.
 
 ### Native preset
 
@@ -238,8 +233,8 @@ and a 12-column grid.
 // [!include ~/snippets/api-reference.tsx:mui-preset]
 ```
 
-The `i18n` object supports `addItem`, `removeItem`, `moveItemUp`,
-`moveItemDown`, and `chooseFile`. All properties are optional.
+Read [Localization](/localization#translate-the-form-kit-labels) for the keys
+of the `i18n` option.
 
 The registry contains these controls:
 
@@ -286,9 +281,7 @@ the schema input type, before schema transformations.
 
 `array.children` receives another builder bound to the item scope. The root
 builder and each array child callback run once while the definition is created;
-they are not value resolvers. The object form
-`defineForm(schema, { ui: [...] })` remains supported and produces the same
-normalized definition.
+they are not value resolvers.
 
 The optional third argument owns the complete managed-update policy:
 
@@ -330,8 +323,8 @@ A request that rejects renders an empty collection. A resolver that successfully
 returns a non-array value violates its contract and throws a `TypeError` through
 React.
 
-Hidden fields keep their React Hook Form values. The `required` property changes
-the UI state only. Put every data rule in the schema.
+Hidden fields [keep their values](/how-it-works#hidden-fields-keep-their-values),
+and [`required` is UI-only](/how-it-works#required-is-ui-only).
 
 An array child path is relative to one item. `itemDefault` accepts a complete
 item or a function that returns one. Form, Please clones the value before each
@@ -377,7 +370,7 @@ the current kit context.
 | `mode` | Optional RHF validation mode. Defaults to `onSubmit`. |
 | `reValidateMode` | Optional RHF revalidation mode. Defaults to `onChange`. |
 | `delayError` | Optional RHF error-display delay in milliseconds. |
-| `onSubmit` | Receives parsed output, editable input, the current binding, and a submitter snapshot. |
+| `onSubmit` | Receives parsed output, schema input, the current binding, and a submitter snapshot. |
 
 Use `FormSubmitDetails<Schema, Context>` from `form-please` when a reusable
 submit handler needs the exact `{ value, input, form, submitter }` parameter
@@ -394,15 +387,10 @@ type.
 // [!include ~/snippets/api-reference.tsx:use-form]
 ```
 
-Submission has this sequence:
+`onSubmit` runs only after the Standard Schema parse succeeds. See [`onSubmit`
+receives four values](/how-it-works#onsubmit-receives-four-values).
 
-1. `kit.Form` captures the editable input and native submitter snapshots.
-2. The internal RHF resolver parses that input once with the Standard Schema.
-3. `onSubmit` receives `{ value, input, form, submitter }` after parsing succeeds.
-4. A returned promise keeps `form.api.formState.isSubmitting` true until it
-   settles.
-
-The definition schema is the only form-level resolver. "Form, Please" fixes
+The definition schema is the only form-level resolver. Form, Please fixes
 `criteriaMode: "all"`, `shouldUnregister: false`, and RHF error focus.
 
 `submitter` is a frozen `{ name, value }` snapshot or `null` for an implicit
@@ -586,7 +574,7 @@ lifecycle rules, envelope encoding, migrations, conflicts, and adapters.
 `Fields` and `Submit` must be descendants of the matching `kit.Form`.
 `AutoForm` provides that form context automatically.
 
-`Form` prevents native submission and connects the "Form, Please" submit wrapper
+`Form` prevents native submission and connects the Form, Please submit wrapper
 to raw `form.api.handleSubmit`. A reset event calls `form.api.reset()`. It sets
 `noValidate` because the Standard Schema owns validation.
 

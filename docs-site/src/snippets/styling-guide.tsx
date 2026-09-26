@@ -29,6 +29,14 @@ const accountDefinition = kit.defineForm(accountSchema, (ui) => [
 			return "personal-account"
 		},
 		children: [
+			ui.field("accountType", {
+				control: "select",
+				label: "Account type",
+				options: [
+					{ label: "Personal", value: "personal" },
+					{ label: "Company", value: "company" },
+				],
+			}),
 			ui.field("email", {
 				control: "text",
 				label: "Email",

@@ -17,17 +17,17 @@ Set `visible` to a resolver that returns a boolean:
 // [!include ~/snippets/lab-profile-form.tsx:conditional-field]
 ```
 
-When `accountType` changes, "Form, Please" resolves the UI tree again. The
+When `accountType` changes, Form, Please resolves the UI tree again. The
 `companyName` field appears only for a company account.
 
 `visible` has these effects:
 
 - A hidden node does not render.
 - A hidden section or array does not render its descendants.
-- A hidden field keeps its value in React Hook Form state.
-- The Standard Schema still receives the hidden value during submission.
+- A hidden field keeps its value, and the schema still validates it.
 
-`visible` does not clear a value or change schema validation.
+See [Hidden fields keep their
+values](/how-it-works#hidden-fields-keep-their-values).
 
 ## Derive field properties
 
@@ -115,8 +115,8 @@ for custom operations and array slots.
 
 ## Keep conditional validation in the schema
 
-`visible` and `required` control the rendered UI. They do not add, remove, or
-change schema rules.
+`visible` and `required` do not change schema rules. See [`required` is
+UI-only](/how-it-works#required-is-ui-only).
 
 Express the same condition in the Standard Schema:
 
@@ -131,3 +131,8 @@ Use a schema transform when cleanup is part of the submission contract. Use
 value middleware when the source and cleared value must commit atomically. Use
 `form.update` for the same managed boundary in an application action. See
 [Value middleware](/middleware).
+
+## Next steps
+
+- [Add repeatable rows](/arrays)
+- [Build a multi-step form](/workflows)

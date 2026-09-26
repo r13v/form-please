@@ -2,6 +2,7 @@
 title: Creative studio policies
 description: A policy editor with an asynchronous catalog in context, nested rules, movable equipment rows, cross-state validation, and two writes.
 showAskAi: false
+searchPriority: 0.5
 ---
 
 import { StudioPoliciesDemo } from "../../components/studio-policies-demo"
@@ -26,7 +27,7 @@ connectivity below 25 Mbps, to see cross-section validation.
 - `matchResource` for pending, success, and error selectable options.
 - Saved option labels while the remote catalog is pending.
 - A generated equipment array and cross-section schema rules.
-- `useWatch` for a live policy summary.
+- `form.api.watch()` for a live policy summary.
 - Two writes from transformed submit output.
 
 TanStack Query owns request state. Form context exposes the current resource

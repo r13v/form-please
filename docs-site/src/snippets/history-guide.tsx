@@ -6,6 +6,7 @@ import {
 	type HistoryHandle,
 	type HistoryJournal,
 	type HistoryOperationResult,
+	type UseHistoryResult,
 	useHistory,
 } from "form-please/history"
 import { nativeFormKit } from "form-please/preset-native"
@@ -38,30 +39,68 @@ const historyDefinition = nativeFormKit.defineForm(
 	{ middleware: [historyFeature] },
 )
 
-export function HistoryPreview() {
+function useProfileHistory() {
 	const form = nativeFormKit.useForm(historyDefinition, {
 		defaultValues: { name: "Ada Lovelace", projects: [] },
 	})
 	const history = useHistory(form, historyFeature)
+	return { form, history }
+}
+// [!endregion setup]
+
+// [!region navigate]
+async function describeOperation(
+	label: string,
+	operation: Promise<HistoryOperationResult>,
+): Promise<string> {
+	try {
+		return `${label}: ${await operation}`
+	} catch (error) {
+		if (error instanceof Error) {
+			return `${label} failed: ${error.message}`
+		}
+		return `${label} failed`
+	}
+}
+
+function UndoRedoButtons({
+	history,
+	onStatus,
+}: {
+	readonly history: UseHistoryResult<HistoryInput>
+	readonly onStatus: (status: string) => void
+}) {
 	const { snapshot } = history
-	// [!endregion setup]
+	return (
+		<>
+			<button
+				disabled={!snapshot.canUndo}
+				onClick={() =>
+					void describeOperation("Undo", history.undo()).then(onStatus)
+				}
+				type="button"
+			>
+				Undo
+			</button>
+			<button
+				disabled={!snapshot.canRedo}
+				onClick={() =>
+					void describeOperation("Redo", history.redo()).then(onStatus)
+				}
+				type="button"
+			>
+				Redo
+			</button>
+		</>
+	)
+}
+// [!endregion navigate]
+
+export function HistoryPreview() {
+	const { form, history } = useProfileHistory()
+	const { snapshot } = history
 	const [exported, setExported] = useState<HistoryJournal<HistoryInput>>()
 	const [message, setMessage] = useState("Edit the form to create history.")
-
-	async function navigate(
-		label: string,
-		operation: Promise<HistoryOperationResult>,
-	) {
-		try {
-			setMessage(`${label}: ${await operation}`)
-		} catch (error) {
-			if (error instanceof Error) {
-				setMessage(error.message)
-			} else {
-				setMessage(`${label} failed`)
-			}
-		}
-	}
 
 	return (
 		<section
@@ -74,23 +113,12 @@ export function HistoryPreview() {
 			</p>
 			<nativeFormKit.AutoForm className="form-please-lab__form" form={form}>
 				<div className="form-please-lab__actions">
-					<button
-						disabled={!snapshot.canUndo}
-						onClick={() => void navigate("Undo", history.undo())}
-						type="button"
-					>
-						Undo
-					</button>
-					<button
-						disabled={!snapshot.canRedo}
-						onClick={() => void navigate("Redo", history.redo())}
-						type="button"
-					>
-						Redo
-					</button>
+					<UndoRedoButtons history={history} onStatus={setMessage} />
 					<button
 						disabled={snapshot.index === 0}
-						onClick={() => void navigate("Seek", history.seek(0))}
+						onClick={() =>
+							void describeOperation("Seek", history.seek(0)).then(setMessage)
+						}
 						type="button"
 					>
 						First position
@@ -109,7 +137,9 @@ export function HistoryPreview() {
 						disabled={exported === undefined}
 						onClick={() => {
 							if (exported !== undefined) {
-								void navigate("Import", history.import(exported))
+								void describeOperation("Import", history.import(exported)).then(
+									setMessage,
+								)
 							}
 						}}
 						type="button"

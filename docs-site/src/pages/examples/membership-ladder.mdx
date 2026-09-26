@@ -2,6 +2,7 @@
 title: Membership ladder
 description: A four-tier membership editor with nested benefit arrays, cross-tier validation, workspace connection, and pause shortcuts.
 showAskAi: false
+searchPriority: 0.5
 ---
 
 import { MembershipLadderDemo } from "../../components/membership-ladder-demo"
@@ -26,7 +27,7 @@ an application-owned shortcut.
 - Query-provided workspace options through form context.
 - `form.api.setValue` for connection state.
 - `form.api.getValues` and `form.api.setValue` for pause shortcuts.
-- A live ladder preview through `useWatch`.
+- A live ladder preview through `form.api.watch()`.
 
 ## Copy the source
 

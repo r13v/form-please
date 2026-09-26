@@ -6,8 +6,8 @@ showAskAi: false
 
 # Examples
 
-These examples use the current public "Form, Please" API. Each live form runs in
-the browser with React Hook Form as its state and validation runtime.
+These examples use the current public Form, Please API. Each live form runs in
+the browser with React Hook Form (RHF) as its state and validation runtime.
 
 ## Design-system integration
 
@@ -32,7 +32,8 @@ the browser with React Hook Form as its state and validation runtime.
 - [Creative studio policies](/examples/studio-policies) passes an asynchronous
   equipment catalog through form context and adapts it with `fromResource`.
 - [Makerspace launch wizard](/examples/makerspace-launch) keeps the active stage
-  in form values and combines address lookup, media, pricing, and promotions.
+  in React state that the form reads through context. It combines address
+  lookup, media, pricing, and promotions.
 - [Learning cohort editor](/examples/learning-cohort) combines remote title
   suggestions, two movable arrays, media, offers, and conflict feedback.
 - [Membership ladder](/examples/membership-ladder) combines nested benefit
@@ -42,10 +43,5 @@ the browser with React Hook Form as its state and validation runtime.
 
 ## Runtime ownership
 
-"Form, Please" resolves definitions and renders controls. React Hook Form owns
-editable state, array operations, validation, and submission. TanStack Query
-owns request state in the examples that load or save data.
-
-Hidden fields preserve their values. Conditional schemas decide which values
-are required for the active branch. Successful submission parses the schema a
-second time and passes transformed output to the submit callback.
+TanStack Query owns request state in the examples that load or save data. Each
+example follows the core rules in [How it works](/how-it-works).

@@ -7,9 +7,9 @@ showAskAi: false
 # Managed value history
 
 Import `createHistoryMiddleware` from `form-please/history` when users need to
-navigate earlier editable values. History is optional and does not create
-another live form store. React Hook Form remains the owner of current values and
-form state.
+go back to an earlier schema input. History is optional and does not create
+another live form store. React Hook Form (RHF) remains the owner of current values and
+form state. See [Ownership](/how-it-works#ownership).
 
 ## Configure one history feature
 
@@ -61,6 +61,14 @@ managed transaction source has `type: "history"` and an `undo`, `redo`, `seek`,
 or `import` action. `beforeUpdate` and middleware can cancel or transform the
 target, and `afterUpdate` observes the final commit.
 
+Call `undo()` and `redo()` from your own controls. Use `snapshot.canUndo` and
+`snapshot.canRedo` to disable a control that has no target. The example waits
+for each operation and shows its result or its rejection:
+
+```tsx
+// [!include ~/snippets/history-guide.tsx:navigate]
+```
+
 Operations report `"applied"`, `"unavailable"`, `"cancelled"`, or
 `"transformed"`. A transformed restore becomes a new group and removes its
 redo branch. A post-commit failure rejects the operation without rolling back
@@ -84,4 +92,7 @@ or audit log. `Date` and `RegExp` leaves are detached. Browser-owned values such
 as `File` and `Blob` preserve their identity. Applications own transport,
 serialization, storage, and trust boundaries.
 
-Try the complete [History workflow](/examples/history).
+## Next steps
+
+- [Try the complete history workflow](/examples/history)
+- [Change values in the same commit](/middleware#derive-a-value-in-the-same-commit)

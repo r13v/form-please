@@ -1,6 +1,6 @@
 ---
 title: Devtools
-description: Inspect React Hook Form state and explain Form Please UI, updates, options, history, and persistence.
+description: Inspect React Hook Form state and explain Form, Please UI, updates, options, history, and persistence.
 showAskAi: false
 ---
 
@@ -9,8 +9,8 @@ import { DevtoolsDemo } from "../components/devtools-demo"
 # Devtools
 
 Use `FormPleaseDevtools` when you must explain why a generated form rendered or
-changed in a specific way. One component mounts the React Hook Form inspector
-and the Form Please diagnostic drawer for the supplied form.
+changed in a specific way. One component mounts the React Hook Form (RHF) inspector
+and the `Form Please Devtools` drawer for the supplied form.
 
 ## Try the live demo
 
@@ -38,8 +38,8 @@ Use the optional `name` when a page has several forms or when a readable label
 helps. Without `name`, the component assigns `Form 1`, `Form 2`, and so on.
 
 The package includes `@hookform/devtools`. The RHF launcher appears at the
-top-right. The Form Please launcher appears at the bottom-right and opens a
-resizable drawer.
+top-right. The **FP Devtools** launcher appears at the bottom-right. It opens
+the resizable `Form Please Devtools` drawer.
 
 ## Use the four views
 
@@ -50,7 +50,7 @@ resizable drawer.
 | **Options** | Static options and async request status, dependencies, duration, errors, and result size. |
 | **Features** | Configured history and persistence snapshots, internal status, and recent transitions. |
 
-Use **Copy RHF path** to move from a Form Please node to the matching RHF field.
+Use **Copy RHF path** to move from a Form, Please node to the matching RHF field.
 Use **Highlight** to scroll to a visible generated control. Pause recording when
 you must inspect the current journal without adding updates. Pausing does not
 pause the form.
@@ -64,3 +64,8 @@ mounted.
 The drawer shows raw local values, context, patches, errors, and feature details.
 This data can be sensitive. Do not mount devtools in an untrusted or production
 environment. The first release does not export or send diagnostic data.
+
+## Next steps
+
+- [Test a definition without React](/testing)
+- [Fix a common problem](/troubleshooting)

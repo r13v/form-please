@@ -2,6 +2,7 @@
 title: Research grant application
 description: A branching grant form with registry search, preserved conditional values, live preview, cross-field validation, and two fake requests.
 showAskAi: false
+searchPriority: 0.5
 ---
 
 import { ResearchGrantDemo } from "../../components/research-grant-demo"
@@ -24,7 +25,7 @@ route to resolve another conditional branch.
 - Conditional fields across several nested objects.
 - An application-owned registry search inside the form.
 - Read-only values populated through `form.api.setValue`.
-- `useWatch` for conditional application UI and a live preview.
+- `form.api.watch()` for conditional application UI and a live preview.
 - Two sequential mutations from transformed schema output.
 - Preserved values when the selected branch changes.
 

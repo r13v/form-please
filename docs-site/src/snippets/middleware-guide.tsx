@@ -319,7 +319,7 @@ const discountDefinition = discountKit.defineForm(
 
 // [!region cancellation]
 export function CancellationMiddlewarePreview() {
-	const [decision, setDecision] = useState("No managed change yet.")
+	const [decision, setDecision] = useState("No managed update yet.")
 	const form = discountKit.useForm(discountDefinition, {
 		context: { maximum: 30, report: setDecision },
 		defaultValues: { discount: 10 },
@@ -336,7 +336,7 @@ export function CancellationMiddlewarePreview() {
 		>
 			<p className="form-please-complex__kicker">Live preview</p>
 			<p className="form-please-complex__summary">
-				Managed changes above 30% are cancelled. A raw RHF update bypasses the
+				Managed updates above 30% are cancelled. A raw RHF update bypasses the
 				guard.
 			</p>
 			<discountKit.Form className="form-please-complex__form" form={form}>
@@ -350,7 +350,7 @@ export function CancellationMiddlewarePreview() {
 						}
 						type="button"
 					>
-						Try 40% as a managed change
+						Try 40% as a managed update
 					</button>
 					<button
 						onClick={() => {

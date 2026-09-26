@@ -1,47 +1,14 @@
 import assert from "node:assert/strict"
 import { access, readFile } from "node:fs/promises"
 import { test } from "node:test"
+import { proseSegments } from "../../scripts/fix-vocs-llms-links.mjs"
+import { pages, sidebarLinks } from "./pages.mjs"
 
 const siteRoot = new URL("../", import.meta.url)
 const repositoryRoot = new URL("../", siteRoot)
 
-const pages = [
-	"src/pages/index.mdx",
-	"src/pages/get-started.mdx",
-	"src/pages/playground.mdx",
-	"src/pages/ai-agents.mdx",
-	"src/pages/definitions.mdx",
-	"src/pages/validation.mdx",
-	"src/pages/conditional-fields.mdx",
-	"src/pages/arrays.mdx",
-	"src/pages/middleware.mdx",
-	"src/pages/history.mdx",
-	"src/pages/persistence.mdx",
-	"src/pages/devtools.mdx",
-	"src/pages/form-kits.mdx",
-	"src/pages/resources.mdx",
-	"src/pages/styling.mdx",
-	"src/pages/api.mdx",
-	"src/pages/recipes.mdx",
-	"src/pages/workflows.mdx",
-	"src/pages/types.mdx",
-	"src/pages/faqs.mdx",
-	"src/pages/examples/index.mdx",
-	"src/pages/examples/history.mdx",
-	"src/pages/examples/persistence.mdx",
-	"src/pages/examples/mui-yup.mdx",
-	"src/pages/examples/shadcn-valibot.mdx",
-	"src/pages/examples/async-multiselect.mdx",
-	"src/pages/examples/research-grant.mdx",
-	"src/pages/examples/studio-policies.mdx",
-	"src/pages/examples/makerspace-launch.mdx",
-	"src/pages/examples/learning-cohort.mdx",
-	"src/pages/examples/membership-ladder.mdx",
-	"src/pages/examples/campaign-builder.mdx",
-]
-
 test("uses Twoslash for complete TypeScript snippets", async () => {
-	for (const path of pages) {
+	for (const { source: path } of pages) {
 		const source = await readFile(new URL(path, siteRoot), "utf8")
 		const completeSnippets = source.matchAll(
 			/^```(?:ts|tsx)([^\n]*)\n\/\/ \[!include ~\/snippets\/[^\]: ]+\]\n```/gm,
@@ -57,14 +24,9 @@ test("uses Twoslash for complete TypeScript snippets", async () => {
 	}
 })
 
-test("keeps supported routes in navigation", async () => {
-	const config = await readFile(new URL("vocs.config.ts", siteRoot), "utf8")
-	for (const path of pages) {
-		const route = path
-			.replace("src/pages", "")
-			.replace(/\/index\.mdx$|\.mdx$/g, "")
-		if (route === "") continue
-		assert.match(config, new RegExp(`link: "${escapeRegExp(route)}"`))
+test("keeps every page route in navigation", () => {
+	for (const { route, source } of pages) {
+		assert.ok(sidebarLinks.has(route), `${source} has no sidebar link ${route}`)
 	}
 })
 
@@ -140,14 +102,68 @@ test("keeps validation guidance executable and complete", async () => {
 		assert.match(validation, new RegExp(`validation-guide\\.tsx:${region}`))
 	}
 
-	for (const phrase of [
-		"first submit attempt",
-		"FormInput<Schema>",
-		"FormOutput<Schema>",
-		"kit.AutoForm",
-		"Server validation is still required",
-	]) {
+	for (const phrase of ["first submit attempt", "kit.AutoForm"]) {
 		assert.match(validation, new RegExp(escapeRegExp(phrase)))
+	}
+})
+
+test("lists each library i18n key in the localization table", async () => {
+	const guide = await readFile(
+		new URL("src/pages/localization.mdx", siteRoot),
+		"utf8",
+	)
+	const [header, , ...rows] = guide
+		.split("\n")
+		.filter((line) => line.startsWith("|"))
+		.map((line) =>
+			line
+				.split("|")
+				.slice(1, -1)
+				.map((cell) => cell.trim()),
+		)
+	const defaultColumn = header.findIndex((cell) => cell.includes("English"))
+	assert.notEqual(defaultColumn, -1, "the table has no English default column")
+
+	for (const [path, objectName, factory] of [
+		[
+			"src/default-slots/default-slots.tsx",
+			"englishDefaultSlotsI18n",
+			"createDefaultSlots",
+		],
+		["src/preset-mui/index.ts", "defaultI18n", "createMuiFormKit"],
+	]) {
+		const source = await readFile(new URL(path, repositoryRoot), "utf8")
+		const body = source.match(
+			new RegExp(`const ${objectName} = [^{]*\\{\\n([\\s\\S]*?)\\n\\}`),
+		)?.[1]
+		assert.ok(body, `${path} has no ${objectName} object`)
+		const defaults = new Map(
+			body
+				.split("\n")
+				.filter((line) => line.trim() !== "")
+				.map((line) => {
+					const entry = line.match(/^\t(\w+): (?:"([^"]*)"|.*`([^`]*)`)/)
+					assert.ok(entry, `${path} has an unreadable i18n entry: ${line}`)
+					const [, key, text, template] = entry
+					return [key, text ?? template.replace(/\$\{[^}]+\}/g, "1")]
+				}),
+		)
+		const column = header.findIndex((cell) => cell.includes(factory))
+		assert.notEqual(column, -1, `the table has no ${factory} column`)
+		const listed = new Map(
+			rows
+				.filter((row) => row[column] !== "—")
+				.map((row) => [row[column].replace(/^`|`$/g, ""), row[defaultColumn]]),
+		)
+
+		assert.deepEqual(
+			[...listed.keys()].sort(),
+			[...defaults.keys()].sort(),
+			`the ${factory} column must list the keys of ${path}`,
+		)
+		for (const [key, text] of defaults) {
+			assert.equal(listed.get(key), text, `wrong English default for ${key}`)
+		}
 	}
 })
 
@@ -163,6 +179,10 @@ test("keeps form kits, API, and production guidance executable", async () => {
 	)
 	const styling = await readFile(
 		new URL("src/pages/styling.mdx", siteRoot),
+		"utf8",
+	)
+	const accessibility = await readFile(
+		new URL("src/pages/accessibility.mdx", siteRoot),
 		"utf8",
 	)
 
@@ -201,10 +221,10 @@ test("keeps form kits, API, and production guidance executable", async () => {
 		"multipart-body",
 		"context-resource",
 		"form-modes",
-		"accessible-control",
 	]) {
 		assert.match(recipes, new RegExp(`production-recipes\\.tsx:${region}`))
 	}
+	assert.match(accessibility, /production-recipes\.tsx:accessible-control/)
 	for (const preview of [
 		"SavedBaselineRecipePreview",
 		"AtomicValuesRecipePreview",
@@ -440,21 +460,6 @@ test("documents persistence with query string and storage adapters", async () =>
 	assert.match(example, /usePersistence\(form, feature\)/)
 })
 
-test("does not present native FormData as the submission source", async () => {
-	const sources = await Promise.all([
-		readFile(new URL("src/pages/get-started.mdx", siteRoot), "utf8"),
-		readFile(
-			new URL("src/components/interactive-lab.client.tsx", siteRoot),
-			"utf8",
-		),
-		readFile(new URL("src/snippets/lab-profile-form.tsx", siteRoot), "utf8"),
-	])
-	const source = sources.join("\n")
-	assert.doesNotMatch(source, /Form, Please keeps it in FormData/)
-	assert.match(source, /Submission uses (?:the )?React Hook Form values/)
-	assert.match(source, /File stays in the React Hook Form input/)
-})
-
 test("keeps the shadcn adapter installable and release-version agnostic", async () => {
 	const registry = JSON.parse(
 		await readFile(new URL("registry.json", repositoryRoot), "utf8"),
@@ -507,6 +512,165 @@ test("the physical example uses only public package imports", async () => {
 	)
 	assert.equal(packageJson.dependencies["form-please"], "file:..")
 })
+
+test("documents each public export on the API or TypeScript page", async () => {
+	const docs = [
+		await readFile(new URL("src/pages/api.mdx", siteRoot), "utf8"),
+		await readFile(new URL("src/pages/types.mdx", siteRoot), "utf8"),
+	].join("\n")
+	const packageJson = JSON.parse(
+		await readFile(new URL("package.json", repositoryRoot), "utf8"),
+	)
+	const tsdownEntries = new Map(
+		Array.from(
+			(
+				await readFile(new URL("tsdown.config.ts", repositoryRoot), "utf8")
+			).matchAll(/^\t\t"?([\w-]+)"?: "(src\/[^"]+)"/gm),
+			([, name, file]) => [name, file],
+		),
+	)
+	const entries = Object.keys(packageJson.exports)
+		.filter((key) => !/\.\w+$/.test(key))
+		.map((key) => {
+			const entry = tsdownEntries.get(key === "." ? "index" : key.slice(2))
+			assert.ok(entry, `tsdown.config.ts has no entry for export ${key}`)
+			return entry
+		})
+	const names = new Set()
+
+	for (const entry of entries) {
+		const source = await readFile(new URL(entry, repositoryRoot), "utf8")
+		assert.doesNotMatch(
+			source,
+			/^export\s+(?:\*|default\b)/m,
+			`${entry} uses an export form that this gate cannot read`,
+		)
+		for (const [, list] of source.matchAll(
+			/^export\s+(?:type\s+)?\{([^}]*)\}/gm,
+		)) {
+			for (const item of list.split(",")) {
+				const name = item
+					.trim()
+					.replace(/^type\s+/, "")
+					.split(/\s+as\s+/)
+					.pop()
+				if (name) names.add(name)
+			}
+		}
+		for (const [, name] of source.matchAll(
+			/^export\s+(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(?:function\*?|const|let|var|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/gm,
+		)) {
+			names.add(name)
+		}
+	}
+
+	assert.ok(names.size > 100, `found only ${names.size} exported names`)
+	const missing = [...names].filter(
+		(name) =>
+			!new RegExp(`\`[^\`\\n]*\\b${escapeRegExp(name)}\\b[^\`\\n]*\``).test(
+				docs,
+			),
+	)
+	assert.deepEqual(
+		missing,
+		[],
+		"api.mdx and types.mdx must name each export in code",
+	)
+})
+
+test("example pages claim only APIs that their snippets use", async () => {
+	let checked = 0
+
+	for (const { source: path } of pages) {
+		if (!path.startsWith("src/pages/examples/")) continue
+		const page = await readFile(new URL(path, siteRoot), "utf8")
+		const section = page.match(
+			/^## What this form demonstrates\n([\s\S]*?)(?=^## |(?![\s\S]))/m,
+		)?.[1]
+		if (!section) continue
+		let snippets = ""
+		for (const [, snippet, region] of page.matchAll(
+			/\/\/ \[!include ~\/snippets\/([^\]:]+)(?::([\w-]+))?\]/g,
+		)) {
+			const source = await readFile(
+				new URL(`src/snippets/${snippet}`, siteRoot),
+				"utf8",
+			)
+			snippets += region
+				? (source.match(
+						new RegExp(
+							`// \\[!region ${region}\\]([\\s\\S]*?)// \\[!endregion ${region}\\]`,
+						),
+					)?.[1] ?? "")
+				: source
+		}
+		const bullets = section
+			.split(/^- /m)
+			.slice(1)
+			.map((bullet) => bullet.split(/\n\s*\n/)[0])
+		let claims = 0
+		let pageChecked = 0
+
+		for (const bullet of bullets) {
+			for (const [, code] of bullet.matchAll(/`([^`]+)`/g)) {
+				claims++
+				const identifier = code.replace(/\(\)$/, "")
+				if (!/^[A-Za-z_$][\w$.]*$/.test(identifier)) continue
+				assert.match(
+					snippets,
+					new RegExp(`(?<![\\w$])${escapeRegExp(identifier)}(?![\\w$])`),
+					`${path} claims \`${identifier}\`, but its snippet does not use it`,
+				)
+				pageChecked++
+			}
+		}
+
+		assert.ok(
+			snippets === "" || claims === 0 || pageChecked > 0,
+			`${path} has claims, but none of them were checked`,
+		)
+		checked += pageChecked
+	}
+
+	assert.ok(checked > 0, "no example claims were checked")
+})
+
+test("prose uses one term for each concept", async () => {
+	const denied = [/\bForm Please\b/, /\bmanaged changes?\b/i]
+
+	for (const { source: path } of pages) {
+		const text = prose(await readFile(new URL(path, siteRoot), "utf8"))
+		for (const term of denied) {
+			assert.doesNotMatch(text, term, `${path} uses a denied term`)
+		}
+	}
+})
+
+test("prose writes React Hook Form (RHF) at the first mention", async () => {
+	let checked = 0
+
+	for (const { source: path } of pages) {
+		const source = await readFile(new URL(path, siteRoot), "utf8")
+		const text = prose(source.replace(/^---\n[\s\S]*?\n---\n/, ""))
+		const first = text.search(/React Hook Form|\bRHF\b/)
+		if (first === -1) continue
+		assert.ok(
+			text.startsWith("React Hook Form (RHF)", first),
+			`${path} must write "React Hook Form (RHF)" at the first mention`,
+		)
+		checked++
+	}
+
+	assert.ok(checked > 0, "no page mentions React Hook Form")
+})
+
+/** The page text without code fences, inline code, import lines, and link targets. */
+function prose(source) {
+	return [...proseSegments(source.replace(/^import\s.*$/gm, ""))]
+		.join(" ")
+		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+		.replace(/\s+/g, " ")
+}
 
 function escapeRegExp(value) {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")

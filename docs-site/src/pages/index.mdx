@@ -23,10 +23,10 @@ import { ScriptedPlayground } from "../components/scripted-playground"
     # Your schema already knows the shape. Let it render the form.
 
     <div className="form-please-overview-intro-text">
-    "Form, Please" turns a Standard Schema and a typed definition into a React
+    Form, Please turns a Standard Schema and a typed definition into a React
     form. Field paths are checked against the schema. Validation messages come
     from the schema. The submit callback receives the transformed output type.
-    React Hook Form runs the state. Your components render it.
+    React Hook Form (RHF) runs the state. Your components render it.
     </div>
 
     <div className="form-please-overview-actions">
@@ -95,37 +95,37 @@ The first tab is a complete program. Copy it into a file, install the three
 packages, and render `SignupForm`. [Get started](/get-started) walks through
 the same file one step at a time.
 
-## Why teams pick it
+## Start from a task
 
-<ul className="form-please-benefits">
+<ul className="form-please-tasks">
   <li>
-    <strong>Typed against your schema</strong>
-    <span>Paths, controls, and submit output are inferred from the schema. A typo is a compile error, not a runtime surprise.</span>
-    <a href={`${import.meta.env.BASE_URL}types`}>TypeScript reference</a>
+    <strong>Validate with Valibot</strong>
+    <span>Pass a Valibot schema. Zod, Yup, and ArkType also work through Standard Schema. Rules, messages, and transforms stay in your schema.</span>
+    <a href={`${import.meta.env.BASE_URL}examples/shadcn-valibot`}>Shadcn with Valibot</a>
   </li>
   <li>
-    <strong>Any Standard Schema</strong>
-    <span>Zod, Valibot, Yup, or ArkType. Validation rules, messages, and transforms stay in the schema you already own.</span>
-    <a href={`${import.meta.env.BASE_URL}validation`}>Validation and submission</a>
-  </li>
-  <li>
-    <strong>Your design system</strong>
-    <span>Wrap your controls and slots once. Native, Material UI, and shadcn kits are included as working examples.</span>
+    <strong>Use my design system</strong>
+    <span>Wrap your controls and slots one time. The native, Material UI, and shadcn kits are working examples.</span>
     <a href={`${import.meta.env.BASE_URL}form-kits`}>Form kits</a>
   </li>
   <li>
-    <strong>React Hook Form underneath</strong>
-    <span>register, Controller, useWatch, and useFieldArray keep working. Nothing is hidden behind the definition.</span>
-    <a href={`${import.meta.env.BASE_URL}recipes`}>Recipes</a>
-  </li>
-  <li>
-    <strong>Batteries, optional</strong>
-    <span>Draft persistence, undo history, devtools, and a headless testing entry ship as separate imports you add when needed.</span>
+    <strong>Save a draft</strong>
+    <span>Keep the schema input in storage that you own and restore it when the user returns.</span>
     <a href={`${import.meta.env.BASE_URL}persistence`}>Persistence</a>
   </li>
   <li>
-    <strong>Built for agents too</strong>
-    <span>An llms.txt index, a full documentation dump, and an installable skill so your coding agent writes correct definitions.</span>
+    <strong>Build a multi-step form</strong>
+    <span>Show one screen at a time, validate each screen, and submit a draft or the final form.</span>
+    <a href={`${import.meta.env.BASE_URL}workflows`}>Product workflows</a>
+  </li>
+  <li>
+    <strong>Use React Hook Form directly</strong>
+    <span>Use register, Controller, useWatch, and useFieldArray next to the generated fields.</span>
+    <a href={`${import.meta.env.BASE_URL}recipes`}>Recipes</a>
+  </li>
+  <li>
+    <strong>Set up my coding agent</strong>
+    <span>Give your agent the llms.txt index or the installable skill, so that it writes correct definitions.</span>
     <a href={`${import.meta.env.BASE_URL}ai-agents`}>AI agents</a>
   </li>
 </ul>
@@ -168,10 +168,8 @@ Browse the [live examples](/examples) or the [API](/api).
 
 ## What stays explicit
 
-- Your Standard Schema owns validation and transformed submit output.
-- Your definition owns generated UI and its managed-update policy.
-- Your controls and slots own the rendered design system.
-- React Hook Form owns editable state and its low-level API.
+Each part of a form has one owner: the schema, React Hook Form, the definition,
+the kit, or your application. Read [Ownership](/how-it-works#ownership).
 
 Use RHF `register`, `Controller`, and hooks such as `useWatch` when a generated
 definition is not enough. `kit.Form` supplies `FormProvider`.

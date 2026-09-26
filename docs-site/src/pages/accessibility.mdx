@@ -1,0 +1,73 @@
+---
+title: Accessibility
+description: Know the accessibility behavior that generated fields give, and connect a custom control or slot to it.
+showAskAi: false
+---
+
+# Accessibility
+
+Generated fields connect labels, descriptions, errors, and focus to each
+control. The shipped controls and slots use these connections. A custom
+control or slot must use them too.
+
+## What the library does
+
+| Behavior | How it works | Source |
+| --- | --- | --- |
+| Focus on the first invalid field | After an invalid submit, React Hook Form (RHF) focuses the first invalid field through `input.ref`. Read [Focus the first issue](/validation#focus-the-first-issue). | `src/create-form-kit.tsx` |
+| Label association | The field slot gets `labelProps.htmlFor`, which is equal to `input.id`. | `src/create-form-kit.tsx` |
+| Error and description association | `input["aria-describedby"]` contains the description ID and the ID of each visible error. | `src/create-form-kit.tsx` |
+| Invalid state | `meta.invalid` is `true` only when the form shows field errors. The shipped controls set `aria-invalid` from it. | `src/create-form-kit.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-mui/controls.tsx` |
+| Required state | The control gets the resolved `required` value. The shipped controls set the native `required` attribute. `required` does not add a validation rule. Read [`required` is UI-only](/how-it-works#required-is-ui-only). | `src/create-form-kit.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-mui/controls.tsx` |
+| Error announcement | The shipped `ErrorMessage` slots render each issue with `role="alert"`. | `src/default-slots/default-slots.tsx`, `src/preset-mui/slots.tsx` |
+| Array action labels | The default array item buttons have an `aria-label` from the kit `i18n` object. Read [Localization](/localization). | `src/default-slots/default-slots.tsx` |
+
+## Connect a custom control
+
+A custom control must attach the supplied properties to its interactive
+element. The following control shows the complete contract:
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:accessible-control]
+```
+
+Connect every applicable `input` property to the interactive element:
+
+| Input property | Required connection |
+| --- | --- |
+| `input.id` | Set the element `id`. The field label uses this ID. |
+| `input.name` | Set the element `name`. This also supports autofill and browser diagnostics. |
+| `input.ref` | Attach it to the focusable element. Invalid submission uses this ref for focus. |
+| `input["aria-describedby"]` | Set `aria-describedby`. It connects descriptions and visible errors. |
+| `meta.invalid` | Set `aria-invalid` from it. |
+
+A custom control must also:
+
+1. Call `setValue` after a valid control change.
+2. Call `blur` from its blur event.
+3. Honor `disabled`, `readOnly`, and `required`.
+
+Native text inputs support a `readOnly` property. Some components do not.
+A custom select, checkbox, or file control must prevent changes when `readOnly`
+is `true`.
+
+Read [Control props](/form-kits#control-props) for the other properties.
+
+## Keep custom slots accessible
+
+Custom slots must preserve semantic groups, labels, issue output, and usable
+buttons. Spread `labelProps`, `descriptionProps`, and `rootProps` on the
+matching elements. `labelProps` connects the label to the control.
+`descriptionProps` and the `ErrorMessage` `rootProps` contain the IDs that
+`aria-describedby` refers to. Read [Slot prop reference](/form-kits#slot-prop-reference).
+
+## Test the accessibility behavior
+
+Test keyboard input, focus, invalid state, and read-only behavior for each
+reusable custom control. Find controls by their labels and roles. Read [Test
+the public experience](/recipes#test-the-public-experience).
+
+## Next steps
+
+- [Translate the form labels](/localization)
+- [Test a definition without React](/testing)

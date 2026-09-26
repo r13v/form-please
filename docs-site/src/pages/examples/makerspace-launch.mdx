@@ -2,6 +2,7 @@
 title: Makerspace launch wizard
 description: A four-stage form with remote address resolution, coordinates, media, capacity pricing, promotions, and sequential publishing.
 showAskAi: false
+searchPriority: 0.5
 ---
 
 import { MakerspaceLaunchDemo } from "../../components/makerspace-launch-demo"
@@ -9,7 +10,7 @@ import { MakerspaceLaunchDemo } from "../../components/makerspace-launch-demo"
 # Makerspace launch wizard
 
 The active screen is external React state. The form definition reads it through
-context, while React Hook Form stores only editable makerspace input.
+context, while React Hook Form (RHF) stores only editable makerspace input.
 
 ## Try the complete flow
 
@@ -29,7 +30,7 @@ writes.
 - Native file input and generated arrays.
 - One transformed output used by three sequential mutations.
 
-"Form, Please" does not include a wizard engine. This example composes the
+Form, Please does not include a wizard engine. This example composes the
 workflow from external screen state and conditional sections. Put a stage in
 the schema only when the server stores it as a domain field, such as an approval
 stage. Do not put the current wizard screen in the schema only to drive UI.

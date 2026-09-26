@@ -5,6 +5,15 @@ submission, or serialization, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Run `npm run check` and `npm run knip` before reporting a task done.
 
+## Docs Coupling
+
+The docs gates read the library source. When you add a public export to an
+entry in `package.json#exports`, name it in inline code in
+`docs-site/src/pages/api.mdx` or `types.mdx`. When you add or change an `i18n`
+key in `src/default-slots/default-slots.tsx` or `src/preset-mui/index.ts`,
+update the table in `docs-site/src/pages/localization.mdx`. Run
+`npm run site:test` to check both.
+
 ## Reuse Before Adding Helpers
 
 Before creating a helper, search `src` for the same behavior, including helpers

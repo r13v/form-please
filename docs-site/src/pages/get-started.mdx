@@ -2,9 +2,10 @@
 title: Get started
 description: Install Form, Please and submit a schema-validated React form.
 showAskAi: false
+searchPriority: 2
 ---
 
-import { InteractiveLab } from "../components/interactive-lab"
+import { GetStartedDemo } from "../components/get-started-demo"
 
 # Get started
 
@@ -13,28 +14,46 @@ preset, Zod, and the default validation timing.
 
 ## Install
 
-Install "Form, Please", React Hook Form, and a Standard Schema library. This
+Install Form, Please, React Hook Form (RHF), and a Standard Schema library. This
 example uses Zod.
 
-```sh
+:::code-group
+
+```sh [npm]
 npm install form-please react-hook-form zod
 ```
 
+```sh [pnpm]
+pnpm add form-please react-hook-form zod
+```
+
+```sh [yarn]
+yarn add form-please react-hook-form zod
+```
+
+```sh [bun]
+bun add form-please react-hook-form zod
+```
+
+:::
+
 React 18 and React 19 are supported peer dependencies.
 
-## 1. Define the data contract
+:::steps
 
-Create a Standard Schema for the editable input. This schema keeps the editable
-values unchanged. It adds `slug` only to the successful submit output.
+## Define the data contract
+
+Create a Standard Schema for the schema input. The schema output can contain
+more values than the schema input.
 
 ```tsx
 // [!include ~/snippets/profile-form.tsx:schema]
 ```
 
-The schema input is `{ name: string; email: string }`. The schema output also
-contains `slug`. Generated fields always edit the schema input.
+The schema input is `{ name: string; email: string }`. Generated fields always
+edit the schema input.
 
-## 2. Define the generated fields
+## Define the generated fields
 
 Connect each schema path to a control from the native preset:
 
@@ -43,10 +62,10 @@ Connect each schema path to a control from the native preset:
 ```
 
 `path` must exist in the schema input. The selected control must accept the
-value at that path. `required: true` changes the UI state only. The Zod schema
-still owns the validation rule.
+value at that path. `required: true` changes the UI state only. See
+[`required` is UI-only](/how-it-works#required-is-ui-only).
 
-## 3. Bind and render the form
+## Bind and render the form
 
 Create the form binding inside a React component. Supply one complete schema
 input as `defaultValues`.
@@ -58,11 +77,23 @@ input as `defaultValues`.
 `kit.AutoForm` renders the native `<form>`, an error summary, and the generated
 fields. Add `kit.Submit` as a child to render the submit button.
 
-After a valid submit, `value` contains the schema output, including `slug`.
-Use the `input` callback property when you also need the editable input.
+After a valid submit, `value` contains the schema output.
+The `onSubmit` callback keeps `value` in React state, and the `<pre>` element
+shows it. Use the `input` callback property when you also need the schema
+input.
 
 All JavaScript package entries are React client modules. In a Next.js App
 Router project, put `"use client"` at the start of the component file.
+
+:::
+
+## See the result
+
+This is the form from step 3. Enter a name and an email, and then click
+**Save profile**. The output shows the schema output with `slug`. Submit empty
+fields to see the validation errors.
+
+<GetStartedDemo />
 
 <details>
 <summary>Copy the complete first form</summary>
@@ -84,20 +115,9 @@ import "form-please/layout.css"
 The native preset is intentionally unstyled. Replace it with your own controls
 and slots, or use the Material UI preset.
 
-## Try the interactive lab
+## Next steps
 
-The lab adds conditional fields, an editable contact array, reset, live
-React Hook Form state, and a diagnostic snapshot of native browser `FormData`.
-Submission uses the React Hook Form values, not that snapshot. Submit the form
-to see the transformed output.
-
-<InteractiveLab />
-
-<details>
-<summary>Copy the complete interactive lab form</summary>
-
-```tsx twoslash
-// [!include ~/snippets/lab-profile-form.tsx]
-```
-
-</details>
+- [Edit a definition in the playground](/playground). See the form, the output,
+  and the TypeScript errors change. Its scenarios show a transform, conditional
+  fields, an array, and a mistyped path.
+- [Learn the rules that each form follows](/how-it-works).

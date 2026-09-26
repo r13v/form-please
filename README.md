@@ -104,7 +104,7 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
 - The Standard Schema validates on submit, then on change after the first
   submit.
 - The RHF resolver parses the Standard Schema once and returns transformed
-  output while the submit wrapper preserves the editable input snapshot.
+  output while the submit wrapper preserves the schema input snapshot.
 - Ordinary UI resolvers receive the complete deeply readonly schema input and
   runtime context. They must be synchronous. A selectable field's `options`
   may instead be an async function of `{ values, context, signal }`.
@@ -154,12 +154,15 @@ Form, Please does not add caching or retries.
 ## Documentation
 
 - [Get started](https://r13v.github.io/form-please/get-started)
+- [How it works](https://r13v.github.io/form-please/how-it-works)
 - [Value middleware](https://r13v.github.io/form-please/middleware)
 - [Managed value history](https://r13v.github.io/form-please/history)
 - [Form persistence](https://r13v.github.io/form-please/persistence)
 - [API reference](https://r13v.github.io/form-please/api)
+- [Troubleshooting](https://r13v.github.io/form-please/troubleshooting)
 - [Shadcn registry adapter](https://r13v.github.io/form-please/examples/shadcn-valibot)
 - [Architecture map](docs/ARCHITECTURE.md)
+- [Use with AI agents](https://r13v.github.io/form-please/ai-agents)
 - [LLM documentation index](https://r13v.github.io/form-please/llms.txt)
 - [Full documentation for LLMs](https://r13v.github.io/form-please/llms-full.txt)
 

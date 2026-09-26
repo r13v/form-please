@@ -1,0 +1,135 @@
+---
+title: How it works
+description: Follow the flow from schema to submit, and learn the core rules for required state, hidden values, parsing, onSubmit, server issues, and ownership.
+showAskAi: false
+searchPriority: 2
+---
+
+# How it works
+
+This page is the single source for the core rules of Form, Please. Other pages
+link to these sections.
+
+## The flow
+
+A form moves through these parts, from the schema to the submit callback:
+
+```text
+Standard Schema                           validation rules and transforms
+      │
+      ▼
+kit.defineForm(schema, (ui) => [...])     definition: generated UI
+      │
+      ▼
+kit.useForm({ defaultValues, onSubmit })  form binding
+      │
+      ▼
+React Hook Form                           editable schema input and form state
+      │  validation run
+      ▼
+Standard Schema resolver                  issues, or transformed output
+      │  valid submit
+      ▼
+onSubmit({ value, input, form, submitter })
+```
+
+The diagram does not show two facts. `kit.useForm` creates one form binding,
+and the binding creates one React Hook Form (RHF) instance. The schema is the
+only resolver of that instance.
+
+## `required` is UI-only
+
+The `required` property changes the control UI and its accessibility state. It
+does not add a validation rule. The Standard Schema must reject a missing or
+invalid value.
+
+The same rule applies to `visible`, `disabled`, and `readOnly`. These
+properties control the generated UI. They do not change the schema.
+
+`kit.Form` sets `noValidate` on the native form element. Browser constraints,
+such as `required` and `type="email"`, do not replace schema validation. Put
+field rules and cross-field rules in the schema.
+
+## Hidden fields keep their values
+
+A hidden generated field does not render, but its value stays in RHF state. The
+Standard Schema still receives that value during validation and submission.
+
+Match the schema condition to the visibility condition. If you do not, an
+invalid hidden value can block submission. A hidden field has no control to
+focus, so `kit.AutoForm` shows its issue in the error summary. Read [Focus the
+first issue](/validation#focus-the-first-issue).
+
+To remove an inactive value from the submitted output, use a schema transform.
+To clear the editable value when the user changes another field, use
+[value middleware](/middleware). See [Conditional
+fields](/conditional-fields#keep-conditional-validation-in-the-schema) for an
+example.
+
+## The schema parses once on submit
+
+Form, Please gives RHF a small Standard Schema resolver. Each validation run
+parses the schema input once. On a valid submit, the same parse returns the
+transformed `FormOutput<Schema>`. Form, Please does not parse the input a second
+time to get the output, and it keeps no validation cache.
+
+The editable `FormInput<Schema>` stays in RHF state. Only a successful submit
+callback receives the transformed output.
+
+RHF can validate the schema again after later user actions. Keep schema
+validation deterministic and free of side effects.
+
+## `onSubmit` receives four values
+
+`onSubmit` receives one object with four values, in this order:
+
+- `value` is the transformed `FormOutput<Schema>`.
+- `input` is the editable `FormInput<Schema>`, captured before validation.
+- `form` is the current form binding.
+- `submitter` is `{ name, value }` for the native submit control, or `null`.
+
+Use `value` for an API request. Use `input` when an operation needs the schema
+input, for example to reset the form after a save. A string input can produce a number output.
+
+The callback can return a promise. `form.api.formState.isSubmitting` stays true
+until the promise settles. `kit.Submit` is disabled while the form validates or
+submits.
+
+The submitter snapshot does not keep a DOM element. Read [Product
+workflows](/workflows#understand-submitter) for implicit submits and named
+submit actions. A direct `form.api.handleSubmit` call is ordinary RHF behavior
+and does not call the Form, Please `onSubmit` wrapper.
+
+## Server issues are not schema issues
+
+The server must still validate each submission. A request failure is not a
+Standard Schema issue, and it does not appear in the form error summary. Keep
+request failures in application state and render them near the form.
+
+If the server returns field issues, validate the response first. Then map each
+known server path to a schema input path and apply it with `form.api.setError`.
+Do not convert network, authorization, or service failures into field errors.
+See [Apply server field errors](/recipes#apply-server-field-errors) and
+[Map server issues](/workflows#4-map-server-issues-at-the-request-boundary)
+for examples.
+
+## Ownership
+
+Each part of a form has one owner:
+
+| Part | Owner |
+| --- | --- |
+| Validation rules and transformed output | The Standard Schema |
+| Schema input, form state, and validation runs | React Hook Form, through the schema resolver |
+| Generated UI and its managed-update policy | The definition |
+| Rendered design system | The controls and slots of the kit |
+| Requests, caches, persistence storage, navigation, permissions, and workflow state | The application |
+
+Form, Please resolves definitions and renders controls. It does not keep a
+second form store. Use one binding for one form, and use `form.api` for the
+RHF API.
+
+## Next steps
+
+- [Describe the form UI in a definition](/definitions)
+- [Validate the input and submit the output](/validation)

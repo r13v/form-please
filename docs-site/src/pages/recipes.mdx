@@ -23,7 +23,7 @@ matches the problem in your application.
 | Discard edits | A `type="reset"` button |
 | Save a new baseline without replacing later edits | `form.api.resetDefaultValues(input)` |
 | Keep dependent values atomic | `middleware` and `form.update(recipe)` |
-| Apply a raw RHF update to multiple fields | `form.api.setValues(values)` |
+| Apply a raw React Hook Form (RHF) update to multiple fields | `form.api.setValues(values)` |
 | Observe values without a form render subscription | `form.api.subscribe` |
 | Validate one wizard step | `form.api.trigger` and `form.api.setFocus` |
 | Build a complete product workflow | [`useFormWorkflow`](/workflows) as application code |
@@ -33,10 +33,10 @@ matches the problem in your application.
 | Load one remote option list | Async field `options` |
 | Coordinate request state with form UI | Form context and `fromResource` |
 | Lock the complete form | The `disabled` or `readOnly` option |
-| Add a design-system control | `defineControl` and the full `ControlProps` contract |
+| Add a design-system control | `defineControl` and the [accessibility contract](/accessibility#connect-a-custom-control) |
 
-React Hook Form owns editable form state. The application owns requests, caches,
-persistence, navigation, permissions, and product workflow state.
+Read [Ownership](/how-it-works#ownership) for the parts that React Hook Form
+and the application own.
 
 ## Compose generated and custom UI
 
@@ -114,7 +114,7 @@ change the name. The new name stays in the field and the form stays dirty.
 <SavedBaselineRecipePreview />
 
 Use the submitted `input` when the server accepts that exact input. Use the
-server's canonical schema input when the server returns different editable
+server's canonical schema input when the server returns different
 values.
 
 ## Keep dependent values atomic
@@ -144,7 +144,8 @@ Forward the original patches, append dependent patches, or return without
 `next` to cancel the complete proposal. Code after synchronous `next` reads the
 committed final value.
 
-Generated controls and `form.update` make one RHF value publication. Generated
+Generated controls and `form.update` make one RHF value
+[publication](/glossary#publication). Generated
 array actions retain native `useFieldArray` row identity and promise one final
 React render, not one raw RHF publication. Direct `form.api` operations bypass
 middleware, so keep invariant-preserving application actions on `form.update`.
@@ -203,7 +204,8 @@ mutation methods from the subscription callback.
 Requires React Hook Form 7.76.1 or newer, which is the package peer minimum.
 
 Use `trigger` with the paths for the current step. Use `setFocus` when the step
-contains an invalid field. Hidden fields keep their values when the next step
+contains an invalid field. Hidden fields [keep their
+values](/how-it-works#hidden-fields-keep-their-values) when the next step
 renders.
 
 ```tsx
@@ -235,14 +237,13 @@ Clear an old request error before each attempt. Render the new failure from
 application state. Reset the form only after the server returns a successful,
 canonical input.
 
-A transport failure is not a schema issue. Keep it out of the form error
-summary. If the server identifies invalid field values, adapt that response to
-the schema or RHF `setError`.
+A transport failure is not a schema issue. See [Server issues are not schema
+issues](/how-it-works#server-issues-are-not-schema-issues).
 
 The visible `kit.Submit` prevents normal duplicate clicks. If application code
 calls `form.api.handleSubmit(onValid, onInvalid)`, that code must also prevent
 concurrent calls. Raw `handleSubmit` does not invoke the configured
-"Form, Please" wrapper.
+Form, Please wrapper.
 
 ## Apply server field errors
 
@@ -270,32 +271,26 @@ authorization, or service failures into field errors.
 
 ## Send schema output and reset with schema input
 
-Standard Schema can transform data. In that case, editable input and submitted
+Standard Schema can transform data. In that case, schema input and submitted
 output are different contracts.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:parsed-output]
 ```
 
-`onSubmit` receives these values:
-
-- `input` is the current `FormInput<Schema>`.
-- `value` is the parsed `FormOutput<Schema>`.
-- `form` is the current form binding.
-- `submitter` is the native submit control snapshot or `null`.
+`onSubmit` receives the parsed `value` and the editable `input`. See
+[`onSubmit` receives four values](/how-it-works#onsubmit-receives-four-values).
 
 Send `value` when the server expects parsed output. Pass schema input to
-`form.api.reset`. If the server returns only output, convert it to editable
+`form.api.reset`. If the server returns only output, convert it to schema
 input at the application boundary.
 
-Keep schema parsing deterministic. Form, Please parses once for validation and
-returns the transformed output from that parse. The schema must still be free
-of side effects because React Hook Form can validate it again after later user
-actions.
+Keep schema parsing deterministic and free of side effects. See [The schema
+parses once on submit](/how-it-works#the-schema-parses-once-on-submit).
 
 ## Choose the transport format
 
-"Form, Please" does not serialize the submit value. Send JSON when the server
+Form, Please does not serialize the submit value. Send JSON when the server
 accepts the parsed object:
 
 ```ts
@@ -351,25 +346,8 @@ states according to its platform semantics.
 
 ## Preserve the accessibility contract
 
-Generated field slots connect labels, descriptions, and issue output to a
-control. A custom control must attach the supplied properties to its
-interactive element.
-
-```tsx
-// [!include ~/snippets/production-recipes.tsx:accessible-control]
-```
-
-A custom control must:
-
-1. Attach `input.id`, `input.name`, and `input.ref`.
-2. Attach `input["aria-describedby"]` and expose `meta.invalid`.
-3. Call `setValue` after a valid control change.
-4. Call `blur` from its blur event.
-5. Honor `disabled`, `readOnly`, and `required`.
-
-Custom slots must preserve semantic groups, labels, issue output, and usable
-buttons. Test keyboard input, focus, invalid state, and read-only behavior for
-each reusable custom control.
+A custom control or slot must attach the supplied IDs, refs, and state to its
+elements. Read [Accessibility](/accessibility) for the complete contract.
 
 ## Test the public experience
 
@@ -387,3 +365,8 @@ operates it.
 
 Read the [API reference](/api) for individual contracts. Read [Controls and
 slots](/form-kits) for design-system integration.
+
+## Next steps
+
+- [Build a multi-step form](/workflows)
+- [Make a custom control accessible](/accessibility)

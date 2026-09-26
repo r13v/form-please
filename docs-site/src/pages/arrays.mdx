@@ -44,7 +44,7 @@ Child paths are relative to one item. In the example, `path: "email"` produces
 `contacts.0.email`, `contacts.1.email`, and later paths.
 
 <details>
-<summary>See the contact array from the interactive lab</summary>
+<summary>See the contact array from the profile form</summary>
 
 ```tsx
 // [!include ~/snippets/lab-profile-form.tsx:array-node]
@@ -74,7 +74,7 @@ The generated add action calls the function for each insertion. It then deeply
 clones the result while preserving browser values such as `File`. Nested
 objects in two generated rows do not share references.
 
-A manual React Hook Form operation does not use `itemDefault`. Supply the new
+A manual React Hook Form (RHF) operation does not use `itemDefault`. Supply the new
 item when you call `append()` or `insert()` from `useFieldArray`.
 
 ## Define nested arrays
@@ -107,7 +107,7 @@ example reports a duplicate email on the specific row that must change:
 // [!include ~/snippets/arrays-guide.tsx:array-validation]
 ```
 
-"Form, Please" converts numeric issue paths to dot notation. The duplicate
+Form, Please converts numeric issue paths to dot notation. The duplicate
 issue above resolves to a path such as `contacts.2.email`.
 
 After an invalid submit, the form focuses the first visible generated control
@@ -138,8 +138,9 @@ Read [Value middleware](/middleware) for transaction sources, cancellation,
 dependent patches, raw RHF observations, and structural limits.
 
 When an array is disabled or read-only, the kit also disables its add, move,
-and remove actions. Child fields inherit that state. A hidden array keeps its
-value and does not render. See [Conditional fields](/conditional-fields).
+and remove actions. Child fields inherit that state. A hidden array does not
+render, but it keeps its value. See [Hidden fields keep their
+values](/how-it-works#hidden-fields-keep-their-values).
 
 ## Add custom array operations
 
@@ -190,3 +191,8 @@ state under a generated row path.
 - Use paths relative to the current array item in `children`.
 - Use an `itemDefault` function when a new item needs a unique ID.
 - Use an array node for repeatable rows, not for one multiselect value.
+
+## Next steps
+
+- [Combine generated and custom UI](/recipes#compose-generated-and-custom-ui)
+- [Save a draft](/persistence)

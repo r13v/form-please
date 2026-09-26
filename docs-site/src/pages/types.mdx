@@ -6,15 +6,15 @@ showAskAi: false
 
 # TypeScript
 
-Import the types on this page from `form-please`.
+Import the root types on this page from `form-please`.
 
 ```ts
 import type { FieldPath, FormInput, FormOutput } from "form-please"
 ```
 
-This page covers every type exported from the root entry point. Types for
-native controls, default slots, and Material UI use their documented subpath
-entries.
+This page covers every type exported from each entry point. A section for a
+subpath entry names its import path, for example `form-please/history`.
+Import the types in that section from that path.
 
 For functions, components, options, and runtime behavior, read the [API
 reference](/api).
@@ -41,7 +41,7 @@ library integration.
 `StandardSchema<Input, Output>` is the common schema contract. Form, Please
 works with any library that implements this contract.
 
-`FormInput<Schema>` is the editable value stored in React Hook Form.
+`FormInput<Schema>` is the schema input type that React Hook Form (RHF) stores.
 `FormOutput<Schema>` is the parsed value passed to `onSubmit`. These types can
 be different when the schema transforms data.
 
@@ -200,7 +200,7 @@ component-local form instance.
 | `DefineFormOptions<Schema, Context>` | Definition-owned `beforeUpdate`, ordered middleware, and `afterUpdate`. |
 | `FormDefinitionUpdatePolicy<Schema, Context>` | Normalized readonly managed-update policy stored by a definition. |
 | `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, validation modes, and submit handler. |
-| `FormSubmitDetails<Schema, Context>` | Parsed output, editable input, form binding, and submitter snapshot passed to a submit handler. |
+| `FormSubmitDetails<Schema, Context>` | Parsed output, schema input, form binding, and submitter snapshot passed to a submit handler. |
 | `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
@@ -244,6 +244,7 @@ Import history types from `form-please/history`:
 | `HistorySnapshot` | Current `canUndo`, `canRedo`, `index`, and `length`. |
 | `HistoryOperationResult` | `applied`, `unavailable`, `cancelled`, or `transformed`. |
 | `HistoryJournal<Input>` | Version 1 in-memory input positions and current index. |
+| `UseHistoryResult<Input>` | The `useHistory` return value: a `HistoryHandle<Input>` plus the current `snapshot`. |
 
 Read [Managed value history](/history) for the complete runtime contract.
 
@@ -263,8 +264,19 @@ Import persistence types from `form-please/persistence`:
 | `PersistenceHandle` | Restore, start, flush, clear, and observe one form's draft. |
 | `PersistenceSnapshot` | Current restore phase and save state. |
 | `PersistenceRestoreResult` | `applied`, `empty`, `cancelled`, `transformed`, or `conflict`. |
+| `UsePersistenceResult` | The `usePersistence` return value: a `PersistenceHandle` plus the current `snapshot`. |
 
 Read [Form persistence](/persistence) for the complete runtime contract.
+
+### Devtools types
+
+Import the devtools type from `form-please/devtools`:
+
+| Type | Purpose |
+| --- | --- |
+| `FormPleaseDevtoolsProps<Schema, Context>` | Props for `FormPleaseDevtools`: the `form` binding to inspect and an optional `name` label. |
+
+Read [Devtools](/devtools) for the runtime behavior.
 
 ### Definition testing types
 
@@ -279,7 +291,7 @@ Import definition testing types from `form-please/testing`:
 | `ManagedDefinitionTransition<Definition>` | A definition transition plus commit status, final transaction, and middleware result. |
 | `DefinitionNodeSnapshot<Definition>` | Discriminated field, section, array, or render projection. |
 | `DefinitionChange<Definition>` | Added, removed, or property-level changed node. |
-| `DefinitionTestValues<Definition>` | Editable input inferred from the definition schema. |
+| `DefinitionTestValues<Definition>` | Schema input inferred from the definition schema. |
 | `DefinitionTestContext<Definition>` | Runtime context inferred from the definition's kit. |
 
 `DefinitionFieldSnapshot`, `DefinitionSectionSnapshot`,
@@ -321,6 +333,55 @@ provides `buttonProps`, deeply readonly input `values`, `isSubmitting`,
 
 Spread `rootProps` on the slot's root element. Do not replace its generated
 attributes or ref. Read [Form kits](/form-kits) for every slot prop.
+
+## Control and preset types
+
+The control and preset entries export these helper types. Read the matching
+API sections for the factories and the control props types.
+
+### Native control types
+
+Import native control types from `form-please/native-controls`:
+
+| Type | Purpose |
+| --- | --- |
+| `NativeSelectOption<Value>` | One `select` option with a `value`, a text `label`, and an optional `disabled` flag. |
+| `NativeSelectEmptyOption` | The `props.emptyOption` entry that maps an empty HTML value to `undefined`. |
+| `NativeTextType` | The HTML input types of the `text` control: `text`, `email`, `password`, `search`, `tel`, and `url`. |
+
+Read [Native controls](/api#native-controls) for the props type of each
+control.
+
+### Default slot types
+
+Import default slot types from `form-please/default-slots`:
+
+| Type | Purpose |
+| --- | --- |
+| `DefaultSlotsI18n` | The array action messages. Read [Localization](/localization#translate-the-form-kit-labels) for the keys. |
+| `DefaultSlotI18nValue<Data>` | A fixed string, or a function that gets readonly `Data` and returns a string. |
+| `DefaultArrayAddI18nData` | The `arrayAdd` data: the optional `label` of the array node. |
+| `DefaultArrayItemI18nData` | The item action data: the zero-based `index` and the one-based `position`. |
+
+Read [Default slots](/api#default-slots) for the `i18n` option.
+
+### Material UI preset types
+
+Import Material UI preset types from `form-please/preset-mui`:
+
+| Type | Purpose |
+| --- | --- |
+| `CreateMuiFormKitOptions` | Options for `createMuiFormKit`: an optional partial `i18n` object. |
+| `MuiFormKitI18n` | The messages `addItem`, `removeItem`, `moveItemUp`, `moveItemDown`, and `chooseFile`. |
+| `MuiSelectOption` | One `select` or `select-multiple` option with a `value`, a `label`, and an optional `disabled` flag. |
+| `MuiRadioOption` | One `radio` option. It adds optional `radioProps` and `labelProps` to the `select` option fields. |
+| `MuiAutocompleteTextFieldProps` | The `textFieldProps` of the `autocomplete` and `autocomplete-multiple` controls. |
+| `MuiFieldSlotOptions` | Field `slotOptions`: `sx` for the `FormControl` root. |
+| `MuiSectionSlotOptions` | Section `slotOptions`: `sx` for the section root and `layoutSx` for its grid. |
+| `MuiArraySlotOptions` | Array `slotOptions`: `sx` for the array root and `itemsSx` for its item list. |
+
+Read [Material UI preset](/api#material-ui-preset) for the control names and
+their props types.
 
 ## Resource state
 

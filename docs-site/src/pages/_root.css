@@ -108,6 +108,22 @@ table {
 	inline-size: 100%;
 }
 
+@media (max-width: 48rem) {
+	.form-please-overview-hero {
+		gap: 1rem;
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.form-please-overview-intro {
+		grid-row: 2;
+	}
+
+	.form-please-overview-logo {
+		grid-column: 1;
+		inline-size: 7rem;
+	}
+}
+
 .form-please-complex {
 	background: var(--fp-docs-panel);
 	border: 1px solid var(--fp-docs-border);
@@ -297,34 +313,13 @@ table {
 	margin: 0;
 }
 
-.form-please-lab__inspector {
-	background: var(--fp-docs-surface);
-	border: 1px solid var(--fp-docs-border);
-	border-radius: 0.75rem;
-	display: grid;
-	gap: 1rem;
-	padding: 1rem;
-}
-
-.form-please-lab__actions,
-.form-please-lab__submit-state {
+.form-please-lab__actions {
 	align-items: center;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.75rem;
 }
 
-.form-please-lab__submit-state {
-	justify-content: space-between;
-}
-
-.form-please-lab__inspector-grid {
-	display: grid;
-	gap: 0.75rem;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.form-please-lab__panel,
 .form-please-overview-demo__result {
 	background: var(--fp-docs-panel);
 	border: 1px solid var(--fp-docs-border);
@@ -335,14 +330,12 @@ table {
 	padding: 0.85rem;
 }
 
-.form-please-lab__panel h3,
 .form-please-overview-demo__result > span {
 	font-size: 0.85rem;
 	font-weight: 700;
 	margin: 0;
 }
 
-.form-please-lab__panel pre,
 .form-please-overview-demo__result pre {
 	background: transparent;
 	color: var(--fp-docs-ink);
@@ -350,27 +343,6 @@ table {
 	margin: 0;
 	overflow: auto;
 	white-space: pre-wrap;
-}
-
-.form-please-lab__state-list {
-	display: grid;
-	gap: 0.45rem;
-	margin: 0;
-}
-
-.form-please-lab__state-list > div {
-	display: flex;
-	gap: 0.75rem;
-	justify-content: space-between;
-}
-
-.form-please-lab__state-list dt {
-	color: var(--fp-docs-muted);
-	font-weight: 700;
-}
-
-.form-please-lab__state-list dd {
-	margin: 0;
 }
 
 .form-please-overview-demo__form {
@@ -392,8 +364,7 @@ table {
 }
 
 @media (max-width: 42rem) {
-	.form-please-complex [data-fp-layout="grid"][data-fp-columns="2"],
-	.form-please-lab__inspector-grid {
+	.form-please-complex [data-fp-layout="grid"][data-fp-columns="2"] {
 		grid-template-columns: 1fr;
 	}
 }
@@ -755,7 +726,7 @@ table {
 	}
 }
 
-/* Overview: hero, playground, benefits, comparison, proof */
+/* Overview: hero, playground, tasks, comparison, proof */
 
 .form-please-overview-hero h1 {
 	font-size: clamp(2rem, 5vw, 3rem);
@@ -1032,9 +1003,9 @@ table {
 	margin: 0;
 }
 
-/* Benefits, comparison, proof */
+/* Tasks, comparison, proof */
 
-.form-please-benefits {
+.form-please-tasks {
 	display: grid;
 	gap: 1rem;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1043,7 +1014,7 @@ table {
 	padding: 0;
 }
 
-.form-please-benefits > li {
+.form-please-tasks > li {
 	background: var(--fp-docs-panel);
 	border: 1px solid var(--fp-docs-border);
 	border-radius: 0.85rem;
@@ -1053,16 +1024,16 @@ table {
 	padding: 1.1rem;
 }
 
-.form-please-benefits > li > strong {
+.form-please-tasks > li > strong {
 	font-size: 1.05rem;
 }
 
-.form-please-benefits > li > span {
+.form-please-tasks > li > span {
 	color: var(--fp-docs-muted);
 	font-size: 0.95rem;
 }
 
-.form-please-benefits > li > a {
+.form-please-tasks > li > a {
 	font-size: 0.9rem;
 	font-weight: 600;
 }
@@ -1101,7 +1072,7 @@ table {
 		position: static;
 	}
 
-	.form-please-benefits {
+	.form-please-tasks {
 		grid-template-columns: 1fr;
 	}
 }

@@ -2,6 +2,7 @@
 title: Campaign builder
 description: A create-or-edit campaign form with seven conditional templates, shared audience and scheduling, payment variants, and fake mutations.
 showAskAi: false
+searchPriority: 0.5
 ---
 
 import { CampaignBuilderDemo } from "../../components/campaign-builder-demo"
@@ -24,7 +25,7 @@ and recurring interval fields.
 - Conditional sections for seven schema branches.
 - Context-provided audience options.
 - Separate create and update mutations outside form state.
-- `useWatch` for the live campaign preview.
+- `form.api.watch()` for the live campaign preview.
 - Transformed submit output with a derived channel list.
 - Preserved values when a conditional section becomes hidden.
 

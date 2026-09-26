@@ -2,6 +2,7 @@
 title: Learning cohort editor
 description: A cohort editor with remote title suggestions, configuration and price arrays, media, four offer sections, and recoverable save conflicts.
 showAskAi: false
+searchPriority: 0.5
 ---
 
 import { LearningCohortDemo } from "../../components/learning-cohort-demo"
@@ -22,7 +23,7 @@ feedback without losing the draft.
 
 ## What this form demonstrates
 
-- `useWatch` for a query key and a live preview.
+- `form.api.watch()` for a query key and a live preview.
 - `form.api.setValue` for an application-owned suggestion control.
 - Two generated arrays with cross-row schema validation.
 - Conditional offer fields that preserve hidden values.

@@ -7,50 +7,19 @@ showAskAi: false
 # FAQs
 
 Use these answers to understand the boundaries between your application,
-React Hook Form, Standard Schema, and "Form, Please."
+React Hook Form (RHF), Standard Schema, and Form, Please.
 
 ## Validation and submission
 
 ### Why does a valid submit parse the schema once?
 
-"Form, Please" supplies a small Standard Schema resolver to React Hook Form. The
-resolver validates the editable input and returns transformed output in the
-same parse.
-
-`kit.Form` captures the editable input and native submit control before raw RHF
-submission. The resolver then supplies transformed `FormOutput<Schema>` to the
-same submit attempt.
-
-This sequence has four important effects:
-
-- Invalid input does not reach `onSubmit`.
-- `onSubmit` receives both the captured input and transformed output.
-- `onSubmit` receives a frozen submitter snapshot for named submit actions.
-- Direct `form.api.handleSubmit` remains ordinary RHF behavior.
-
-Keep schema validation deterministic and free of side effects. See [Validation
-and submission](/validation) for the complete validation sequence.
+The validation parse also returns the transformed output. See [The schema
+parses once on submit](/how-it-works#the-schema-parses-once-on-submit).
 
 ### What does `onSubmit` receive?
 
-The callback receives four values:
-
-- `value` is the transformed `FormOutput<Schema>`.
-- `input` is the editable `FormInput<Schema>` from React Hook Form.
-- `form` is the current "Form, Please" binding.
-- `submitter` is `{ name, value }` for the native submit control, or `null`.
-
-Use `value` for an API request. Use `input` when an operation needs the original
-editable shape. For example, a string input can produce a number output.
-
-The callback can return a promise. React Hook Form keeps `isSubmitting` true
-until that promise settles. See [Send schema output and reset with schema
-input](/recipes#send-schema-output-and-reset-with-schema-input) for a complete
-submission example.
-
-The submitter snapshot is captured before validation. It does not retain a DOM
-element. Read [Product workflows](/workflows#understand-submitter) for implicit
-submits and multiple validated actions.
+It receives `value`, `input`, `form`, and `submitter`. See [`onSubmit` receives
+four values](/how-it-works#onsubmit-receives-four-values).
 
 ### Does submission use native `FormData`?
 
@@ -58,7 +27,7 @@ No. Submission uses the values in React Hook Form state. Nested objects, arrays,
 and `File` values keep their JavaScript types.
 
 Your application owns transport serialization. Send JSON, construct
-`FormData`, or use another protocol in `onSubmit`. "Form, Please" does not
+`FormData`, or use another protocol in `onSubmit`. Form, Please does not
 select a transport format.
 
 ```ts
@@ -70,62 +39,25 @@ header because the browser must add the multipart boundary.
 
 ### Does `required: true` add a validation rule?
 
-No. The `required` property changes the control UI and accessibility state.
-The Standard Schema must reject a missing or invalid value.
-
-The same boundary applies to `visible`, `disabled`, and `readOnly`. These
-properties control the generated UI. They do not change the schema and do not
-remove values from submission.
-
-`kit.Form` disables native browser validation with `noValidate`. Put field and
-cross-field rules in the schema.
+No. The Standard Schema owns all validation rules. See [`required` is
+UI-only](/how-it-works#required-is-ui-only).
 
 ### How do I display server errors?
 
-Keep request failures in application state and render them near the form. A
-network failure is not a Standard Schema issue.
-
-If the server returns field-validation results, convert them deliberately with
-the applicable React Hook Form error APIs. Do not treat a transport failure as a
-schema result. The server must still validate every submission. See [Keep async
-submission in the
-application](/recipes#keep-async-submission-in-the-application) for a request
-error example. See [Apply server field
-errors](/recipes#apply-server-field-errors) for a typed `setError` example.
+Keep request failures in application state, and apply known field issues with
+`form.api.setError`. See [Server issues are not schema
+issues](/how-it-works#server-issues-are-not-schema-issues).
 
 ## Conditional UI and values
 
 ### Do hidden fields lose their values?
 
-No. A hidden generated field does not render, but its value remains in React
-Hook Form state. The Standard Schema still receives that value during
-validation and submission.
+No. A hidden field keeps its value, and the schema still validates it. See
+[Hidden fields keep their values](/how-it-works#hidden-fields-keep-their-values).
 
-This definition hides `companyName` for a personal account:
+### Does Form, Please fetch async options?
 
-```tsx
-// [!include ~/snippets/lab-profile-form.tsx:conditional-field]
-```
-
-Match the schema condition to the visibility condition. Otherwise, an invalid
-hidden value can block submission. `kit.AutoForm` puts an issue for a hidden
-field in the error summary because there is no visible control to focus.
-
-Use a schema transform when the submitted output must omit an inactive value:
-
-```tsx
-// [!include ~/snippets/conditional-fields-guide.tsx:conditional-schema]
-```
-
-Use value middleware when the editable value must be cleared atomically as the
-user changes another field. Use `form.update` for an application-owned managed
-action. A direct `form.api.setValue` bypasses middleware deliberately. See
-[Value middleware](/middleware) and [Conditional fields](/conditional-fields)
-for the boundaries.
-
-### Does "Form, Please" fetch async options?
-
-Yes. A selectable field can use an async `options` function. "Form, Please"
+Yes. A selectable field can use an async `options` function. Form, Please
 invokes it, tracks the `values` and `context` properties it reads, aborts the
 previous signal when those dependencies change, and ignores stale results.
 The function still contains the application request:
@@ -151,7 +83,7 @@ Load data before or beside the form. Pass the current result through context.
 Resolvers can then derive labels, descriptions, control props, visibility, and
 interaction state synchronously.
 
-"Form, Please" resolves the complete UI tree after each form value change. Keep
+Form, Please resolves the complete UI tree after each form value change. Keep
 resolvers small and free of side effects.
 
 ## React Hook Form and manual UI
@@ -173,6 +105,7 @@ UI](/recipes#compose-generated-and-custom-ui) for a complete example.
 Generated controls and `form.update` pass through configured value middleware.
 Direct `form.api` calls, reset, and initial values do not. Use raw RHF methods
 as an explicit escape hatch rather than expecting middleware to intercept them.
+See [Value middleware](/middleware).
 
 ### Should I create a second form for custom UI?
 
@@ -184,13 +117,8 @@ submission state do not automatically synchronize between two bindings.
 
 ### What happens after an invalid submit?
 
-RHF focuses the first registered invalid field, including manual fields. Focus
-order follows RHF registration order.
-
-If no invalid generated control can receive focus, `kit.AutoForm` focuses the
-first error-summary item. A manually composed `kit.Form` does not add that
-summary fallback. The application must render its own summary when it does not
-use `kit.AutoForm`.
+RHF focuses the first registered invalid field. Read [Focus the first
+issue](/validation#focus-the-first-issue).
 
 ## Definitions, kits, and lifetime
 
@@ -230,7 +158,7 @@ kit when the application needs a different registry or grid.
 
 ### Which schema libraries can I use?
 
-Use any schema that implements Standard Schema. "Form, Please" does not require
+Use any schema that implements Standard Schema. Form, Please does not require
 a library-specific adapter.
 
 The documentation includes complete examples for [Zod](/get-started),

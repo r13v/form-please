@@ -2,12 +2,13 @@
 title: Validation and submission
 description: Understand Standard Schema validation, transformed output, errors, and focus behavior.
 showAskAi: false
+searchPriority: 2
 ---
 
 # Validation and submission
 
 Use the definition schema as the single form-level validation contract. The
-schema validates the complete React Hook Form input. It also produces the value
+schema validates the complete React Hook Form (RHF) input. It also produces the value
 that `onSubmit` receives.
 
 ## Build the validation schema
@@ -32,11 +33,8 @@ Pass the schema to `kit.defineForm`. The generated fields edit the schema input.
 // [!include ~/snippets/validation-guide.tsx:definition]
 ```
 
-The `required` property changes the rendered control and its accessibility
-state. It does not add a schema rule. The schema must reject a missing value.
-
-`kit.Form` sets `noValidate` on the native form element. Browser constraints,
-such as `required` and `type="email"`, do not replace schema validation.
+The `required` property does not add a schema rule. See [`required` is
+UI-only](/how-it-works#required-is-ui-only).
 
 ## Understand validation timing
 
@@ -49,7 +47,7 @@ Form, Please configures this validation sequence:
 | Edit before the first submit | The form does not run change validation. |
 | Submit for the first time | React Hook Form validates the complete schema input. |
 | Edit after the first submit attempt | React Hook Form validates on each change. |
-| Submit valid input | The resolver returns transformed output and "Form, Please" calls `onSubmit`. |
+| Submit valid input | The resolver returns transformed output and Form, Please calls `onSubmit`. |
 
 The first submit attempt can be valid or invalid. After that attempt, each edit
 runs the complete form-level schema. `useForm` can override `mode`,
@@ -80,8 +78,9 @@ Omit the issue path when the user cannot fix the issue in one field:
 // [!include ~/snippets/validation-guide.tsx:form-issue]
 ```
 
-Use `kit.Form` and `kit.Fields` for manual composition. In that case, the
-application must render its own summary for form-level and hidden-field issues.
+Use `kit.Form` and `kit.Fields` for manual composition. A manually composed
+`kit.Form` has no summary. The application must render its own summary for
+form-level and hidden-field issues.
 
 ## Focus the first issue
 
@@ -90,29 +89,23 @@ including an application-owned field. Focus order follows RHF registration
 order.
 
 If no generated control can receive focus, `kit.AutoForm` focuses the first
-error-summary item. A manually composed `kit.Form` has no automatic summary
-fallback.
+error-summary item.
 
-Hidden fields keep their values and remain part of schema validation. A hidden
-field has no generated control, so its issue appears in the `kit.AutoForm`
-summary. The schema must match the form's visibility rules when a hidden value
-must not block submission.
+A custom control receives focus only when it attaches `input.ref`. Read
+[Accessibility](/accessibility) for the control contract.
 
-## Transformed output
-
-The internal RHF resolver validates and produces `FormOutput<Schema>` in one
-Standard Schema parse. Editable `FormInput<Schema>` remains in RHF state;
-transformed output is passed only to a successful submit callback. No custom
-validation cache is required.
+A hidden field has no generated control, so `kit.AutoForm` shows its issue in
+the summary. See [Hidden fields keep their
+values](/how-it-works#hidden-fields-keep-their-values).
 
 ## Submit input and output
 
-`onSubmit` receives four values:
+The schema parses once, and the same parse gives the transformed output. See
+[The schema parses once on
+submit](/how-it-works#the-schema-parses-once-on-submit).
 
-- `value` is the transformed `FormOutput<Schema>`.
-- `input` is the editable `FormInput<Schema>`.
-- `form` is the current form binding.
-- `submitter` is the captured submit control `name` and `value`, or `null`.
+`onSubmit` receives `value`, `input`, `form`, and `submitter`. See [`onSubmit`
+receives four values](/how-it-works#onsubmit-receives-four-values).
 
 This example sends the transformed `value` to the server. It resets the editable
 baseline with `input` after a successful request.
@@ -121,31 +114,21 @@ baseline with `input` after a successful request.
 // [!include ~/snippets/validation-guide.tsx:submission]
 ```
 
-`submitter` is captured before validation. It is not a live DOM element and it
-does not contain request metadata. `onSubmit` can return a promise.
-`form.api.formState.isSubmitting` remains true until the promise settles.
-`kit.Submit` is disabled while the form validates or submits.
-
 Use `FormSubmitDetails<Schema, Context>` from `form-please` to type an extracted
 submit handler without repeating the `{ value, input, form, submitter }` object
 shape.
 Read [Product workflows](/workflows#understand-submitter) for multiple submit
 actions and the complete snapshot contract.
 
-Server validation is still required. A request failure is not a Standard Schema
-issue and does not appear in the form summary. Store and render request failures
-in application state, as the example does.
+The example keeps request failures in application state. See [Server issues
+are not schema issues](/how-it-works#server-issues-are-not-schema-issues).
 
-## Set default Zod messages
+## Translate validation messages
 
-"Form, Please" displays the messages that the Standard Schema returns. Configure
-Zod once, before form validation runs, when the application needs global
-defaults:
+To translate the Zod, Valibot, or Yup messages, read
+[Localization](/localization#translate-validation-messages).
 
-```ts twoslash
-// [!include ~/snippets/zod-error-messages.ts]
-```
+## Next steps
 
-Return `undefined` for issue types that must use the Zod default. A schema-level
-message has priority over `customError`. Do not call `z.config()` during a
-component render because it changes global Zod configuration.
+- [Show a field only when a condition is true](/conditional-fields)
+- [Build a multi-step form](/workflows)

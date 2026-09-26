@@ -7,8 +7,9 @@ showAskAi: false
 # Form persistence
 
 Import `createPersistenceMiddleware` from `form-please/persistence` when a form
-needs a durable editable draft. React Hook Form still owns the live values and
-form state. Persistence stores only the complete schema input.
+needs a durable editable draft. React Hook Form (RHF) still owns the live values and
+form state, as [Ownership](/how-it-works#ownership) describes. Persistence
+stores only the complete schema input.
 
 ## Configure and restore
 
@@ -94,7 +95,7 @@ type FormPersistenceAdapter = {
 }
 ```
 
-Form Please owns the JSON-safe envelope. The application owns storage,
+Form, Please owns the JSON-safe envelope. The application owns storage,
 authentication, authorization, request cancellation, and retention.
 
 ### Query string with nuqs
@@ -121,7 +122,7 @@ request functions remain application-owned.
 ## Version and encode drafts
 
 Each stored envelope contains the persistence protocol version, the application
-`version`, and the encoded payload. Increase `version` when the editable input
+`version`, and the encoded payload. Increase `version` when the schema input
 shape changes. Supply `migrate(value, fromVersion, toVersion)` to convert the
 decoded old value. A successful migration is immediately rewritten in the
 current envelope.
@@ -140,3 +141,8 @@ One form accepts one persistence feature. The feature does not synchronize
 multiple tabs or forms, save on page unload, retain RHF metadata, or persist
 managed history. The adapter can add cross-client coordination when the product
 requires it.
+
+## Next steps
+
+- [Add undo and redo](/history)
+- [Save a draft in the query string](/examples/persistence)

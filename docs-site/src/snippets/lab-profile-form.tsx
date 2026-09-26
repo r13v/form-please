@@ -1,10 +1,9 @@
 // @jsx: react-jsx
 "use client"
 
-import { createFormKit, type FormInput, type FormOutput } from "form-please"
+import { createFormKit, type FormInput } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
-import { useState } from "react"
 import { z } from "zod"
 
 const profileSchema = z
@@ -49,8 +48,7 @@ const profileSchema = z
 		contactCount: value.contacts.length,
 	}))
 
-export type ProfileInput = FormInput<typeof profileSchema>
-export type ProfileOutput = FormOutput<typeof profileSchema>
+type ProfileInput = FormInput<typeof profileSchema>
 
 export const defaultValues = {
 	name: "Ada Lovelace",
@@ -175,22 +173,3 @@ export const profileDefinition = kit.defineForm(profileSchema, (ui) => [
 	}),
 	// [!endregion array-node]
 ])
-
-export function ProfileForm() {
-	const [saved, setSaved] = useState<ProfileOutput>()
-	const form = kit.useForm(profileDefinition, {
-		defaultValues,
-		onSubmit: ({ value }) => setSaved(value),
-	})
-	let output = "Submit the form to see typed output."
-	if (saved !== undefined) output = JSON.stringify(saved, null, 2)
-
-	return (
-		<>
-			<kit.AutoForm form={form}>
-				<kit.Submit>Save profile</kit.Submit>
-			</kit.AutoForm>
-			<pre aria-live="polite">{output}</pre>
-		</>
-	)
-}

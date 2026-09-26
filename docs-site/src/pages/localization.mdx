@@ -1,0 +1,113 @@
+---
+title: Localization
+description: Translate field labels, validation messages, and the array action labels of the default slots and the Material UI preset.
+showAskAi: false
+---
+
+# Localization
+
+Form, Please has no locale setting. Each part of the form gets its text from
+a different source:
+
+- Field labels and other definition text come from your definition. Read the
+  locale from the runtime `context`.
+- Validation messages come from the schema library. Configure its messages.
+- Array action labels and the file button label come from the slots and
+  controls of the form kit. Give the kit an `i18n` object.
+
+## Translate labels with context
+
+Put the locale in the kit context. A label function gets the `context` in its
+second argument. When you give `useForm` a new `context` object, Form, Please
+resolves the labels again. Memoize the object, so that it changes only when the
+locale changes.
+
+```tsx
+// [!include ~/snippets/localization-guide.tsx:context-labels]
+```
+
+A custom control gets the same `context` in its props, so it can read
+`context.locale`. Read [Resolver values](/definitions#resolver-values) for the
+arguments of property functions.
+
+## Translate validation messages
+
+Form, Please displays the messages that the Standard Schema returns. Configure
+the schema library once, before form validation runs. Do not configure it
+during a component render, because the configuration is global.
+
+A message that you give to one schema or one check has priority over the
+global messages.
+
+### Zod
+
+Load a Zod locale with `z.config()`. Add `customError` to replace the message of
+one issue type. Return `undefined` to use the locale message.
+
+```ts
+// [!include ~/snippets/localization-guide.tsx:zod-messages]
+```
+
+### Valibot
+
+Set the language with `setGlobalConfig`. Then set the messages for that
+language with `setGlobalMessage` and `setSpecificMessage`.
+
+```ts
+// [!include ~/snippets/localization-guide.tsx:valibot-messages]
+```
+
+### Yup
+
+Call `setLocale` before you create the schemas. Yup reads the default message
+when a schema method runs, so a schema created earlier keeps the old message.
+
+```ts
+// [!include ~/snippets/localization-guide.tsx:yup-messages]
+```
+
+## Translate the form kit labels
+
+The default slots and the Material UI preset use different `i18n` key names
+for the same actions. Their callbacks also get different arguments.
+
+| Label | `createDefaultSlots` key | `createMuiFormKit` key | English default |
+| --- | --- | --- | --- |
+| Append an array item | `arrayAdd` | `addItem` | Add item |
+| Remove an array item | `arrayRemove` | `removeItem` | Remove item 1 |
+| Move an array item up | `arrayMoveUp` | `moveItemUp` | Move item 1 up |
+| Move an array item down | `arrayMoveDown` | `moveItemDown` | Move item 1 down |
+| Choose a file | — | `chooseFile` | Choose file |
+
+- A `createDefaultSlots` value is a string or a callback. The `arrayAdd`
+  callback gets the array `label`. The item callbacks get the zero-based
+  `index` and the one-based `position`.
+- A `createMuiFormKit` value for an item action is a callback that gets the
+  one-based position as a number. `addItem` and `chooseFile` are strings.
+- All keys are optional. A missing key keeps the English default.
+
+### Default slots
+
+`nativeFormKit` uses the English default slots. To translate them, create the
+kit with `createFormKit`, `createNativeControls`, and `createDefaultSlots`.
+
+```tsx
+// [!include ~/snippets/localization-guide.tsx:default-slots-i18n]
+```
+
+Read [Default slots](/api#default-slots) for the i18n types.
+
+### Material UI preset
+
+Give `createMuiFormKit` an `i18n` object.
+
+```tsx
+// [!include ~/snippets/localization-guide.tsx:mui-i18n]
+```
+
+Read [Material UI preset](/api#material-ui-preset) for the preset options.
+
+## Next steps
+
+- [Make a custom control accessible](/accessibility)
+- [Fix a common problem](/troubleshooting)

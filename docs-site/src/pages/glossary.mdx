@@ -1,0 +1,51 @@
+---
+title: Glossary
+description: Find the meaning of the terms that the Form, Please docs use.
+showAskAi: false
+---
+
+# Glossary
+
+Each term on this page has one meaning in these docs. Each entry links to the
+section that explains the term.
+
+## Managed update
+
+A managed update is a value change that goes through the managed update hooks and value middleware.
+Generated controls, generated array actions, `form.update`, history, and
+persistence restore make managed updates. Direct `form.api` calls and resets do
+not. Read
+[Know which changes enter middleware](/middleware#know-which-changes-enter-middleware).
+
+## Proposal
+
+A proposal is the value change that a managed update suggests before it commits. Middleware
+can forward the proposal, add dependent patches, or cancel it. Read
+[Cancel a managed update](/middleware#cancel-a-managed-update).
+
+## Publication
+
+A publication is one value notification that React Hook Form (RHF) sends to its
+subscribers.
+Generated controls and `form.update` make one publication for each managed
+update. Read [Keep dependent values atomic](/recipes#keep-dependent-values-atomic).
+
+## React Hook Form (RHF)
+
+RHF is the form library that owns the live values, form state, and validation
+runs. Form, Please does not create another form store. Read
+[Ownership](/how-it-works#ownership).
+
+## Schema input
+
+The schema input is the value that the schema accepts before it parses. RHF stores the schema input,
+and each field path points into it. The schema output can be different when the
+schema transforms data. Read
+[Schema input and output](/types#schema-input-and-output).
+
+## Transaction
+
+A transaction is the `ValueTransaction` object that each middleware receives. It contains the
+previous values, the next values, the patches, the source, and the context of
+one proposal or of the final committed update. Read
+[Read a transaction](/middleware#read-a-transaction).
