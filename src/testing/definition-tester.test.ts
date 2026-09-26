@@ -107,6 +107,31 @@ const initialValues: Values = {
 }
 
 describe("createDefinitionTester", () => {
+	it("projects the node error display", () => {
+		const errorDefinition = kit.defineForm(schema, (ui) => [
+			ui.field("kind", { control: "text" }),
+			ui.field("taxId", {
+				control: "text",
+				errorDisplay: (values) => (values.kind === "company" ? "all" : "first"),
+			}),
+			ui.array("contacts", {
+				errorDisplay: "first",
+				itemDefault: { name: "" },
+				children: () => [],
+			}),
+		])
+		const tester = createDefinitionTester(errorDefinition, {
+			context: { canEdit: true, locale: "en" },
+			values: initialValues,
+		})
+
+		expect(tester.field("kind").errorDisplay).toBeUndefined()
+		expect(tester.field("taxId").errorDisplay).toBe("first")
+		expect(tester.array("contacts").errorDisplay).toBe("first")
+		tester.setValue("kind", "company")
+		expect(tester.field("taxId").errorDisplay).toBe("all")
+	})
+
 	it("inspects resolved definition behavior with strict selectors", () => {
 		const tester = createDefinitionTester(definition, {
 			context: { canEdit: true, locale: "en" },

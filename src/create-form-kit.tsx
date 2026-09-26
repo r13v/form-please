@@ -39,6 +39,7 @@ import {
 	type ResolvedDefinition,
 	type ResolvedFieldNode,
 	type ResolvedNode,
+	readErrorDisplay,
 	resolveDefinition,
 	resolveHiddenFieldWrites,
 } from "./definition.js"
@@ -64,6 +65,7 @@ import type {
 	ControlDefinitionRegistry,
 	ControlProps,
 	DeepReadonly,
+	ErrorDisplay,
 	FieldSlotProps,
 	FormDefinition,
 	FormDefinitionBuilder,
@@ -152,6 +154,8 @@ export type UseFormOptions<
 	readonly delayError?: number
 	/** Whether all generated controls reject user interaction. */
 	readonly disabled?: boolean
+	/** Overrides the kit error display for this form. */
+	readonly errorDisplay?: ErrorDisplay
 	/** The React Hook Form validation mode. */
 	readonly mode?: Mode
 	/** Whether all generated controls prevent value changes. */
@@ -237,6 +241,8 @@ type RuntimeForm = {
 	readonly disabled: boolean
 	/** Whether all generated controls are read-only. */
 	readonly readOnly: boolean
+	/** The error display used by nodes without their own value. */
+	readonly errorDisplay: ErrorDisplay
 	/** Focusable generated inputs indexed by absolute path. */
 	readonly inputRefs: Map<string, HTMLElement>
 	/** The first summary issue used as a focus fallback. */
@@ -503,6 +509,8 @@ export type CreateFormKitOptions<
 	readonly slots: FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
 	/** Allowed grid column counts and spans. Defaults to `1` through `4`. */
 	readonly grid?: readonly Grid[]
+	/** How many validation messages each field and array shows. Defaults to `"all"`. */
+	readonly errorDisplay?: ErrorDisplay
 }
 
 /** Provides private form runtime data to generated components. */
@@ -553,11 +561,14 @@ export function createFormKit<
 	>
 	assertSlots(options.slots)
 	const grid = normalizeGrid(options.grid, "createFormKit")
+	const errorDisplay =
+		readErrorDisplay(options.errorDisplay, "createFormKit") ?? "all"
 
 	return assembleKit(
 		controls,
 		slots as unknown as RuntimeSlots,
 		grid,
+		errorDisplay,
 	) as unknown as FormKit<
 		Controls,
 		FieldOptions,
@@ -573,6 +584,7 @@ function assembleKit(
 	controls: ControlDefinitionRegistry,
 	slots: RuntimeSlots,
 	grid: readonly number[],
+	kitErrorDisplay: ErrorDisplay,
 ): FormKit<
 	ControlDefinitionRegistry,
 	unknown,
@@ -738,6 +750,8 @@ function assembleKit(
 				diagnosticTarget,
 				disabled: options.disabled === true,
 				dispatch: coordinator.dispatch,
+				errorDisplay:
+					readErrorDisplay(options.errorDisplay, "useForm") ?? kitErrorDisplay,
 				errorSummaryRef,
 				formElement: null,
 				inputRefs: inputRefs.current,
@@ -756,6 +770,7 @@ function assembleKit(
 			fixedDefinition,
 			options.context,
 			options.disabled,
+			options.errorDisplay,
 			options.onSubmit,
 			options.readOnly,
 		])
@@ -1114,6 +1129,7 @@ function GeneratedField({
 		path,
 		inputId,
 		showErrors,
+		node.errorDisplay ?? form.errorDisplay,
 	)
 	const describedBy = useMemo(
 		() => joinIds([descriptionId, ...errorIds]),
@@ -1280,6 +1296,7 @@ function GeneratedArray({
 		path,
 		arrayId,
 		showErrors,
+		node.errorDisplay ?? form.errorDisplay,
 	)
 	const canAdd = !node.disabled && !node.readOnly
 	return useMemo(
@@ -1412,16 +1429,17 @@ function useGeneratedIssues(
 	path: string,
 	id: string,
 	showErrors: boolean,
+	errorDisplay: ErrorDisplay,
 ): {
 	readonly errors: readonly FormIssue[]
 	readonly displayErrors: readonly FormIssue[]
 	readonly errorIds: readonly string[]
 } {
 	const errors = useMemo(() => fieldErrorToIssues(error, path), [error, path])
-	const displayErrors = useMemo(
-		() => (showErrors ? errors : []),
-		[errors, showErrors],
-	)
+	const displayErrors = useMemo(() => {
+		if (!showErrors) return []
+		return errorDisplay === "first" ? errors.slice(0, 1) : errors
+	}, [errorDisplay, errors, showErrors])
 	const errorIds = useMemo(
 		() => displayErrors.map((_issue, index) => `${id}-error-${index}`),
 		[displayErrors, id],

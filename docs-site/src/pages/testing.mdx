@@ -36,6 +36,10 @@ layout, visibility, and interaction flags. They deliberately omit resolver
 callbacks, context objects, render components, option trackers, and private
 resolved nodes.
 
+Field and array snapshots include the node `errorDisplay`. The value is
+`undefined` when the node does not set it. The tester does not read the
+`errorDisplay` of the kit or `useForm`.
+
 ## Include the definition's managed-update policy
 
 Configure hooks and middleware once in `kit.defineForm`. The tester uses that

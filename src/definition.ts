@@ -2,6 +2,7 @@ import type { FieldValues } from "react-hook-form"
 
 import type {
 	ControlDefinitionRegistry,
+	ErrorDisplay,
 	FormDefinition,
 	FormInput,
 	NormalizedNode,
@@ -132,6 +133,8 @@ export type ResolvedFieldNode = ResolvedNodeBase<"field"> & {
 	readonly optionValues: unknown
 	/** Whether the definition marks the field as required. */
 	readonly required: boolean
+	/** The field error display, when the definition supplies one. */
+	readonly errorDisplay: ErrorDisplay | undefined
 }
 
 /** A resolved section node ready for structural rendering. */
@@ -160,6 +163,8 @@ export type ResolvedArrayNode = ResolvedNodeBase<"array"> & {
 	readonly description: ReactUiContent | undefined
 	/** The resolved array-slot configuration. */
 	readonly slotOptions: unknown
+	/** The array error display, when the definition supplies one. */
+	readonly errorDisplay: ErrorDisplay | undefined
 	/** Resolved child nodes for each current array item. */
 	readonly itemChildren: readonly (readonly ResolvedNode[])[]
 }
@@ -482,6 +487,15 @@ function normalizeNodes(
 		if (kind === "array" && !("itemDefault" in candidate)) {
 			throw new TypeError(`Array "${path}" requires itemDefault`)
 		}
+		if (
+			(kind === "field" || kind === "array") &&
+			typeof candidate.errorDisplay !== "function"
+		) {
+			readErrorDisplay(
+				candidate.errorDisplay,
+				`${kind === "field" ? "Field" : "Array"} "${path}"`,
+			)
+		}
 
 		const fallbackId =
 			path === undefined ? `${kind}:${state.nodes.length}` : `${kind}:${path}`
@@ -702,6 +716,15 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 							pathPrefix,
 							context,
 						),
+						errorDisplay: readErrorDisplay(
+							resolveOptional(
+								node.errorDisplay,
+								resolverValues,
+								pathPrefix,
+								context,
+							),
+							`Field "${path}"`,
+						),
 						options: node.options,
 						optionValues:
 							typeof node.options === "function" ? resolverValues : undefined,
@@ -789,6 +812,15 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 							resolverValues,
 							pathPrefix,
 							context,
+						),
+						errorDisplay: readErrorDisplay(
+							resolveOptional(
+								node.errorDisplay,
+								resolverValues,
+								pathPrefix,
+								context,
+							),
+							`Array "${path}"`,
 						),
 						itemChildren,
 					})
@@ -953,6 +985,17 @@ function readWhenHidden(
 	throw new TypeError(
 		`Field "${path}" whenHidden must be "keep", "reset", or an object with a value property`,
 	)
+}
+
+/** Validates one static or resolved error display. */
+export function readErrorDisplay(
+	value: unknown,
+	owner: string,
+): ErrorDisplay | undefined {
+	if (value === undefined || value === "all" || value === "first") {
+		return value
+	}
+	throw new TypeError(`${owner} errorDisplay must be "all" or "first"`)
 }
 
 /** Reuses a frozen resolved list when each item retains its reference. */

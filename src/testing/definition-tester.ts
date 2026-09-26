@@ -21,6 +21,7 @@ import type {
 	ControlOptionOf,
 	ControlOwnPropsOf,
 	DeepReadonly,
+	ErrorDisplay,
 	FieldPath,
 	FormDefinition,
 	FormInput,
@@ -139,6 +140,8 @@ export type DefinitionFieldSnapshot<Definition extends FormDefinition> =
 		>
 		/** The resolved supporting content. */
 		readonly description: ReactUiContent | undefined
+		/** The field error display, or `undefined` when the form or kit value applies. */
+		readonly errorDisplay: ErrorDisplay | undefined
 		/** The resolved field label. */
 		readonly label: ReactUiContent | undefined
 		/** The absolute React Hook Form field path. */
@@ -177,6 +180,8 @@ export type DefinitionArraySnapshot<Definition extends FormDefinition> =
 	DefinitionNodeSnapshotBase<"array"> & {
 		/** The resolved supporting content. */
 		readonly description: ReactUiContent | undefined
+		/** The array error display, or `undefined` when the form or kit value applies. */
+		readonly errorDisplay: ErrorDisplay | undefined
 		/** The item value or factory used by generated append actions. */
 		readonly itemDefault: unknown
 		/** The resolved array label. */
@@ -666,6 +671,7 @@ function snapshotNode<Definition extends FormDefinition>(
 				...common,
 				control: node.control,
 				description: node.description,
+				errorDisplay: node.errorDisplay,
 				kind: "field",
 				label: node.label,
 				path: node.path,
@@ -686,6 +692,7 @@ function snapshotNode<Definition extends FormDefinition>(
 			return Object.freeze({
 				...common,
 				description: node.description,
+				errorDisplay: node.errorDisplay,
 				itemDefault: node.itemDefault,
 				kind: "array",
 				label: node.label,
