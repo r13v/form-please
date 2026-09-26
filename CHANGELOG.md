@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/r13v/form-please/compare/v1.7.0...v1.7.1) (2026-09-26)
+
+
+### Performance Improvements
+
+* **types:** accept only helper-created nodes in builder lists ([#30](https://github.com/r13v/form-please/issues/30)) ([f22afb7](https://github.com/r13v/form-please/commit/f22afb721ed3873b5d27527f797f0a291e6fdd8e))
+
 ## [1.7.0](https://github.com/r13v/form-please/compare/v1.6.0...v1.7.0) (2026-09-26)
 
 
