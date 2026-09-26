@@ -110,6 +110,39 @@ test.describe("Form, Please documentation", () => {
 		expect(errors).toEqual([])
 	})
 
+	test("opens the matching page from the first search result", async ({
+		page,
+	}) => {
+		const errors = pageErrors(page)
+		await page.goto("./get-started")
+
+		for (const [query, url, heading] of [
+			[
+				"localization",
+				/\/form-please\/localization(#localization)?$/,
+				"Localization",
+			],
+			[
+				"troubleshooting",
+				/\/form-please\/troubleshooting(#troubleshooting)?$/,
+				"Troubleshooting",
+			],
+		] as const) {
+			await page.getByRole("button", { name: /^Search\.\.\./ }).click()
+			await page.getByRole("combobox").fill(query)
+			await page
+				.getByRole("listbox", { name: "Search results" })
+				.getByRole("option")
+				.first()
+				.click()
+			await expect(page).toHaveURL(url)
+			await expect(
+				page.getByRole("heading", { level: 1, name: heading }),
+			).toBeVisible()
+		}
+		expect(errors).toEqual([])
+	})
+
 	test("runs query string persistence through reload and clear", async ({
 		page,
 	}) => {

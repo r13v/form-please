@@ -442,12 +442,12 @@ Found by the I05 verifier. Recheck with `rg` before you edit.
 - Modify: all guide pages in the Learn, Build, and Advanced groups
 - Modify: `tests/browser/docs-site.spec.ts`
 
-- [ ] rewrite the benefit cards at `index.mdx:98-131` as task cards ("Validate with Valibot", "Use my design system", "Save a draft", "Build a multi-step form" → `/workflows`); do not add a second card grid
-- [ ] end each guide with a `## Next steps` section that has one or two task links
-- [ ] set `searchPriority` in the frontmatter: higher on Get started, How it works, Definitions, Validation, and Troubleshooting; lower on the complex examples
-- [ ] add an e2e test: search for "localization" and "troubleshooting", and the first result opens the matching page
-- [ ] the anchor gate covers the new links; add no "section exists" tests
-- [ ] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 13
+- [x] rewrite the benefit cards at `index.mdx:98-131` as task cards ("Validate with Valibot", "Use my design system", "Save a draft", "Build a multi-step form" → `/workflows`); do not add a second card grid (the section is now "Start from a task" with six task cards; the CSS class is `form-please-tasks`)
+- [x] end each guide with a `## Next steps` section that has one or two task links (17 guides; Get started's "Try more features" became its Next steps, and the History closing link moved into its list)
+- [x] set `searchPriority` in the frontmatter: higher on Get started, How it works, Definitions, Validation, and Troubleshooting; lower on the complex examples (2 on the five core pages, 0.5 on the six complex examples; the Vocs default is 1)
+- [x] add an e2e test: search for "localization" and "troubleshooting", and the first result opens the matching page (the first result is the page-top section, so the URL may end with the page's own `#slug`)
+- [x] the anchor gate covers the new links; add no "section exists" tests
+- [x] run `npm run site:verify:preview`, `npm run check`, and `npm run knip`; all must pass before Task 13
 
 ### Task 13: Add the glossary and control the terms (I17)
 
