@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/r13v/form-please/compare/v1.6.0...v1.7.0) (2026-09-26)
+
+
+### Features
+
+* add a native radio control and document form variants ([#28](https://github.com/r13v/form-please/issues/28)) ([7aa1a39](https://github.com/r13v/form-please/commit/7aa1a39cedec7d56a108a452b21e346d714d0713))
+
 ## [1.6.0](https://github.com/r13v/form-please/compare/v1.5.0...v1.6.0) (2026-08-18)
 
 
