@@ -38,10 +38,11 @@ A field node accepts an optional `whenHidden` property:
 ```ts
 type WhenHidden<Value> = "keep" | "reset" | { readonly value: Value }
 
-readonly whenHidden?: Resolvable<WhenHidden<PathValue<Scope, Path>>, Root, Context>
+readonly whenHidden?: Resolvable<WhenHidden<PathValue<Scope, Path>> | undefined, Root, Context>
 ```
 
-- `"keep"` is the default. The field keeps its value.
+- `"keep"` is the default. The field keeps its value. A resolver that returns
+  `undefined` also keeps the value, so a missing branch cannot remove data.
 - `"reset"` writes the value at the same path in the initial form values. When
   that path is absent, the field receives `undefined`. A field in an array
   item that is absent from the initial values has no initial value, so

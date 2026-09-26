@@ -65,8 +65,10 @@ function defineTestForm(seen: ValueTransaction<Values, Context>[] = []) {
 			ui.field("status", {
 				control: "text",
 				visible: (values) => values.accountType === "company",
-				whenHidden: (_values, { context }) =>
-					context.mode === "create" ? { value: "reset" } : "keep",
+				whenHidden: (_values, { context }) => {
+					if (context.mode !== "create") return
+					return { value: "reset" }
+				},
 			}),
 			ui.field("internalNote", {
 				control: "text",
@@ -131,7 +133,7 @@ describe("whenHidden", () => {
 		expect(seen[0]?.nextValues).toEqual(tester.values)
 	})
 
-	it("resolves the action with the transaction context", () => {
+	it("keeps the value when the resolver returns undefined", () => {
 		const { tester } = createTester("edit")
 		tester.setValue("status", "active")
 

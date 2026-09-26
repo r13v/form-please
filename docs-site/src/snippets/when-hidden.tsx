@@ -65,8 +65,8 @@ const editorDefinition = editorKit.defineForm(accountSchema, (ui) => [
 		label: "Company name",
 		visible: (values) => values.accountType === "company",
 		whenHidden: (_values, { context }) => {
-			if (context.mode === "create") return "reset"
-			return "keep"
+			if (context.mode !== "create") return
+			return "reset"
 		},
 	}),
 ])

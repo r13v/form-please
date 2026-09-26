@@ -945,6 +945,7 @@ function readWhenHidden(
 	value: unknown,
 	path: string,
 ): "keep" | "reset" | { readonly value: unknown } {
+	if (value === undefined) return "keep"
 	if (value === "keep" || value === "reset") return value
 	if (isRecord(value) && Object.hasOwn(value, "value")) {
 		return value as { readonly value: unknown }

@@ -210,8 +210,9 @@ the edit and the runtime context:
 // [!include ~/snippets/when-hidden.tsx:context-resolver]
 ```
 
-Do not repeat the `visible` condition in this resolver. The form calls it only
-when the field becomes hidden.
+A resolver that returns `undefined` keeps the value. Do not repeat the
+`visible` condition in this resolver. The form calls it only when the field
+becomes hidden.
 
 The form applies `whenHidden` in the same managed update as the edit. Value
 middleware, history, and persistence receive one transaction. One undo

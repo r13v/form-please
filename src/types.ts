@@ -419,7 +419,7 @@ type FieldNodeForPath<
 	readonly path: Path
 	/** Keeps, resets, or replaces the value when a managed update hides the field. */
 	readonly whenHidden?: Resolvable<
-		WhenHidden<PathValue<Scope, Path>>,
+		WhenHidden<PathValue<Scope, Path>> | undefined,
 		Root,
 		Context
 	>
