@@ -148,6 +148,10 @@ export default defineConfig({
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
 				{ text: "Recipes", link: "/recipes" },
+				{
+					text: "Migrate from React Hook Form",
+					link: "/migrate-from-react-hook-form",
+				},
 				{ text: "Product workflows", link: "/workflows" },
 				{ text: "Persistence", link: "/persistence" },
 				{ text: "History", link: "/history" },

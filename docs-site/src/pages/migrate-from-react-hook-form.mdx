@@ -1,0 +1,146 @@
+---
+title: Migrate from React Hook Form
+description: Move an application from React Hook Form (RHF) to Form, Please one form at a time, and move a large form in steps.
+showAskAi: false
+---
+
+import { MigrationDemo } from "../components/migration-demo"
+
+# Migrate from React Hook Form (RHF)
+
+An application with many RHF forms cannot stop feature work
+for a migration. Migrate one form at a time. RHF forms and Form, Please forms
+work in the same application, and they need no shared setup.
+
+## Rewrite one form
+
+Most forms fit in one pull request. Keep the schema and the default values.
+Replace the markup with a definition. Before you start, read [Behavior
+changes](#behavior-changes).
+
+This support ticket form uses RHF, `zodResolver`, and one Zod schema:
+
+```ts twoslash
+// [!include ~/snippets/migration-schema.ts]
+```
+
+The two tabs show the same form before and after the rewrite:
+
+:::code-group
+
+```tsx twoslash [React Hook Form]
+// [!include ~/snippets/migration-before.tsx]
+```
+
+```tsx twoslash [Form, Please]
+// [!include ~/snippets/migration-after.tsx]
+```
+
+:::
+
+The rewrite moves each part of the RHF form to one place:
+
+| React Hook Form | Form, Please |
+| --- | --- |
+| `resolver: zodResolver(ticketSchema)` | The schema argument of `kit.defineForm` |
+| A label, an input, and an issue element for each field | One `ui.field` node. The kit renders the label, the issue, `aria-invalid`, and `aria-describedby`. |
+| `defaultValues` | The same `defaultValues` in `kit.useForm` |
+| `handleSubmit(callback)` | The `onSubmit` option. `value` is the schema output. |
+| `<form noValidate>` | `kit.AutoForm`, which sets `noValidate` |
+
+## Compare the result
+
+Switch between the two versions. Submit each form empty, and then submit valid
+values. Both versions show the same schema issues and the same output.
+
+<MigrationDemo />
+
+## Why migrate one form at a time
+
+Each form has its own form binding. You can review, merge, and release each
+rewritten form alone. The other forms of the application do not change.
+
+The rewritten form has no field markup. The type checker verifies each path
+against the schema, and the kit supplies the accessible markup. The kit wraps
+each design-system control one time, so the next form costs less.
+
+Write a test for the RHF form before the rewrite. Find the controls by their
+labels, and check the issues and the submit output. The same test must pass
+after the rewrite without changes:
+
+```tsx
+// [!include ~/snippets/migration-test.tsx:contract]
+```
+
+## Advanced use
+
+### Migrate a large form in steps
+
+Use steps when a form is too large for one pull request, or when other people
+change the form at the same time. `kit.useForm` creates its own RHF instance,
+so the first step replaces the owner of the form state. The next steps move
+the fields.
+
+1. Move all validation into the schema. RHF does not apply `register` rules,
+   such as `required` and `validate`, when the form has a resolver. Do this
+   step in RHF, before you use Form, Please.
+2. Replace the owner. Call `kit.useForm` with an empty definition:
+
+   ```tsx
+   const ticketDefinition = kit.defineForm(ticketSchema, () => [])
+   ```
+
+   Replace `<form>` with `kit.Form`, and move the `handleSubmit` callback to
+   `onSubmit`. Get `register` and `formState` from `form.api`. `form.api` is
+   the unchanged RHF `UseFormReturn`, and `kit.Form` supplies RHF
+   `FormProvider`, so the existing field markup continues to work. This step
+   changes the form behavior, not its markup. Release it alone.
+3. Move the fields into the definition. Move one field or one section, and
+   then delete its markup. `kit.Fields` renders all generated fields in one
+   place. Move the fields in visual order from the top, and keep the other
+   markup after `kit.Fields`.
+4. Optional: replace each `useEffect` that calls `setValue` for a dependent
+   value with `beforeUpdate`. Read [Value middleware](/middleware).
+
+This form is at step 3. The name and email fields moved. The topic and message
+fields still use RHF markup:
+
+```tsx
+// [!include ~/snippets/migration-adopt.tsx:in-progress]
+```
+
+The test from [Why migrate one form at a time](#why-migrate-one-form-at-a-time)
+passes for this version too. Each field that stays outside the definition
+supplies its own label, issue output, and focus behavior. Read [You keep the
+React Hook Form API](/how-it-works#you-keep-the-react-hook-form-api).
+
+### Wrap custom controls first
+
+A form that uses design-system controls needs those controls in the kit.
+Register each control with `defineControl` one time. Start with the controls
+that the first form uses, and add other controls when the next forms need
+them. Read [Form kits](/form-kits).
+
+## Reference
+
+### Behavior changes
+
+| React Hook Form code | In Form, Please |
+| --- | --- |
+| `useForm({ resolver })` | The definition schema is the only resolver. Pass a Standard Schema, not a resolver. |
+| `register` rules, such as `required` and `validate` | Not applied, because the form has a resolver. Put the rules in the schema. |
+| Async `defaultValues` or the `values` option | Not available. `defaultValues` is a required, complete, and synchronous schema input. Mount the form after the data loads. Read [Load an edit-form baseline](/recipes#load-an-edit-form-baseline). |
+| `shouldUnregister: true` | Not available. Form, Please sets `shouldUnregister: false`, so [hidden fields keep their values](/how-it-works#hidden-fields-keep-their-values). |
+| `criteriaMode` | Set to `"all"`. |
+| `mode`, `reValidateMode`, and `delayError` | The same options on `kit.useForm`. |
+| Other `useForm` options | Not available. See [`useForm`](/api#useform) for the complete list. |
+| `handleSubmit(onValid)` | The `onSubmit` option. A direct `form.api.handleSubmit` call does not call `onSubmit`. |
+| `<form noValidate>` | `kit.Form` sets `noValidate`. |
+| `FormProvider` | `kit.Form` supplies it. |
+| `useEffect` and `setValue` for a dependent value | `beforeUpdate` in the definition. |
+| `useFieldArray` | `ui.array` for generated arrays. Raw `useFieldArray` calls on `form.api.control` still work and do not run value middleware. |
+
+## Next steps
+
+- [Wrap your design-system controls in a kit](/form-kits)
+- [Keep a total in sync with `beforeUpdate`](/middleware)

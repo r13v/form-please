@@ -115,6 +115,13 @@ components inside the same `kit.Form`.
 A second binding creates a second state owner. Changes, validation state, and
 submission state do not automatically synchronize between two bindings.
 
+### Can I migrate an existing React Hook Form app?
+
+Yes. Migrate one form at a time. RHF forms and Form, Please forms work in the
+same application. A large form can move in steps, because `form.api` keeps the
+existing RHF field code working. Read [Migrate from React Hook
+Form](/migrate-from-react-hook-form).
+
 ### What happens after an invalid submit?
 
 RHF focuses the first registered invalid field. Read [Focus the first
