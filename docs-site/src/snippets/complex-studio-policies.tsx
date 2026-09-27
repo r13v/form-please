@@ -21,26 +21,54 @@ import { z } from "zod"
 
 import { type QueryResourceState, queryToResource } from "./query-to-resource"
 
+const currency = z.enum(["USD", "EUR", "GBP"])
+
 const studioPolicySchema = z
 	.object({
 		access: z.object({
-			earlyEnabled: z.boolean(),
-			earlyFrom: z.string().optional(),
-			earlyFee: z.number().min(0).optional(),
-			lateEnabled: z.boolean(),
-			lateUntil: z.string().optional(),
-			lateFee: z.number().min(0).optional(),
+			early: z.discriminatedUnion("enabled", [
+				z.object({ enabled: z.literal(false) }),
+				z.object({
+					enabled: z.literal(true),
+					from: z.string().min(1, "Set the earliest access time").prefault(""),
+					fee: z.number().min(0).optional(),
+				}),
+			]),
+			late: z.discriminatedUnion("enabled", [
+				z.object({ enabled: z.literal(false) }),
+				z.object({
+					enabled: z.literal(true),
+					until: z
+						.string()
+						.min(1, "Set the latest departure time")
+						.prefault(""),
+					fee: z.number().min(0).optional(),
+				}),
+			]),
 		}),
-		safeguard: z.object({
-			depositRequired: z.boolean(),
-			amount: z.number().min(0).optional(),
-			currency: z.enum(["USD", "EUR", "GBP"]),
-		}),
-		youth: z.object({
-			policy: z.enum(["all-ages", "sixteen-plus", "adults-only"]),
-			guardianRequired: z.boolean(),
-			quietHours: z.string().optional(),
-		}),
+		safeguard: z.discriminatedUnion("depositRequired", [
+			z.object({ depositRequired: z.literal(false), currency }),
+			z.object({
+				depositRequired: z.literal(true),
+				amount: z.number().min(50, "Deposits start at 50").prefault(0),
+				currency,
+			}),
+		]),
+		youth: z.discriminatedUnion("policy", [
+			z.object({
+				policy: z.literal("all-ages"),
+				guardianRequired: z.literal(
+					true,
+					"All-ages sessions require a guardian policy",
+				),
+				quietHours: z.string().optional(),
+			}),
+			z.object({
+				policy: z.enum(["sixteen-plus", "adults-only"]),
+				guardianRequired: z.boolean(),
+				quietHours: z.string().optional(),
+			}),
+		]),
 		equipment: z
 			.array(
 				z.object({
@@ -54,54 +82,21 @@ const studioPolicySchema = z
 			allowed: z.boolean(),
 			cateringNoticeHours: z.number().int().min(0).optional(),
 		}),
-		connectivity: z.object({
-			mode: z.enum(["included", "request", "offline"]),
-			minimumMbps: z.number().int().min(1).optional(),
-		}),
+		connectivity: z.discriminatedUnion("mode", [
+			z.object({
+				mode: z.literal("included"),
+				minimumMbps: z
+					.number()
+					.int()
+					.min(25, "Published connectivity must be at least 25 Mbps")
+					.prefault(0),
+			}),
+			z.object({ mode: z.enum(["request", "offline"]) }),
+		]),
 		animals: z.object({
 			policy: z.enum(["assistance-only", "approval", "not-allowed"]),
 			notes: z.string().optional(),
 		}),
-	})
-	.superRefine((value, context) => {
-		if (value.access.earlyEnabled && value.access.earlyFrom === undefined) {
-			context.addIssue({
-				code: "custom",
-				path: ["access", "earlyFrom"],
-				message: "Set the earliest access time",
-			})
-		}
-		if (value.access.lateEnabled && value.access.lateUntil === undefined) {
-			context.addIssue({
-				code: "custom",
-				path: ["access", "lateUntil"],
-				message: "Set the latest departure time",
-			})
-		}
-		if (value.safeguard.depositRequired && (value.safeguard.amount ?? 0) < 50) {
-			context.addIssue({
-				code: "custom",
-				path: ["safeguard", "amount"],
-				message: "Deposits start at 50",
-			})
-		}
-		if (value.youth.policy === "all-ages" && !value.youth.guardianRequired) {
-			context.addIssue({
-				code: "custom",
-				path: ["youth", "guardianRequired"],
-				message: "All-ages sessions require a guardian policy",
-			})
-		}
-		if (
-			value.connectivity.mode === "included" &&
-			(value.connectivity.minimumMbps ?? 0) < 25
-		) {
-			context.addIssue({
-				code: "custom",
-				path: ["connectivity", "minimumMbps"],
-				message: "Published connectivity must be at least 25 Mbps",
-			})
-		}
 	})
 	.transform((value) => ({
 		...value,
@@ -122,12 +117,8 @@ type PolicyContext = {
 
 const baseline = {
 	access: {
-		earlyEnabled: true,
-		earlyFrom: "08:00",
-		earlyFee: 35,
-		lateEnabled: false,
-		lateUntil: undefined,
-		lateFee: undefined,
+		early: { enabled: true, from: "08:00", fee: 35 },
+		late: { enabled: false },
 	},
 	safeguard: { depositRequired: true, amount: 300, currency: "USD" },
 	youth: {
@@ -170,36 +161,36 @@ const policyDefinition = contextualKit.defineForm(studioPolicySchema, (ui) => [
 		description: "Opening exceptions carry their own times and fees.",
 		columns: 2,
 		children: [
-			ui.field("access.earlyEnabled", {
+			ui.field("access.early.enabled", {
 				control: "checkbox",
 				label: "Allow early access",
 			}),
-			ui.field("access.earlyFrom", {
+			ui.field("access.early.from", {
 				control: "time",
 				label: "Earliest arrival",
-				visible: (values) => values.access.earlyEnabled,
+				visible: (values) => values.access.early.enabled,
 				props: { step: 900 },
 			}),
-			ui.field("access.earlyFee", {
+			ui.field("access.early.fee", {
 				control: "number",
 				label: "Early access fee",
-				visible: (values) => values.access.earlyEnabled,
+				visible: (values) => values.access.early.enabled,
 				props: { min: 0, step: 5 },
 			}),
-			ui.field("access.lateEnabled", {
+			ui.field("access.late.enabled", {
 				control: "checkbox",
 				label: "Allow late departure",
 			}),
-			ui.field("access.lateUntil", {
+			ui.field("access.late.until", {
 				control: "time",
 				label: "Latest departure",
-				visible: (values) => values.access.lateEnabled,
+				visible: (values) => values.access.late.enabled,
 				props: { step: 900 },
 			}),
-			ui.field("access.lateFee", {
+			ui.field("access.late.fee", {
 				control: "number",
 				label: "Late departure fee",
-				visible: (values) => values.access.lateEnabled,
+				visible: (values) => values.access.late.enabled,
 				props: { min: 0, step: 5 },
 			}),
 		],
@@ -415,7 +406,7 @@ function StudioPoliciesForm() {
 	}
 	const values = form.api.watch()
 	const accessOptions =
-		Number(values.access.earlyEnabled) + Number(values.access.lateEnabled)
+		Number(values.access.early.enabled) + Number(values.access.late.enabled)
 	const restrictedEquipment = values.equipment.filter(
 		(item) => item.mandatoryBriefing,
 	).length

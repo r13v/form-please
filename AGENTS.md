@@ -29,6 +29,12 @@ so that TypeScript infers their types. Do not use `satisfies`, explicit
 generic arguments, or standalone typed constants there. If a type annotation
 exists only because a snippet region splits the code, move the region boundary.
 
+In example schemas, model fields that exist only in one variant with
+`z.discriminatedUnion`. Put a checkbox and its dependent fields in one nested
+object, and use the checkbox as the discriminator. Use `.refine` with `path` for
+a rule that relates fields. Use `.superRefine` only when one rule adds more than
+one issue.
+
 Write prose in Simplified Technical English (STE) clarity mode: one term for
 one concept, active voice, and one instruction in each sentence.
 

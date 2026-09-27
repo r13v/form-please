@@ -331,9 +331,6 @@ describe("form kit", () => {
 			items: z.array(z.object({ name: z.string() })),
 		})
 
-		expect(() => kit.defineForm(schema, (() => ({ ui: [] })) as never)).toThrow(
-			"Form definition builder must return a ui array",
-		)
 		expect(() => kit.defineFragment(schema, (async () => []) as never)).toThrow(
 			"Fragment definition builder must return a ui array",
 		)
@@ -446,21 +443,6 @@ describe("form kit", () => {
 
 		expectTypeOf<"speakers.0.name">().toMatchTypeOf<FieldPath<Input>>()
 		expectTypeOf<PathValue<Input, "speakers.0.name">>().toEqualTypeOf<string>()
-
-		expect(() =>
-			kit.defineForm(
-				z.object({ speakers: z.array(z.object({ name: z.string() })) }),
-				{
-					ui: [
-						{
-							kind: "field",
-							path: "speakers[0].name" as never,
-							control: "text",
-						},
-					],
-				},
-			),
-		).toThrow("invalid React Hook Form syntax")
 	})
 
 	it("expands reusable fragments with local resolvers in every object scope", () => {

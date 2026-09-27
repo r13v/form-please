@@ -19,10 +19,13 @@ import { useMemo, useState } from "react"
 import { useWatch } from "react-hook-form"
 import { z } from "zod"
 
-const promotionSchema = z.object({
-	enabled: z.boolean(),
-	percent: z.number().min(1).max(90).optional(),
-})
+const promotionSchema = z.discriminatedUnion("enabled", [
+	z.object({ enabled: z.literal(false) }),
+	z.object({
+		enabled: z.literal(true),
+		percent: z.number("Set the active reduction").min(1).max(90),
+	}),
+])
 
 const launchSchema = z
 	.object({
@@ -80,16 +83,6 @@ const launchSchema = z
 		}),
 	})
 	.superRefine((value, context) => {
-		for (const [name, promotion] of Object.entries(value.promotions)) {
-			if (promotion.enabled && promotion.percent === undefined) {
-				context.addIssue({
-					code: "custom",
-					path: ["promotions", name, "percent"],
-					message: "Set the active reduction",
-				})
-			}
-		}
-
 		const sorted = [...value.capacityBands].sort(
 			(left, right) => left.people - right.people,
 		)
@@ -171,9 +164,9 @@ const defaultValues = {
 		"Use the east courtyard entrance and check in at the tool desk before entering the floor.",
 	promotions: {
 		launch: { enabled: true, percent: 20 },
-		student: { enabled: false, percent: undefined },
+		student: { enabled: false },
 		community: { enabled: true, percent: 15 },
-		offPeak: { enabled: false, percent: undefined },
+		offPeak: { enabled: false },
 	},
 } satisfies LaunchInput
 

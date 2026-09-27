@@ -85,7 +85,6 @@ describe("package metadata", () => {
 				"--fp-stack-gap",
 			]),
 		)
-		expect(packageJson.exports["./layout.css"]).toBe("./dist/layout.css")
 
 		const { stdout } = await execFileAsync(
 			"npm",

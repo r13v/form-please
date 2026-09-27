@@ -300,9 +300,10 @@ class HistoryState<Input extends FieldValues, Context> {
 		journal?: NormalizedJournal<Input>,
 	): Promise<HistoryOperationResult> {
 		const target = cloneFormValue(
-			journal?.entries[targetIndex] ?? this.#entries[targetIndex],
+			journal === undefined
+				? this.#entries[targetIndex]
+				: journal.entries[targetIndex],
 		)
-		if (target === undefined) return "unavailable"
 
 		const pending: PendingRestore<Input> = {
 			action,

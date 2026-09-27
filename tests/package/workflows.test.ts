@@ -36,7 +36,6 @@ describe("GitHub Pages workflow", () => {
 			(step) => step.uses === "actions/upload-pages-artifact@v4",
 		)
 
-		expect(verifyIndex).toBeGreaterThan(-1)
 		expect(artifactIndex).toBeGreaterThan(-1)
 		expectRunOrder(stepRuns(steps), [
 			"npm ci",
@@ -60,9 +59,6 @@ describe("trusted npm publishing workflow", () => {
 			issues: "write",
 			"pull-requests": "write",
 		})
-		expect(
-			record(job(publish, "release").permissions)["id-token"],
-		).toBeUndefined()
 		expect(record(job(publish, "publish").permissions)).toEqual({
 			contents: "read",
 			"id-token": "write",

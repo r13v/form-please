@@ -126,26 +126,20 @@ const campaignSchema = z
 			feedbackPulse: templateFields.feedbackPulse,
 		}),
 	])
-	.superRefine((value, context) => {
-		if (!Object.values(value.audience.channels).some(Boolean)) {
-			context.addIssue({
-				code: "custom",
-				path: ["audience", "channels"],
-				message: "Choose at least one delivery channel",
-			})
-		}
-		if (
-			value.audience.deliveryMode !== "immediate" &&
-			value.schedule.endsOn !== undefined &&
-			value.schedule.endsOn < value.schedule.startsOn
-		) {
-			context.addIssue({
-				code: "custom",
-				path: ["schedule", "endsOn"],
-				message: "The end date must follow the start date",
-			})
-		}
+	.refine((value) => Object.values(value.audience.channels).some(Boolean), {
+		message: "Choose at least one delivery channel",
+		path: ["audience", "channels"],
 	})
+	.refine(
+		({ audience, schedule }) =>
+			audience.deliveryMode === "immediate" ||
+			schedule.endsOn === undefined ||
+			schedule.endsOn >= schedule.startsOn,
+		{
+			message: "The end date must follow the start date",
+			path: ["schedule", "endsOn"],
+		},
+	)
 	.transform((value) => ({
 		...value,
 		selectedChannels: Object.entries(value.audience.channels)
