@@ -181,9 +181,10 @@ narrows it.
 | Values of the other variant | A transform must remove them. | The selected variant schema removes them. |
 
 The union can also be at a nested path. Then field paths include the parent
-key, such as `account.companyName`. A reusable fragment cannot be placed at a
-union scope, because the scope does not satisfy the input of one variant. Put
-the variant fields directly in the section.
+key, such as `account.companyName`. A fragment for one variant cannot be
+placed at a union scope, because the scope does not satisfy the input of that
+variant. Put the variant fields directly in the section, or define the
+fragment with the complete union schema.
 
 ## Reset a hidden field
 
@@ -242,16 +243,28 @@ array.
 `visible` and `required` do not change schema rules. See [`required` is
 UI-only](/how-it-works#required-is-ui-only).
 
-Express the same condition in the Standard Schema:
+Select the schema tool that matches the rule:
+
+| Rule | Schema tool | Example |
+| --- | --- | --- |
+| A value selects which fields exist. | `z.discriminatedUnion` | [Split a form into variants](#split-a-form-into-variants) |
+| One condition relates two or more fields. | `.refine` with `path` | The approval note below |
+| One rule adds more than one issue. | `.superRefine` | [A unique email in each array row](/arrays#validate-arrays-and-rows) |
+
+A boolean can also select a variant. Put the checkbox and its dependent fields
+in one nested object, such as `{ enabled, from }`. Then use `enabled` as the
+discriminator with `z.literal(true)` and `z.literal(false)`.
+
+Use `.refine` when a range or a comparison controls the rule. This form shows
+the approval note only for a discount above 20%. The schema requires the note
+for the same condition:
 
 ```tsx
 // [!include ~/snippets/conditional-fields-guide.tsx:conditional-schema]
 ```
 
-This schema requires `companyName` only for a company account. Its transform
-also removes a stale `companyName` from personal-account output. When each
-account type has its own set of fields, use a discriminated union instead. See
-[Split a form into variants](#split-a-form-into-variants).
+`path` attaches the issue to the `approvalNote` field. Without `path`, the
+issue is a form-level issue.
 
 Use a schema transform when cleanup is part of the submission contract. Use
 `whenHidden` to clear the editable value when an edit hides the field. Use

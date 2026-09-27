@@ -13,15 +13,11 @@ const accountSchema = z
 		companyName: z.string(),
 	})
 	// [!region validate]
-	.superRefine((value, context) => {
-		if (value.accountType === "company" && !value.companyName.trim()) {
-			context.addIssue({
-				code: "custom",
-				message: "Enter the company name",
-				path: ["companyName"],
-			})
-		}
-	})
+	.refine(
+		(value) =>
+			value.accountType !== "company" || value.companyName.trim() !== "",
+		{ message: "Enter the company name", path: ["companyName"] },
+	)
 	// [!endregion validate]
 	// [!region transform]
 	.transform(({ companyName, ...account }) => {

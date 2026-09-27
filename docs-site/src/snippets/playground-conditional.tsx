@@ -4,24 +4,21 @@ import { nativeFormKit as kit } from "form-please/preset-native"
 import { useState } from "react"
 import { z } from "zod"
 
-const accountSchema = z
-	.object({
-		accountType: z.enum(["personal", "company"]),
-		companyName: z.string().optional(),
-		email: z.string().email("Enter a valid email"),
-	})
-	.superRefine((value, context) => {
-		if (
-			value.accountType === "company" &&
-			(value.companyName ?? "").trim() === ""
-		) {
-			context.addIssue({
-				code: "custom",
-				message: "Enter the company name",
-				path: ["companyName"],
-			})
-		}
-	})
+const accountBase = z.object({
+	email: z.email("Enter a valid email"),
+})
+
+const accountSchema = z.discriminatedUnion("accountType", [
+	accountBase.extend({ accountType: z.literal("personal") }),
+	accountBase.extend({
+		accountType: z.literal("company"),
+		companyName: z
+			.string()
+			.trim()
+			.min(1, "Enter the company name")
+			.prefault(""),
+	}),
+])
 
 const accountForm = kit.defineForm(accountSchema, (ui) => [
 	ui.field("accountType", {
@@ -35,8 +32,8 @@ const accountForm = kit.defineForm(accountSchema, (ui) => [
 	ui.field("companyName", {
 		control: "text",
 		label: "Company name",
+		required: true,
 		visible: ({ accountType }) => accountType === "company",
-		required: ({ accountType }) => accountType === "company",
 	}),
 	ui.field("email", {
 		control: "text",
@@ -51,7 +48,6 @@ export function AccountForm() {
 	const form = kit.useForm(accountForm, {
 		defaultValues: {
 			accountType: "personal",
-			companyName: "",
 			email: "ada@example.com",
 		},
 		onSubmit: ({ value }) => setSaved(value),

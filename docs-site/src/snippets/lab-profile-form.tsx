@@ -6,45 +6,42 @@ import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { z } from "zod"
 
+const profileBase = z.object({
+	name: z.string().min(1, "Name is required"),
+	country: z.string().min(2, "Choose a country"),
+	newsletter: z.boolean(),
+	avatar: z
+		.custom<File | undefined>(
+			(value) =>
+				value === undefined ||
+				(typeof File !== "undefined" && value instanceof File),
+			"Choose a browser File",
+		)
+		.optional(),
+	contacts: z
+		.array(
+			z.object({
+				email: z.string().email("Use a valid email"),
+				label: z.string().optional(),
+			}),
+		)
+		.min(1, "Add at least one contact"),
+})
+
 const profileSchema = z
-	.object({
-		name: z.string().min(1, "Name is required"),
-		accountType: z.enum(["personal", "company"]),
-		companyName: z.string().optional(),
-		country: z.string().min(2, "Choose a country"),
-		newsletter: z.boolean(),
-		avatar: z
-			.custom<File | undefined>(
-				(value) =>
-					value === undefined ||
-					(typeof File !== "undefined" && value instanceof File),
-				"Choose a browser File",
-			)
-			.optional(),
-		contacts: z
-			.array(
-				z.object({
-					email: z.string().email("Use a valid email"),
-					label: z.string().optional(),
-				}),
-			)
-			.min(1, "Add at least one contact"),
-	})
-	.superRefine((value, context) => {
-		if (
-			value.accountType === "company" &&
-			(value.companyName ?? "").trim().length === 0
-		) {
-			context.addIssue({
-				code: "custom",
-				message: "Company name is required",
-				path: ["companyName"],
-			})
-		}
-	})
+	.discriminatedUnion("accountType", [
+		profileBase.extend({ accountType: z.literal("personal") }),
+		profileBase.extend({
+			accountType: z.literal("company"),
+			companyName: z
+				.string()
+				.trim()
+				.min(1, "Company name is required")
+				.prefault(""),
+		}),
+	])
 	.transform((value) => ({
 		...value,
-		companyName: value.companyName?.trim() || undefined,
 		contactCount: value.contacts.length,
 	}))
 
@@ -113,7 +110,7 @@ export const profileDefinition = kit.defineForm(profileSchema, (ui) => [
 			ui.field("companyName", {
 				control: "text",
 				label: "Company name",
-				required: ({ accountType }) => accountType === "company",
+				required: true,
 				visible: ({ accountType }) => accountType === "company",
 				props: {
 					placeholder: "Compiler Labs",

@@ -170,23 +170,23 @@ export function useFormWorkflow<
 	} as const
 }
 
-const onboardingSchema = z
-	.object({
-		name: z.string().min(1, "Enter a name"),
-		email: z.email("Enter a valid email"),
-		organization: z.boolean(),
-		organizationName: z.string(),
-		department: z.string().min(1, "Enter a department"),
-	})
-	.superRefine((input, context) => {
-		if (input.organization && input.organizationName.trim() === "") {
-			context.addIssue({
-				code: "custom",
-				message: "Enter the organization name",
-				path: ["organizationName"],
-			})
-		}
-	})
+const onboardingBase = z.object({
+	name: z.string().min(1, "Enter a name"),
+	email: z.email("Enter a valid email"),
+	department: z.string().min(1, "Enter a department"),
+})
+
+const onboardingSchema = z.discriminatedUnion("organization", [
+	onboardingBase.extend({ organization: z.literal(false) }),
+	onboardingBase.extend({
+		organization: z.literal(true),
+		organizationName: z
+			.string()
+			.trim()
+			.min(1, "Enter the organization name")
+			.prefault(""),
+	}),
+])
 
 type OnboardingInput = FormInput<typeof onboardingSchema>
 type OnboardingScreen = "identity" | "organization" | "details" | "review"

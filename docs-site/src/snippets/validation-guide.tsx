@@ -19,14 +19,9 @@ const bookingSchema = z
 			.regex(/^\d+$/, "Enter a whole number")
 			.transform(Number),
 	})
-	.superRefine(({ capacity, reservedSeats }, context) => {
-		if (reservedSeats > capacity) {
-			context.addIssue({
-				code: "custom",
-				message: "Reserved seats cannot exceed the capacity",
-				path: ["reservedSeats"],
-			})
-		}
+	.refine(({ capacity, reservedSeats }) => reservedSeats <= capacity, {
+		message: "Reserved seats cannot exceed the capacity",
+		path: ["reservedSeats"],
 	})
 // [!endregion schema]
 
@@ -107,12 +102,7 @@ export function BookingForm() {
 // [!region form-issue]
 const invitationSchema = z
 	.object({ invitationCode: z.string() })
-	.superRefine(({ invitationCode }, context) => {
-		if (invitationCode === "EXPIRED") {
-			context.addIssue({
-				code: "custom",
-				message: "This invitation has expired",
-			})
-		}
+	.refine(({ invitationCode }) => invitationCode !== "EXPIRED", {
+		message: "This invitation has expired",
 	})
 // [!endregion form-issue]

@@ -122,25 +122,27 @@ const contactsDefinition = nativeFormKit.defineForm(contactsSchema, (ui) => [
 // [!endregion array-resolver]
 
 // [!region conditional-schema]
-const accountSchema = z
+const discountSchema = z
 	.object({
-		accountType: z.enum(["personal", "company"]),
-		companyName: z.string().optional(),
+		discountPercent: z.number().min(0).max(100),
+		approvalNote: z.string(),
 	})
-	.superRefine((value, context) => {
-		if (
-			value.accountType === "company" &&
-			(value.companyName ?? "").trim().length === 0
-		) {
-			context.addIssue({
-				code: "custom",
-				message: "Company name is required",
-				path: ["companyName"],
-			})
-		}
-	})
-	.transform(({ companyName, ...account }) => {
-		if (account.accountType === "personal") return account
-		return { ...account, companyName: companyName?.trim() }
-	})
+	.refine(
+		({ discountPercent, approvalNote }) =>
+			discountPercent <= 20 || approvalNote.trim() !== "",
+		{ message: "Explain a discount above 20%", path: ["approvalNote"] },
+	)
+
+const discountDefinition = nativeFormKit.defineForm(discountSchema, (ui) => [
+	ui.field("discountPercent", {
+		control: "number",
+		label: "Discount percent",
+	}),
+	ui.field("approvalNote", {
+		control: "textarea",
+		label: "Approval note",
+		required: true,
+		visible: ({ discountPercent }) => discountPercent > 20,
+	}),
+])
 // [!endregion conditional-schema]
