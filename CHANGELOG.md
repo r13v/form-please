@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/r13v/form-please/compare/v1.8.0...v1.9.0) (2026-09-27)
+
+
+### Features
+
+* choose how many validation messages fields show with errorDisplay ([#35](https://github.com/r13v/form-please/issues/35)) ([c226106](https://github.com/r13v/form-please/commit/c226106e0d08f9ae6dea5ffca8c13724aa05b508))
+
 ## [1.8.0](https://github.com/r13v/form-please/compare/v1.7.1...v1.8.0) (2026-09-26)
 
 
