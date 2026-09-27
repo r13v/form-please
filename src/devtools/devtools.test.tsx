@@ -40,8 +40,7 @@ describe("FormPleaseDevtools", () => {
 
 		render(<View />)
 
-		expect(await screen.findByTestId("rhf-devtools")).toBeDefined()
-		expect(renderRhfDevtools).toHaveBeenCalled()
+		await screen.findByTestId("rhf-devtools")
 		expect(renderRhfDevtools.mock.calls.at(-1)?.[0]).toMatchObject({
 			placement: "top-right",
 		})

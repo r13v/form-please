@@ -65,7 +65,6 @@ export default defineConfig({
 	title: "Form, Please",
 	description:
 		"Typed, schema-validated React forms that keep native HTML semantics and your design system.",
-	// logoUrl: "/brand/form-please-icon.png",
 	iconUrl: `${assetBasePath}/favicon.ico`,
 	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io",
 	basePath,

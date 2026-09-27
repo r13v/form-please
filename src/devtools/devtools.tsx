@@ -905,25 +905,17 @@ function ValueBlock({
 }
 
 function ValuePreview({ value }: Readonly<{ value: unknown }>) {
-	try {
-		return (
-			<div className="fp-devtools__value">
-				<JsonView
-					className="fp-devtools__json"
-					collapsed={1}
-					displayDataTypes={false}
-					highlightUpdates
-					value={inspectableValue(value)}
-				/>
-			</div>
-		)
-	} catch (error) {
-		return (
-			<div className="fp-devtools__value">
-				[Unable to inspect: {inspectionError(error)}]
-			</div>
-		)
-	}
+	return (
+		<div className="fp-devtools__value">
+			<JsonView
+				className="fp-devtools__json"
+				collapsed={1}
+				displayDataTypes={false}
+				highlightUpdates
+				value={inspectableValue(value)}
+			/>
+		</div>
+	)
 }
 
 function inspectableValue(value: unknown): object {
@@ -1158,16 +1150,6 @@ function formatFocus(focus: DevtoolsStoreSnapshot["lastFocus"]): string {
 	if (focus.target === "field") return focus.path ?? "generated field"
 	if (focus.target === "summary") return "error summary"
 	return "no available target"
-}
-
-function inspectionError(error: unknown): string {
-	try {
-		return error instanceof Error
-			? `${error.name}: ${error.message}`
-			: String(error)
-	} catch {
-		return "unknown inspection error"
-	}
 }
 
 function generatedFormName(target: object): string {

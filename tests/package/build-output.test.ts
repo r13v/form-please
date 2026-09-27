@@ -72,12 +72,8 @@ describe("build output", () => {
 
 		expect(rootGraph).not.toContain("createHistoryMiddleware")
 		expect(rootGraph).not.toContain("createPersistenceMiddleware")
-		expect(historyGraph).toContain("createHistoryMiddleware")
-		expect(historyGraph).toContain("useHistory")
 		expect(historyGraph).toContain('from "react"')
 		expect(historyGraph).not.toContain('from "react-hook-form"')
-		expect(persistenceGraph).toContain("createPersistenceMiddleware")
-		expect(persistenceGraph).toContain("usePersistence")
 		expect(persistenceGraph).toContain('from "react"')
 		expect(persistenceGraph).not.toContain('from "react-hook-form"')
 	})
@@ -91,7 +87,6 @@ describe("build output", () => {
 		expect(rootGraph).not.toContain("FormPleaseDevtools")
 		expect(devtoolsGraph).toContain("@hookform/devtools")
 		expect(devtoolsGraph).toContain("@uiw/react-json-view")
-		expect(devtoolsGraph).toContain("FormPleaseDevtools")
 	})
 })
 

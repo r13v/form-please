@@ -210,15 +210,9 @@ export class FormPleaseDevtoolsStore implements FormDiagnosticSink {
 		return () => {
 			if (released) return
 			released = true
-			if (this.#connectionCount > 0) this.#connectionCount--
+			this.#connectionCount--
 			if (this.#connectionCount === 0) this.#disconnectObservers()
 		}
-	}
-
-	/** Releases subscriptions without discarding the current journal. */
-	disconnect(): void {
-		this.#connectionCount = 0
-		this.#disconnectObservers()
 	}
 
 	#disconnectObservers(): void {

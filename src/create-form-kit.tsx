@@ -680,16 +680,13 @@ function assembleKit(
 		apiRef.current = api
 		const contextRef = useRef(options.context)
 		contextRef.current = options.context
-		const validationRef = useRef<ManagedValidationOptions>({
-			isSubmitted: api.formState.isSubmitted,
-			mode: options.mode ?? "onSubmit",
-			reValidateMode: options.reValidateMode ?? "onChange",
-		})
-		validationRef.current = {
+		const validation: ManagedValidationOptions = {
 			isSubmitted: api.formState.isSubmitted,
 			mode: options.mode ?? "onSubmit",
 			reValidateMode: options.reValidateMode ?? "onChange",
 		}
+		const validationRef = useRef(validation)
+		validationRef.current = validation
 		const commitRef = useRef<
 			ValueTransactionCommit<FormValues<Schema>, unknown> | undefined
 		>(undefined)
@@ -1145,9 +1142,6 @@ function GeneratedField({
 		{ path, target: form.diagnosticTarget },
 	)
 	const control = controls[String(node.control)]
-	if (control === undefined || typeof control.component !== "function") {
-		throw new TypeError(`Unknown control "${String(node.control)}"`)
-	}
 	const Control = control.component as ComponentType<
 		ControlProps<unknown, unknown, unknown> & {
 			readonly options?: readonly unknown[]
@@ -1497,7 +1491,7 @@ function renderErrors(
 		<Slot
 			issue={issue}
 			key={`${path}:${issue.message}`}
-			rootProps={errorProps(ids[index] ?? `${path}-error-${index}`, path)}
+			rootProps={errorProps(ids[index], path)}
 		/>
 	))
 }

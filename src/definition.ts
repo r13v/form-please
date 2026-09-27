@@ -350,7 +350,7 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 	source: unknown,
 	controls: ControlDefinitionRegistry,
 	grid: readonly number[],
-	ownsFragment: OwnsFragment = () => false,
+	ownsFragment: OwnsFragment,
 	updates?: unknown,
 ): FormDefinition<Schema> {
 	assertStandardSchema(schema, "Form")
@@ -589,9 +589,6 @@ function readFragmentPlacement(
 	if (placement === undefined) {
 		return undefined
 	}
-	if (!isRecord(placement) || !isRecord(placement.fragment)) {
-		throw new TypeError("Fragment placement is invalid")
-	}
 	return placement as RuntimeFragmentPlacement
 }
 
@@ -649,13 +646,13 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					: undefined
 			const visible =
 				parent.visible &&
-				resolveValue(node.visible, true, resolverValues, pathPrefix, context)
+				resolveValue(node.visible, true, resolverValues, context)
 			const disabled =
 				parent.disabled ||
-				resolveValue(node.disabled, false, resolverValues, pathPrefix, context)
+				resolveValue(node.disabled, false, resolverValues, context)
 			const readOnly =
 				parent.readOnly ||
-				resolveValue(node.readOnly, false, resolverValues, pathPrefix, context)
+				resolveValue(node.readOnly, false, resolverValues, context)
 			const common = {
 				...nodeShell,
 				id,
@@ -663,14 +660,9 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 				disabled,
 				readOnly,
 				context,
-				className: resolveOptional(
-					node.className,
-					resolverValues,
-					pathPrefix,
-					context,
-				),
+				className: resolveOptional(node.className, resolverValues, context),
 				span: validateSpan(
-					resolveOptional(node.span, resolverValues, pathPrefix, context),
+					resolveOptional(node.span, resolverValues, context),
 					definition.grid,
 					parent.columns,
 				),
@@ -688,41 +680,27 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						label: resolveOptional<ReactUiContent | undefined>(
 							node.label,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						slotOptions: resolveOptional(
 							node.slotOptions,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						required: resolveValue(
 							node.required,
 							false,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
-						props: resolveOptional(
-							node.props,
-							resolverValues,
-							pathPrefix,
-							context,
-						),
+						props: resolveOptional(node.props, resolverValues, context),
 						errorDisplay: readErrorDisplay(
-							resolveOptional(
-								node.errorDisplay,
-								resolverValues,
-								pathPrefix,
-								context,
-							),
+							resolveOptional(node.errorDisplay, resolverValues, context),
 							`Field "${path}"`,
 						),
 						options: node.options,
@@ -735,7 +713,7 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 					const previousSection =
 						previousNode?.kind === "section" ? previousNode : undefined
 					const columns = validateColumns(
-						resolveValue(node.columns, 1, resolverValues, pathPrefix, context),
+						resolveValue(node.columns, 1, resolverValues, context),
 						definition.grid,
 					)
 					const children = resolveNodes(
@@ -752,19 +730,16 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						title: resolveOptional<ReactUiContent | undefined>(
 							node.title,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						slotOptions: resolveOptional(
 							node.slotOptions,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						children,
@@ -798,28 +773,20 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						label: resolveOptional<ReactUiContent | undefined>(
 							node.label,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						description: resolveOptional<ReactUiContent | undefined>(
 							node.description,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						slotOptions: resolveOptional(
 							node.slotOptions,
 							resolverValues,
-							pathPrefix,
 							context,
 						),
 						errorDisplay: readErrorDisplay(
-							resolveOptional(
-								node.errorDisplay,
-								resolverValues,
-								pathPrefix,
-								context,
-							),
+							resolveOptional(node.errorDisplay, resolverValues, context),
 							`Array "${path}"`,
 						),
 						itemChildren,
@@ -908,12 +875,7 @@ export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
 		if (source.type === "array" && path.startsWith(`${source.path}.`)) continue
 
 		const action = readWhenHidden(
-			resolveOptional(
-				field.node.whenHidden,
-				field.resolverValues,
-				field.pathPrefix,
-				context,
-			),
+			resolveOptional(field.node.whenHidden, field.resolverValues, context),
 			path,
 		)
 		if (action === "keep") continue
@@ -948,7 +910,7 @@ function collectWhenHiddenFields(
 			const resolverValues = getResolverValues(node, values, pathPrefix)
 			const visible =
 				parentVisible &&
-				resolveValue(node.visible, true, resolverValues, pathPrefix, context)
+				resolveValue(node.visible, true, resolverValues, context)
 			if (node.kind === "field" && node.whenHidden !== undefined) {
 				fields.set(joinPath(pathPrefix, String(node.path)), {
 					node,
@@ -1077,19 +1039,17 @@ function resolveValue<Value, Context>(
 	value: unknown,
 	fallback: Value,
 	values: unknown,
-	pathPrefix: string,
 	context: Context,
 ): Value {
 	return value === undefined
 		? fallback
-		: resolveOptional<Value>(value, values, pathPrefix, context)
+		: resolveOptional<Value>(value, values, context)
 }
 
 /** Resolves a synchronous UI value when it is a function. */
 function resolveOptional<Value = unknown, Context = unknown>(
 	value: unknown,
 	values: unknown,
-	_pathPrefix: string,
 	context: Context,
 ): Value {
 	if (typeof value !== "function") {
