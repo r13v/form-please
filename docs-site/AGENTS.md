@@ -78,9 +78,13 @@
   and uses Testing Library. `vitest.docs.config.ts` dedupes `react`,
   `react-dom`, and `react-hook-form`, so the snippet, the built package, and
   Testing Library share one copy of each.
-- `postbuild` runs `scripts/fix-vocs-skip-links.mjs` and
-  `scripts/fix-vocs-llms-links.mjs`. The second script adds the base path to
+- `postbuild` runs `scripts/fix-vocs-skip-links.mjs`,
+  `scripts/fix-vocs-llms-links.mjs`, and `scripts/fix-vocs-sitemap.mjs`.
+  The second script adds the base path to
   root-relative links in `llms.txt`, `llms-full.txt`, and
   `assets/md/**/*.md`, outside code, and replaces the
   `import.meta.env.BASE_URL` templates that MDX JSX leaves there. Keep `showAskAi: false` on all pages until Vocs fixes
-  its Ask AI base-path bug. Do not patch the `vocs` dependency.
+  its Ask AI base-path bug. The third script adds the base path
+  to sitemap URLs and the robots sitemap reference. Keep `baseUrl` separate
+  from `basePath`; canonical URLs already include both. Do not patch the
+  `vocs` dependency.

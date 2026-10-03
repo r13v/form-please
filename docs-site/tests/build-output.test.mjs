@@ -85,6 +85,17 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /Persistence restore \| `persistence`/)
 })
 
+test("the plain-text full file includes the same text as each Markdown page", async () => {
+	const full = await readFile(new URL("llms-full.txt", publicRoot), "utf8")
+	for (const { markdown: file } of pages) {
+		const markdown = await readFile(new URL(file, publicRoot), "utf8")
+		assert.ok(
+			full.includes(markdown.trim()),
+			`llms-full.txt is missing ${file}`,
+		)
+	}
+})
+
 test("LLM files link to built pages under the base path", async () => {
 	let checked = 0
 
@@ -113,19 +124,21 @@ test("LLM files link to built pages under the base path", async () => {
 	assert.ok(checked > 0, "no root-relative links were checked")
 })
 
-test("the AI agents page lists LLM files that the build emits", async () => {
-	const page = await readFile(
+test("the AI agents page and skill list LLM files that the build emits", async () => {
+	for (const source of [
 		new URL("src/pages/ai-agents.mdx", siteRoot),
-		"utf8",
-	)
-	const files = Array.from(
-		page.matchAll(/https:\/\/r13v\.github\.io\/form-please\/([^\s)`<]+)/g),
-		([, file]) => file,
-	).filter((file) => /\.(md|txt)$/.test(file))
+		new URL("../skills/form-please/SKILL.md", siteRoot),
+	]) {
+		const page = await readFile(source, "utf8")
+		const files = Array.from(
+			page.matchAll(/https:\/\/r13v\.github\.io\/form-please\/([^\s)`<]+)/g),
+			([, file]) => file,
+		).filter((file) => /\.(md|txt)$/.test(file))
 
-	assert.ok(files.length > 0, "ai-agents.mdx lists no LLM files")
-	for (const file of files) {
-		await access(new URL(file, publicRoot))
+		assert.ok(files.length > 0, `${source.pathname} lists no LLM files`)
+		for (const file of files) {
+			await access(new URL(file, publicRoot))
+		}
 	}
 })
 
@@ -139,5 +152,63 @@ test("production metadata uses the GitHub Pages URL", async () => {
 	assert.match(
 		html,
 		/<link rel="canonical" href="https:\/\/r13v\.github\.io\/form-please\/get-started"/,
+	)
+})
+
+test("sitemap, robots, metadata, and HTML links agree on the deployment path", async () => {
+	const firstPage = await readFile(
+		new URL("get-started/index.html", publicRoot),
+		"utf8",
+	)
+	const [, firstCanonical] =
+		firstPage.match(/<link rel="canonical" href="([^"]+)"/) ?? []
+	assert.ok(firstCanonical, "missing canonical URL")
+	const origin = new URL(firstCanonical).origin
+	const expectedUrls = []
+
+	for (const { route } of pages) {
+		const path = `${basePath}${route}`
+		const expectedUrl = `${origin}${path.replace(/\/$/, "") || "/"}`
+		// Vocs keeps the trailing slash for the site root.
+		const canonical = route === "/" ? `${origin}${basePath}/` : expectedUrl
+		expectedUrls.push(canonical)
+		const html = await readFile(new URL(builtFileFor(path), publicRoot), "utf8")
+		assert.ok(
+			html.includes(`<link rel="canonical" href="${canonical}"`),
+			`${route} must have canonical URL ${canonical}`,
+		)
+		assert.ok(
+			html.includes(`<meta property="og:url" content="${canonical}"`),
+			`${route} must have og:url ${canonical}`,
+		)
+
+		for (const [, href] of html.matchAll(/\s(?:href|src)="([^"]+)"/g)) {
+			if (!href.startsWith("/") && !href.startsWith(`${origin}/`)) continue
+			const url = new URL(href, origin)
+			if (url.origin !== origin) continue
+			assert.ok(
+				url.pathname === basePath || url.pathname.startsWith(`${basePath}/`),
+				`${route} links outside the deployment: ${href}`,
+			)
+			if (basePath !== "") {
+				assert.ok(
+					!url.pathname.startsWith(`${basePath}${basePath}/`),
+					`${route} doubles the deployment path: ${href}`,
+				)
+			}
+		}
+	}
+
+	const sitemap = await readFile(new URL("sitemap.xml", publicRoot), "utf8")
+	const urls = Array.from(
+		sitemap.matchAll(/<loc>([^<]+)<\/loc>/g),
+		([, url]) => url,
+	)
+	assert.deepEqual(urls.sort(), expectedUrls.sort())
+	const robots = await readFile(new URL("robots.txt", publicRoot), "utf8")
+	assert.match(robots, /^User-agent: \*\nAllow: \/\n/m)
+	assert.deepEqual(
+		robots.split("\n").filter((line) => line.startsWith("Sitemap:")),
+		[`Sitemap: ${origin}${basePath}/sitemap.xml`],
 	)
 })

@@ -4,8 +4,40 @@ import {
 	prefixMarkdownLinks,
 	proseSegments,
 } from "../../scripts/fix-vocs-llms-links.mjs"
+import { prefixSitemapUrl } from "../../scripts/fix-vocs-sitemap.mjs"
 
 const basePath = "/form-please"
+
+test("sitemap URLs reach the deployment once, including the root and nested pages", () => {
+	for (const [input, expected] of [
+		["/", "/form-please/"],
+		["/get-started", "/form-please/get-started"],
+		["/examples/history", "/form-please/examples/history"],
+		["/sitemap.xml", "/form-please/sitemap.xml"],
+		["/form-pleased", "/form-please/form-pleased"],
+	]) {
+		const url = `https://r13v.github.io${expected}`
+		assert.equal(
+			prefixSitemapUrl(`https://r13v.github.io${input}`, basePath),
+			url,
+		)
+		assert.equal(prefixSitemapUrl(url, `${basePath}/`), url)
+	}
+	assert.equal(
+		prefixSitemapUrl("https://r13v.github.io/form-please", basePath),
+		"https://r13v.github.io/form-please",
+	)
+})
+
+test("sitemap URLs preserve root deployments and the preview origin", () => {
+	const url = "https://r13v.github.io/get-started"
+	assert.equal(prefixSitemapUrl(url, "/"), url)
+	assert.equal(prefixSitemapUrl(url, ""), url)
+	assert.equal(
+		prefixSitemapUrl("http://127.0.0.1:4175/examples/history", basePath),
+		"http://127.0.0.1:4175/form-please/examples/history",
+	)
+})
 
 test("prefixMarkdownLinks adds the base path to root-relative links", () => {
 	assert.equal(
