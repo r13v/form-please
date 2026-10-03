@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/r13v/form-please/compare/v1.9.0...v1.9.1) (2026-10-03)
+
+
+### Bug Fixes
+
+* make agent documentation access predictable ([#38](https://github.com/r13v/form-please/issues/38)) ([e0ce2b6](https://github.com/r13v/form-please/commit/e0ce2b614bb03e9ec720228e0a732ff729833b94))
+
 ## [1.9.0](https://github.com/r13v/form-please/compare/v1.8.0...v1.9.0) (2026-09-27)
 
 
