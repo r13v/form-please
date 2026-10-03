@@ -66,6 +66,8 @@ export default defineConfig({
 	description:
 		"Typed, schema-validated React forms that keep native HTML semantics and your design system.",
 	iconUrl: `${assetBasePath}/favicon.ico`,
+	// Keep baseUrl separate from basePath: Vocs adds basePath to canonical URLs.
+	// postbuild fixes the sitemap and robots output, where Vocs 2.7.2 omits it.
 	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io",
 	basePath,
 	renderStrategy: "full-static",

@@ -9,8 +9,8 @@ showAskAi: false
 Give your coding agent the current Form, Please documentation, so that it does
 not rely only on its training data. You can do this in two ways:
 
-- Paste a prompt that points the agent to the LLM files. This works with each
-  agent that can read a URL.
+- Paste a prompt that points the agent to the LLM files and their fallback
+  links. Your agent needs web or HTTP access.
 - Install the Form, Please skill. This works without a prompt.
 
 The `llms.txt` file is the documentation index.
@@ -21,8 +21,16 @@ Copy this prompt into your agent session, and then add your task:
 
 ```text
 Read https://r13v.github.io/form-please/llms.txt and follow its links to the
-pages that concern my task. Treat those pages as the source of truth for
-Form, Please. Do not use Form, Please APIs that the pages do not document.
+HTML pages that concern my task. If your web tool rejects the direct URL,
+open https://github.com/r13v/form-please, follow "Use with AI agents", and
+then follow "llms.txt" in the Documentation files table. Use link clicks,
+not another direct open of the file URL. If a direct HTML URL also fails,
+follow its navigation link from the AI agents page. With shell/HTTP access,
+fetch the same URL with an available HTTP client instead. If text/markdown is
+unsupported, read the corresponding HTML page or the relevant section of
+llms-full.txt, linked from the same table. Treat those pages as the source
+of truth for Form, Please. Use only documented APIs. If you cannot read
+the pages for my task, report the access failure before implementing code.
 ```
 
 ### Documentation files
@@ -32,11 +40,57 @@ Form, Please. Do not use Form, Please APIs that the pages do not document.
 | `llms.txt` | [`https://r13v.github.io/form-please/llms.txt`](https://r13v.github.io/form-please/llms.txt) | The index: one link and one description for each page |
 | `llms-full.txt` | [`https://r13v.github.io/form-please/llms-full.txt`](https://r13v.github.io/form-please/llms-full.txt) | All pages in one Markdown file |
 | Page Markdown | `https://r13v.github.io/form-please/assets/md/<page>.md` | One page as Markdown |
+| HTML page | `https://r13v.github.io/form-please/<page>/` | One rendered page with its examples |
 
 In the page Markdown URL, `<page>` is the page path without the first slash.
 For example, the Markdown of `/form-please/get-started` is
 [`/form-please/assets/md/get-started.md`](https://r13v.github.io/form-please/assets/md/get-started.md),
 and the Markdown of the overview is `/form-please/assets/md/index.md`.
+
+### If a documentation URL fails
+
+Use this sequence when your agent cannot read a direct URL:
+
+1. Open the [Form, Please repository](https://github.com/r13v/form-please).
+2. Follow **Use with AI agents** in its Documentation list.
+3. Follow **llms.txt** in the table above.
+4. Read the HTML pages listed in the index for your task. If direct opens fail,
+   follow their navigation links from the AI agents page.
+
+Codex `web.run` has read `llms.txt` through this sequence while rejecting a
+direct `open` of the same URL. Use `click` for each link in that tool. The
+cause of this difference is unknown.
+
+With shell/HTTP access, fetch the same URL with an available HTTP client.
+For example, use Node.js:
+
+```sh
+node --input-type=module -e 'const r = await fetch("https://r13v.github.io/form-please/llms.txt"); if (!r.ok) throw new Error(`HTTP ${r.status}`); console.log(await r.text())'
+```
+
+If curl is available, use:
+
+```sh
+curl -fsSL https://r13v.github.io/form-please/llms.txt
+```
+
+curl is not required. The Node.js command uses its built-in HTTP client.
+
+Some web tools reject the `text/markdown` response of a page Markdown URL.
+Read the corresponding HTML page instead. For example, read
+[Get started](/get-started) for `assets/md/get-started.md`.
+For Markdown with the supported `text/plain` response, follow **llms-full.txt**
+in the table above. An HTTP client can fetch that file from its URL too.
+Find the relevant page heading in the full file. If the tool truncates the
+response, read further or use the individual HTML page.
+
+Both LLM files return `text/plain; charset=utf-8` on the published site.
+Codex `web.run` has read both through links on this page. If none of these
+paths gives your agent the pages for its task, it must report the access
+failure before it implements code that depends on them.
+
+Vocs can leave `[!include …]` references in Markdown examples. Read the
+corresponding HTML page for the complete code of those examples.
 
 ## Install the skill
 
@@ -98,9 +152,9 @@ Use the form-please skill. Review this form definition for invalid schema paths,
 validation mistakes, and submission errors.
 ```
 
-When the skill activates, it tells the agent to read `llms.txt` (see
-[Documentation files](#documentation-files)) and use that documentation as its
-source of truth.
+When the skill activates, it tells the agent to read `llms.txt` and the pages
+for its task. It includes the same web and HTTP fallback sequence described
+above. The agent uses that documentation as its source of truth.
 
 ## Verify the installation
 
