@@ -33,27 +33,11 @@ const releaseDefinition = nativeFormKit.defineForm(
 	{ middleware: [releasePersistence] },
 )
 
-type ValidatedIntent = "publish" | "save-and-close"
-type ReleaseSubmitter = FormSubmitDetails<typeof releaseSchema>["submitter"]
-
-function readValidatedIntent(submitter: ReleaseSubmitter): ValidatedIntent {
-	if (submitter === null) return "publish"
-	if (submitter.name !== "intent") {
-		throw new TypeError(`Unknown submitter: ${submitter.name}`)
-	}
-	if (submitter.value === "publish" || submitter.value === "save-and-close") {
-		return submitter.value
-	}
-	throw new TypeError(`Unknown submit intent: ${submitter.value}`)
-}
-
-function submitIntent(intent: ValidatedIntent) {
-	return { name: "intent", value: intent } as const
-}
+type ReleaseIntent = "publish" | "save-and-close"
 
 async function sendRelease(
 	value: z.output<typeof releaseSchema>,
-	intent: ValidatedIntent,
+	intent: ReleaseIntent,
 ): Promise<void> {
 	const response = await fetch("/api/releases", {
 		method: "POST",
@@ -65,17 +49,28 @@ async function sendRelease(
 
 export function ReleaseActions({ onClose }: { readonly onClose: () => void }) {
 	const [status, setStatus] = useState("Restoring the draft…")
+	async function finishRelease(
+		{ form, input, value }: FormSubmitDetails<typeof releaseSchema>,
+		intent: ReleaseIntent,
+	) {
+		if (intent === "publish") setStatus("Publishing…")
+		else setStatus("Saving…")
+		await sendRelease(value, intent)
+		await releasePersistence.handle(form).clear()
+		form.api.reset(input)
+		if (intent === "save-and-close") onClose()
+		else setStatus("Published.")
+	}
 	const form = nativeFormKit.useForm(releaseDefinition, {
 		defaultValues: { title: "", description: "" },
-		onSubmit: async ({ form, input, submitter, value }) => {
-			const intent = readValidatedIntent(submitter)
-			if (intent === "publish") setStatus("Publishing…")
-			else setStatus("Saving…")
-			await sendRelease(value, intent)
-			await releasePersistence.handle(form).clear()
-			form.api.reset(input)
-			if (intent === "save-and-close") onClose()
-			else setStatus("Published.")
+		actions: {
+			publish: {
+				implicit: true,
+				onSubmit: (details) => finishRelease(details, "publish"),
+			},
+			saveAndClose: {
+				onSubmit: (details) => finishRelease(details, "save-and-close"),
+			},
 		},
 	})
 	const persistence = usePersistence(form, releasePersistence)
@@ -112,13 +107,13 @@ export function ReleaseActions({ onClose }: { readonly onClose: () => void }) {
 				Save draft
 			</button>
 			<nativeFormKit.Submit
-				{...submitIntent("publish")}
+				action={form.actions.publish}
 				disabled={!persistenceReady}
 			>
 				Publish
 			</nativeFormKit.Submit>
 			<nativeFormKit.Submit
-				{...submitIntent("save-and-close")}
+				action={form.actions.saveAndClose}
 				disabled={!persistenceReady}
 			>
 				Save and close

@@ -203,6 +203,14 @@ component-local form instance.
 | `FormDefinitionUpdatePolicy<Schema, Context>` | Normalized readonly managed-update policy stored by a definition. |
 | `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, validation modes, and submit handler. |
 | `FormSubmitDetails<Schema, Context>` | Parsed output, schema input, form binding, and submitter snapshot passed to a submit handler. |
+| `FormActionConfig<Schema, Context>` | One submit action: `implicit`, `validate`, and `onSubmit`. |
+| `FormActionsConfig<Schema, Context>` | The `actions` record accepted by `useForm`. |
+| `FormActionValidateDetails<Schema>` | Parsed output and schema input passed to an action `validate`. |
+| `FormAction<Schema, Context, Name>` | A bound action from `form.actions`. |
+| `FormSubmission<Name>` | External store of the running action. |
+| `FormSubmissionSnapshot<Name>` | `{ action }` snapshot of `FormSubmission`. |
+| `FormIssueInput<Schema>` | An issue with a typed optional path for `validate` and `setIssues`. |
+| `SetIssuesOptions<Schema>` | The `focus` option of `setIssues`. |
 | `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
@@ -397,3 +405,9 @@ their props types.
 The type does not fetch or cache data. Use it to expose application-owned
 resource state. Read [Resource state](/resources) for mapping and adapter
 examples.
+
+## Array reconciliation
+
+`FormBinding.array` infers its row type from an `ArrayFieldPath`. Its `reconcile`
+method checks string or number keys, the `key` callback, and complete rows returned
+by `create`. See [Reconcile selected rows](/reconcile).

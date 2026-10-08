@@ -1463,6 +1463,8 @@ export type SubmitSlotProps<
 	readonly buttonProps: SubmitButtonProps
 	/** The current deeply readonly editable form values. */
 	readonly values: DeepReadonly<FormInput<Schema>>
+	/** Whether any submit action of the form is running. */
+	readonly isPending: boolean
 	/** Whether the form is running its submit handler. */
 	readonly isSubmitting: boolean
 	/** Whether the editable values differ from the default baseline. */

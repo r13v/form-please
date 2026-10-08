@@ -393,6 +393,22 @@ On a successful submit:
    matching snapshots and output. `submitter` is `null` when the native event
    has no submit control.
 
+`useForm` accepts `onSubmit` or named `actions`. `onSubmit` is the shorthand
+for an implicit `submit` action. `kit.Submit` marks its button with the action
+name, and the native submit handler selects that action, or the implicit action
+for Enter and other native submits. One synchronous entry point locks the form
+before async work. An action `validate` runs after the schema passes. With
+explicit `actions`, `kit.Form` handles Enter in single-line inputs itself so a
+native first-button submitter cannot select the wrong action; the `onSubmit`
+shorthand keeps native implicit submission and its `submitter` snapshot.
+
+Action issues and `setIssues` external issues live in a private issue store
+beside schema errors. The store writes them to RHF errors, and the resolver
+merges them into each validation result while the value at their path is
+unchanged. A value change at the path removes them. A submit attempt clears
+both sources before validation. Generated fields show stored issues without
+touched or submit state.
+
 Direct `form.api.handleSubmit(onValid, onInvalid)` remains raw RHF behavior and
 does not invoke the configured Form Please wrapper. Resolver ownership,
 `criteriaMode: "all"`, retained hidden values, and RHF error focus are runtime

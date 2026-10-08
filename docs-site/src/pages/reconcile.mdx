@@ -1,0 +1,76 @@
+---
+title: Reconcile selected rows
+description: Preserve edited rows and row metadata when a selection changes.
+showAskAi: false
+---
+
+import { ReconcileDemo } from "../components/reconcile-demo"
+
+# Reconcile selected rows
+
+Use `form.array(path).reconcile(keys, options)` when a record selection determines
+which rows a user edits. Retained records keep their values, touched state, and
+errors when their indexes change.
+
+## Example
+
+This selection reads its checked state from form values. Edit an expiry, remove
+another delegate, and add a new delegate.
+
+```tsx
+// [!include ~/snippets/reconcile.tsx:reconcile-example]
+```
+
+<ReconcileDemo />
+
+Assigning a rebuilt array preserves only the values that your application copies.
+Reconcile uses native React Hook Form (RHF) array operations to preserve retained row
+identity and move row metadata to the new indexes. A cancelled update also leaves
+the selection unchanged because the selection reads the form values.
+
+## Advanced use
+
+Pass keys in the required output order. Reconcile reads the current rows each
+time you call it. `create` runs once for each new key and supplies a complete
+editable row. It does not run for retained rows or an unchanged selection.
+
+Call reconcile from a selection event or after an application-owned request.
+The application must reject stale request results before it calls reconcile.
+Do not call reconcile on each render.
+
+A nested path such as `teams.0.delegates` selects one mounted generated array.
+Nested values and metadata move with a retained parent row. Nested generated
+arrays can remount when their indexed path changes, so their private RHF row IDs
+are not guaranteed to survive that move.
+
+## Reference
+
+| Argument | Contract |
+| --- | --- |
+| `path` | A typed path to a non-nullable object array rendered by `kit.Fields`. |
+| `keys` | Unique string or number keys in the required result order. |
+| `key(row)` | Returns the application-owned key of a current or created row. |
+| `create(key)` | Returns a complete row containing the requested key. |
+
+Reconcile rejects duplicate current keys, duplicate selected keys, and a created
+row with the wrong key before it changes values. A creation error also leaves
+values unchanged. An unchanged selection publishes no managed transaction.
+
+The array must be mounted when you call reconcile. A hidden, unmounted, or
+application-owned array fails before values change. One call reconciles one
+array. It does not independently reconcile nested selections.
+
+Reconcile enters `beforeUpdate`, middleware, and `afterUpdate` as an `array`
+source with action `reconcile`. Middleware can cancel the operation or adjust
+ordinary values. It cannot change the selected array's keys, length, or order.
+During reconcile, it must keep nested arrays in selected rows unchanged, including
+their leaf values. It must also keep other mounted generated array structures
+unchanged. Unsupported middleware changes fail before native operations.
+A successful call records one history step when history is configured. Native
+RHF subscribers can observe intermediate array operations before the final
+managed value publication.
+
+Retained row errors and touched state move with the row. Removed rows lose their
+metadata. Array-level errors remain with the array until a later validation
+replaces them. Dirty state compares the result with default values. Undo restores
+values through the existing history reset contract; it can regenerate row IDs.
