@@ -160,17 +160,16 @@ A draft can contain incomplete or invalid input. Use `type="button"` for **Save
 draft** and call `persistence.flush()` directly. This action does not submit the
 form and does not run complete schema validation.
 
-Use `kit.Submit` for **Publish** and **Save and close**. Both actions validate the
-complete Standard Schema before `onSubmit` runs.
+Use `actions` and `kit.Submit action` for **Publish** and **Save and close**.
+Both actions validate the complete Standard Schema before their `onSubmit` runs.
 
 ```tsx twoslash
 // [!include ~/snippets/workflow-submit-actions.tsx]
 ```
 
-The helper constrains application intent values even though native button
-`value` is a string. The handler treats only a `null` implicit submit as
-**Publish** and rejects unexpected submitter names or values. Choose a different
-explicit default if the product requires it.
+Each button selects its action object, so the handler does not parse a button
+name or value. `implicit: true` makes Enter in a single-line field run
+**Publish**. Remove it if Enter must not submit the form.
 
 ## Understand `submitter`
 
@@ -208,8 +207,9 @@ Changing or removing the button while validation is pending does not change the
 snapshot. Direct `form.api.handleSubmit` calls remain raw React Hook Form calls
 and do not invoke the Form, Please `onSubmit` wrapper.
 
-Use `submitter` only to select a validated application action. Validate the
-action again at the server boundary. Do not use a button value as authorization.
+Prefer `actions` to select an application action. `submitter` remains for the
+`onSubmit` shorthand and native button values. Validate the action again at the
+server boundary. Do not use a button value as authorization.
 
 ## Production checklist
 

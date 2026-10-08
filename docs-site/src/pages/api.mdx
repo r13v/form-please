@@ -377,7 +377,8 @@ the current kit context.
 | `reValidateMode` | Optional RHF revalidation mode. Defaults to `onChange`. |
 | `delayError` | Optional RHF error-display delay in milliseconds. |
 | `errorDisplay` | Optional `"all"` or `"first"`. Overrides the kit `errorDisplay` for this form. |
-| `onSubmit` | Receives parsed output, schema input, the current binding, and a submitter snapshot. |
+| `onSubmit` | Receives parsed output, schema input, the current binding, and a submitter snapshot. It is the shorthand for an implicit `submit` action. |
+| `actions` | Named submit actions. Each action has an `onSubmit` handler, an optional `validate` callback, and an optional `implicit: true`. Do not use it with `onSubmit`. |
 
 Use `FormSubmitDetails<Schema, Context>` from `form-please` when a reusable
 submit handler needs the exact `{ value, input, form, submitter }` parameter
@@ -411,6 +412,67 @@ submit. It is captured before validation and does not expose the live DOM
 element. Read the [product workflow tutorial](/workflows#understand-submitter)
 for named actions, async validation, and implicit-submit behavior.
 
+### Submit actions
+
+`actions` connects each button to its own validator and handler:
+
+```tsx
+const form = kit.useForm(definition, {
+  defaultValues,
+  actions: {
+    approve: { implicit: true, onSubmit: ({ value }) => approveRequest(value) },
+    decline: {
+      validate: ({ input }) =>
+        input.reason.trim() ? [] : [{ path: "reason", message: "Enter a reason." }],
+      onSubmit: ({ value }) => declineRequest(value),
+    },
+  },
+})
+
+<kit.Submit action={form.actions.decline}>Decline</kit.Submit>
+```
+
+A submit attempt runs these steps:
+
+1. Form, Please locks submission and captures the input snapshot.
+2. It clears the issues of the previous action and the external issues.
+3. It runs the schema once.
+4. If the schema passes, it runs `validate({ input, value })` of the selected action.
+5. If `validate` returns no issues, it runs `onSubmit({ value, input, form, submitter })`.
+
+Because `validate` runs only after the schema passes, the user can see schema
+issues and action issues in two submit attempts. Action issues focus the first
+invalid field. An edit of a path clears the action issues for that path.
+
+Enter in a single-line field runs the `implicit` action. Without an implicit
+action, Enter does not submit the form. At most one action can be implicit.
+A native submit that does not come from `kit.Submit` also runs the implicit
+action. `onSubmit` is the shorthand for `actions: { submit: { implicit: true, onSubmit } }`.
+With the shorthand, Enter keeps native implicit submission and its `submitter`.
+
+`form.submission` is an external store. `useSnapshot(form.submission).action`
+gives the name of the running action, or `null`.
+
+### External issues
+
+`form.setIssues(issues, { focus })` replaces the external issues. Each
+`FormIssueInput<Schema>` has a `message` and an optional typed `path`.
+An issue without a path shows in the error summary. External issues show
+immediately and do not block the next submit attempt. Action and external
+issues cannot use a path under the React Hook Form `root` key; such a call
+throws a `TypeError`.
+
+| `focus` | Effect |
+| --- | --- |
+| omitted | Focus does not move. |
+| a field path | Focuses that field, or the error summary if the field is disabled, hidden, or not registered. |
+| `true` | Focuses the first invalid field in RHF registration order, or the error summary. |
+
+An edit of a path clears the external issues for that path and for its parent
+and child paths. Revalidation does not clear external issues. `form.setIssues([])`
+and a `kit.Form` reset clear them. Check that a server response is current
+before you call `setIssues`.
+
 Use form-wide state for review or locked workflows:
 
 ```tsx
@@ -427,6 +489,9 @@ A binding contains these public fields:
 | `definition` | Fixed definition captured during the first hook render. |
 | `context` | Current runtime context. |
 | `update(recipe)` | Apply one managed Immer recipe through value middleware. |
+| `actions` | Submit actions with stable identity for `kit.Submit action`. |
+| `submission` | External store with the running action name. |
+| `setIssues(issues, options)` | Replace the external issues and optionally move focus. |
 
 Form-wide interaction and focus bookkeeping remain private. Use `form.api` for
 raw RHF operations that deliberately bypass managed middleware.
@@ -581,7 +646,7 @@ lifecycle rules, envelope encoding, migrations, conflicts, and adapters.
 | --- | --- |
 | `kit.Form` | Requires a binding from the same kit. Accepts native form props except owned submit, reset, action, and validation props. |
 | `kit.Fields` | Renders the resolved definition. It renders optional children after generated fields. |
-| `kit.Submit` | Accepts button props except `type`. The configured submit slot always receives `type="submit"`. |
+| `kit.Submit` | Accepts button props except `type` and an `action` from `form.actions`. Without `action`, it runs the `onSubmit` shorthand action. The configured submit slot always receives `type="submit"`. |
 | `kit.AutoForm` | Renders `Form`, the error summary, `Fields`, and then its children. |
 
 `Fields` and `Submit` must be descendants of the matching `kit.Form`.
@@ -591,7 +656,8 @@ lifecycle rules, envelope encoding, migrations, conflicts, and adapters.
 to raw `form.api.handleSubmit`. A reset event calls `form.api.reset()`. It sets
 `noValidate` because the Standard Schema owns validation.
 
-`Submit` becomes disabled while validation or submission runs. It also follows
+`Submit` becomes disabled while validation or any action runs. Its render
+function and slot receive `isPending`. It also follows
 the form-wide `disabled` option and its own `disabled` prop.
 
 Use RHF hooks and components directly when generated fields are only part of
@@ -642,3 +708,10 @@ state](/resources) for a TanStack Query adapter.
 
 Read [Production recipes](/recipes) for complete composition and submission
 patterns.
+
+## Reconcile a generated array
+
+`FormBinding.array(path).reconcile(keys, { key, create })` synchronizes one mounted
+generated array with a record selection. Retained rows keep their editable data
+and row metadata. See [Reconcile selected rows](/reconcile) for a complete example
+and support limits.

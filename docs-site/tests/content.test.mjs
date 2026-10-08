@@ -303,7 +303,7 @@ test("keeps the product workflow tutorial copyable and explicit", async () => {
 		"does not retain a live DOM element",
 		"confirmation uses a server receipt",
 		"changes navigation only",
-		"rejects unexpected submitter names or values",
+		"selects its action object",
 	]) {
 		assert.match(workflows, new RegExp(escapeRegExp(phrase), "i"))
 	}

@@ -14,7 +14,7 @@ import type { FormIssue, StandardSchema } from "./types.js"
 /** Identifies errors created by the Standard Schema resolver. */
 const standardSchemaErrorType = "standard-schema"
 /** Stores schema issues that do not select an input path. */
-const pathlessErrorKey = ""
+export const pathlessErrorKey = ""
 /** Attaches original schema issues to React Hook Form error objects. */
 const standardSchemaIssues = Symbol("standard-schema-issues")
 /** Marks an error branch that contains an attached schema issue. */
@@ -25,17 +25,60 @@ export function createStandardSchemaResolver<
 	Input extends FieldValues,
 	Context,
 	Output,
->(schema: StandardSchema<Input, Output>): Resolver<Input, Context, Output> {
+>(
+	schema: StandardSchema<Input, Output>,
+	readExtraIssues?: (values: Input) => readonly FormIssue[],
+): Resolver<Input, Context, Output> {
 	return async (values) => {
 		const result = await schema["~standard"].validate(cloneFormValue(values))
-		if (result.issues === undefined) {
+		const extraIssues = readExtraIssues?.(values) ?? []
+		if (result.issues === undefined && extraIssues.length === 0) {
 			return { errors: {}, values: result.value }
 		}
 
-		return {
-			errors: issuesToFieldErrors<Input>(result.issues),
-			values: {},
+		const errors = issuesToFieldErrors<Input>(result.issues ?? [])
+		mergeFormIssues(errors, extraIssues)
+		return { errors, values: {} }
+	}
+}
+
+/** Identifies `types` keys and errors written for action and external issues. */
+export const formIssueErrorType = "form-please"
+
+/** Adds action and external issues under their own `types` keys. */
+function mergeFormIssues(
+	errors: Record<string, unknown>,
+	issues: readonly FormIssue[],
+): void {
+	const messagesByPath = new Map<string, string[]>()
+	for (const issue of issues) {
+		const key = issue.path ?? pathlessErrorKey
+		messagesByPath.set(key, [...(messagesByPath.get(key) ?? []), issue.message])
+	}
+	for (const [path, messages] of messagesByPath) {
+		const types = Object.fromEntries(
+			messages.map((message, index) => [
+				`${formIssueErrorType}.${index}`,
+				message,
+			]),
+		)
+		const existing =
+			path === pathlessErrorKey ? errors[path] : get(errors, path)
+		if (isRecord(existing) && typeof existing.message === "string") {
+			existing.types = {
+				...(isRecord(existing.types) ? existing.types : {}),
+				...types,
+			}
+			continue
 		}
+		const error = isRecord(existing) ? existing : {}
+		Object.assign(error, {
+			message: messages[0],
+			type: formIssueErrorType,
+			types,
+		})
+		if (path === pathlessErrorKey) errors[path] = error
+		else if (error !== existing) set(errors, path, error)
 	}
 }
 
@@ -49,6 +92,43 @@ export function fieldErrorToIssues(
 		...(isRecord(error) ? issuesForError(error.root, path) : []),
 	]
 	return uniqueIssues(messages)
+}
+
+/** Updates package-owned issue paths before RHF moves retained array error branches. */
+export function remapArraySchemaIssues(
+	errors: unknown,
+	arrayPath: string,
+	indexes: ReadonlyMap<number, number>,
+): void {
+	const prefix = `${arrayPath}.`
+	const visit = (value: unknown): void => {
+		if (!isRecord(value)) return
+		const issues = attachedStandardSchemaIssues(value)
+		if (issues.length > 0) {
+			Object.defineProperty(value, standardSchemaIssues, {
+				configurable: true,
+				value: issues.flatMap((issue) => {
+					if (!issue.path?.startsWith(prefix)) return [issue]
+					const suffix = issue.path.slice(prefix.length)
+					const [index] = suffix.split(".")
+					if (index === undefined || !/^(0|[1-9]\d*)$/.test(index))
+						return [issue]
+					const nextIndex = indexes.get(Number(index))
+					if (nextIndex === undefined) return []
+					return [
+						{
+							...issue,
+							path: `${prefix}${nextIndex}${suffix.slice(index.length)}`,
+						},
+					]
+				}),
+			})
+		}
+		for (const [key, child] of Object.entries(value)) {
+			if (key !== "ref" && key !== "types") visit(child)
+		}
+	}
+	visit(errors)
 }
 
 /** Flattens a React Hook Form error tree into unique public form issues. */
@@ -165,7 +245,19 @@ function mergeFieldError(
 /** Reads attached schema issues or derives issues from a field error. */
 function issuesForError(value: unknown, path?: string): readonly FormIssue[] {
 	const attached = attachedStandardSchemaIssues(value)
-	if (attached.length > 0) return attached
+	if (attached.length > 0) {
+		const formIssues =
+			isRecord(value) && isRecord(value.types)
+				? Object.entries(value.types)
+						.filter(
+							(entry): entry is [string, string] =>
+								entry[0].startsWith(`${formIssueErrorType}.`) &&
+								typeof entry[1] === "string",
+						)
+						.map(([, message]) => toFormIssue(message, path))
+				: []
+		return [...attached, ...formIssues]
+	}
 	return ownErrorMessages(value).map((message) => ({
 		message,
 		...(path === undefined ? {} : { path }),
@@ -196,7 +288,7 @@ function isFieldError(value: Record<string, unknown>): boolean {
 }
 
 /** Tests whether a key belongs to field-error metadata instead of a child path. */
-function isFieldErrorMetadataKey(key: string): boolean {
+export function isFieldErrorMetadataKey(key: string): boolean {
 	return key === "message" || key === "ref" || key === "type" || key === "types"
 }
 
@@ -288,6 +380,6 @@ function uniqueIssues(issues: readonly FormIssue[]): readonly FormIssue[] {
 }
 
 /** Tests whether a value is a non-null object record. */
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object"
 }

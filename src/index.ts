@@ -6,10 +6,18 @@ export type {
 	AutoFormProps,
 	CreateFormKitOptions,
 	DefineFormOptions,
+	FormAction,
+	FormActionConfig,
+	FormActionsConfig,
+	FormActionValidateDetails,
 	FormBinding,
+	FormIssueInput,
 	FormKit,
 	FormProps,
+	FormSubmission,
+	FormSubmissionSnapshot,
 	FormSubmitDetails,
+	SetIssuesOptions,
 	UseFormOptions,
 } from "./create-form-kit.js"
 export { createFormKit } from "./create-form-kit.js"

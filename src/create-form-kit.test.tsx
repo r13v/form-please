@@ -18,7 +18,11 @@ import {
 import { describe, expect, expectTypeOf, it, vi } from "vitest"
 import { z } from "zod"
 import { defineControl } from "./control-definition.js"
-import { createFormKit } from "./create-form-kit.js"
+import {
+	createFormKit,
+	type FormAction,
+	type FormBinding,
+} from "./create-form-kit.js"
 import type { ResolvedFieldNode, ResolvedNode } from "./definition.js"
 import type {
 	ArrayItemSlotProps,
@@ -2816,5 +2820,338 @@ describe("errorDisplay", () => {
 				}),
 			]),
 		).toThrow('Field "password" errorDisplay must be "all" or "first"')
+	})
+})
+
+describe("submit actions and external issues", () => {
+	const reviewSchema = z.object({ name: z.string(), reason: z.string() })
+	const reviewDefinition = kit.defineForm(reviewSchema, {
+		ui: [
+			{ kind: "field", path: "name", control: "text", label: "Name" },
+			{ kind: "field", path: "reason", control: "text", label: "Reason" },
+		],
+	})
+
+	function ReviewForm({
+		approve,
+		decline,
+		withImplicit = true,
+	}: {
+		readonly approve: (value: unknown) => unknown
+		readonly decline: (value: unknown) => unknown
+		readonly withImplicit?: boolean
+	}) {
+		const form = kit.useForm(reviewDefinition, {
+			defaultValues: { name: "Ada", reason: "" },
+			actions: {
+				approve: {
+					implicit: withImplicit,
+					onSubmit: ({ value }) => approve(value),
+				},
+				decline: {
+					validate: ({ input }) =>
+						input.reason.trim()
+							? []
+							: [{ path: "reason", message: "Enter a reason." }],
+					onSubmit: ({ value }) => decline(value),
+				},
+			},
+		})
+		expectTypeOf(form.actions).toHaveProperty("approve")
+		// @ts-expect-error Unknown action names are type errors.
+		void form.actions.publish
+		return (
+			<kit.AutoForm form={form}>
+				<kit.Submit action={form.actions.decline}>
+					{({ buttonProps, isPending }) => (
+						<button {...buttonProps}>
+							{isPending ? "Declining" : "Decline"}
+						</button>
+					)}
+				</kit.Submit>
+				<kit.Submit action={form.actions.approve}>Approve</kit.Submit>
+			</kit.AutoForm>
+		)
+	}
+
+	it("runs the selected action and its validator", async () => {
+		const approve = vi.fn()
+		const decline = vi.fn()
+		render(<ReviewForm approve={approve} decline={decline} />)
+
+		fireEvent.click(screen.getByRole("button", { name: "Decline" }))
+		expect(await screen.findByText("Enter a reason.")).toBeTruthy()
+		expect(decline).not.toHaveBeenCalled()
+		await waitFor(() =>
+			expect(document.activeElement).toBe(screen.getByLabelText("Reason")),
+		)
+
+		fireEvent.change(screen.getByLabelText("Reason"), {
+			target: { value: "Duplicate" },
+		})
+		expect(screen.queryByText("Enter a reason.")).toBeNull()
+		const declineButton = screen.getByRole("button", { name: "Decline" })
+		await waitFor(() =>
+			expect((declineButton as HTMLButtonElement).disabled).toBe(false),
+		)
+		fireEvent.click(declineButton)
+		await waitFor(() =>
+			expect(decline).toHaveBeenCalledWith({
+				name: "Ada",
+				reason: "Duplicate",
+			}),
+		)
+
+		fireEvent.click(screen.getByRole("button", { name: "Approve" }))
+		await waitFor(() => expect(approve).toHaveBeenCalledTimes(1))
+		expect(decline).toHaveBeenCalledTimes(1)
+	})
+
+	it("disables every action button while one action runs", async () => {
+		let release = () => {}
+		const approve = vi.fn(
+			() =>
+				new Promise<void>((resolve) => {
+					release = resolve
+				}),
+		)
+		render(<ReviewForm approve={approve} decline={vi.fn()} />)
+
+		fireEvent.click(screen.getByRole("button", { name: "Approve" }))
+		const pending = await screen.findByRole("button", { name: "Declining" })
+		expect((pending as HTMLButtonElement).disabled).toBe(true)
+		fireEvent.click(screen.getByRole("button", { name: "Approve" }))
+		await act(async () => release())
+		await screen.findByRole("button", { name: "Decline" })
+		expect(approve).toHaveBeenCalledTimes(1)
+	})
+
+	it("runs only the implicit action when Enter is pressed in a field", async () => {
+		const approve = vi.fn()
+		const { unmount } = render(
+			<ReviewForm approve={approve} decline={vi.fn()} />,
+		)
+		fireEvent.keyDown(screen.getByLabelText("Name"), { key: "Enter" })
+		await waitFor(() => expect(approve).toHaveBeenCalledTimes(1))
+		unmount()
+
+		const withoutImplicit = vi.fn()
+		render(
+			<ReviewForm
+				approve={withoutImplicit}
+				decline={vi.fn()}
+				withImplicit={false}
+			/>,
+		)
+		fireEvent.keyDown(screen.getByLabelText("Name"), { key: "Enter" })
+		fireEvent.submit(
+			screen.getByLabelText("Name").closest("form") as HTMLElement,
+		)
+		await act(async () => {})
+		expect(withoutImplicit).not.toHaveBeenCalled()
+	})
+
+	it("rejects ambiguous action configuration", () => {
+		const errors = vi.spyOn(console, "error").mockImplementation(() => {})
+		function Both() {
+			// @ts-expect-error onSubmit and actions are exclusive.
+			kit.useForm(reviewDefinition, {
+				defaultValues: { name: "", reason: "" },
+				onSubmit: vi.fn(),
+				actions: { approve: { onSubmit: vi.fn() } },
+			})
+			return null
+		}
+		function TwoImplicit() {
+			kit.useForm(reviewDefinition, {
+				defaultValues: { name: "", reason: "" },
+				actions: {
+					approve: { implicit: true, onSubmit: vi.fn() },
+					decline: { implicit: true, onSubmit: vi.fn() },
+				},
+			})
+			return null
+		}
+		function MissingAction() {
+			const form = kit.useForm(reviewDefinition, {
+				defaultValues: { name: "", reason: "" },
+				actions: { approve: { onSubmit: vi.fn() } },
+			})
+			return (
+				<kit.Form form={form}>
+					<kit.Submit>Save</kit.Submit>
+				</kit.Form>
+			)
+		}
+		expect(() => render(<Both />)).toThrow("onSubmit or actions")
+		expect(() => render(<TwoImplicit />)).toThrow("one implicit action")
+		expect(() => render(<MissingAction />)).toThrow("requires an action")
+		errors.mockRestore()
+	})
+
+	it("shows external issues immediately and clears them on edit", async () => {
+		let form: ReturnType<typeof useReview> | undefined
+		function useReview() {
+			return kit.useForm(reviewDefinition, {
+				defaultValues: { name: "Ada", reason: "" },
+				mode: "onChange",
+				onSubmit: vi.fn(),
+			})
+		}
+		function View() {
+			form = useReview()
+			return <kit.AutoForm form={form} />
+		}
+		render(<View />)
+
+		act(() =>
+			form?.setIssues(
+				[
+					{ path: "name", message: "This name is already used." },
+					{ path: "reason", message: "Explain the change." },
+					{ message: "The source changed." },
+				],
+				{ focus: "name" },
+			),
+		)
+		expect(screen.getByText("This name is already used.")).toBeTruthy()
+		expect(screen.getByText("The source changed.")).toBeTruthy()
+		await waitFor(() =>
+			expect(document.activeElement).toBe(screen.getByLabelText("Name")),
+		)
+
+		fireEvent.change(screen.getByLabelText("Name"), {
+			target: { value: "Grace" },
+		})
+		await waitFor(() =>
+			expect(screen.queryByText("This name is already used.")).toBeNull(),
+		)
+		expect(screen.getByText("Explain the change.")).toBeTruthy()
+		expect(screen.getByText("The source changed.")).toBeTruthy()
+
+		act(() => form?.setIssues([]))
+		expect(screen.queryByText("Explain the change.")).toBeNull()
+		expect(() =>
+			form?.setIssues([{ path: "root" as "name", message: "Reserved path." }]),
+		).toThrow("reserved React Hook Form root path")
+		expect(screen.queryByText("The source changed.")).toBeNull()
+	})
+
+	it("clears only external issues and keeps schema and child errors", async () => {
+		const addressSchema = z.object({
+			name: z.string().min(2, "Enter at least two characters"),
+			address: z.object({ zip: z.string().min(1, "Enter a zip code.") }),
+		})
+		const addressDefinition = kit.defineForm(addressSchema, {
+			ui: [
+				{ kind: "field", path: "name", control: "text", label: "Name" },
+				{ kind: "field", path: "address.zip", control: "text", label: "Zip" },
+			],
+		})
+		let form: FormBinding<typeof addressSchema, unknown, "submit"> | undefined
+		function View() {
+			form = kit.useForm(addressDefinition, {
+				defaultValues: { name: "A", address: { zip: "" } },
+				onSubmit: vi.fn(),
+			})
+			return <kit.AutoForm form={form} />
+		}
+		render(<View />)
+		fireEvent.submit(
+			screen.getByLabelText("Name").closest("form") as HTMLElement,
+		)
+		await screen.findByText("Enter a zip code.")
+
+		act(() =>
+			form?.setIssues([
+				{ path: "name", message: "Enter at least two characters" },
+				{ path: "address", message: "Check the address." },
+				{ message: "The source changed." },
+			]),
+		)
+		expect(screen.getByText("Check the address.")).toBeTruthy()
+		act(() =>
+			form?.setIssues([
+				{ path: "name", message: "Enter at least two characters" },
+				{ path: "name", message: "Choose another name." },
+				{ path: "address", message: "Check the address." },
+				{ message: "The source changed." },
+			]),
+		)
+		await act(async () => {
+			await form?.api.trigger()
+		})
+		expect(screen.getByText("Check the address.")).toBeTruthy()
+		expect(screen.getByText("Choose another name.")).toBeTruthy()
+		act(() => form?.setIssues([]))
+		expect(screen.queryByText("Check the address.")).toBeNull()
+		expect(screen.queryByText("The source changed.")).toBeNull()
+		expect(screen.getByText("Enter at least two characters")).toBeTruthy()
+		expect(screen.getByText("Enter a zip code.")).toBeTruthy()
+	})
+
+	it("focuses the summary when the issue field is not registered", async () => {
+		const nameOnly = kit.defineForm(reviewSchema, {
+			ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
+		})
+		let form: FormBinding<typeof reviewSchema, unknown, "submit"> | undefined
+		function View() {
+			form = kit.useForm(nameOnly, {
+				defaultValues: { name: "Ada", reason: "" },
+				onSubmit: vi.fn(),
+			})
+			return (
+				<kit.AutoForm form={form}>
+					<input aria-label="Notes" />
+				</kit.AutoForm>
+			)
+		}
+		render(<View />)
+		screen.getByLabelText("Notes").focus()
+		act(() =>
+			form?.setIssues([{ path: "reason", message: "Explain the change." }], {
+				focus: "reason",
+			}),
+		)
+		await waitFor(() =>
+			expect(document.activeElement?.textContent).toContain(
+				"Explain the change.",
+			),
+		)
+	})
+
+	it("keeps native Enter submission for the submit shorthand", () => {
+		function View() {
+			const form = kit.useForm(definition, {
+				defaultValues: { name: "Ada" },
+				onSubmit: vi.fn(),
+			})
+			return <kit.AutoForm form={form} />
+		}
+		render(<View />)
+		expect(
+			fireEvent.keyDown(screen.getByLabelText("Name"), { key: "Enter" }),
+		).toBe(true)
+	})
+
+	it("keeps the submit shorthand as a submit action", async () => {
+		const onSubmit = vi.fn()
+		function View() {
+			const form = kit.useForm(definition, {
+				defaultValues: { name: "Ada" },
+				onSubmit,
+			})
+			expectTypeOf(form.actions).toEqualTypeOf<{
+				readonly submit: FormAction<typeof schema, unknown, "submit">
+			}>()
+			return (
+				<kit.Form form={form}>
+					<kit.Submit action={form.actions.submit}>Save</kit.Submit>
+				</kit.Form>
+			)
+		}
+		render(<View />)
+		fireEvent.click(screen.getByRole("button", { name: "Save" }))
+		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
 	})
 })

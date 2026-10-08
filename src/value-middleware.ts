@@ -65,6 +65,11 @@ export type ValueTransactionSource<Input extends FieldValues> =
 			readonly toIndex: number
 	  }
 	| {
+			readonly type: "array"
+			readonly path: ArrayFieldPath<Input>
+			readonly action: "reconcile"
+	  }
+	| {
 			readonly type: "update"
 	  }
 	| {

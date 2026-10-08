@@ -148,6 +148,7 @@ export default defineConfig({
 			items: [
 				{ text: "Conditional fields", link: "/conditional-fields" },
 				{ text: "Arrays", link: "/arrays" },
+				{ text: "Reconcile selected rows", link: "/reconcile" },
 				{ text: "Recipes", link: "/recipes" },
 				{
 					text: "Migrate from React Hook Form",

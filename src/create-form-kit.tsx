@@ -5,6 +5,7 @@ import {
 	type ComponentType,
 	createContext,
 	createElement,
+	type KeyboardEvent,
 	memo,
 	type ReactElement,
 	type ReactNode,
@@ -31,6 +32,11 @@ import {
 	useWatch,
 } from "react-hook-form"
 import {
+	type FormArray,
+	reconcileGeneratedArray,
+	registerGeneratedArray,
+} from "./array-reconcile.js"
+import {
 	createFormFragment,
 	hasWhenHidden,
 	normalizeDefinition,
@@ -48,6 +54,7 @@ import {
 	hasFormDiagnosticSink,
 	publishFormDiagnosticEvent,
 } from "./diagnostics.js"
+import { createFormIssueStore, type FormIssueStore } from "./form-issues.js"
 import { cloneFormValue } from "./form-value.js"
 import {
 	cloneItemDefault,
@@ -61,11 +68,13 @@ import {
 	hasFieldError,
 } from "./standard-schema-resolver.js"
 import type {
+	ArrayFieldPath,
 	ArraySlotProps,
 	ControlDefinitionRegistry,
 	ControlProps,
 	DeepReadonly,
 	ErrorDisplay,
+	FieldPath,
 	FieldSlotProps,
 	FormDefinition,
 	FormDefinitionBuilder,
@@ -77,6 +86,7 @@ import type {
 	FormKitSlots,
 	FormOutput,
 	FormPleaseStyle,
+	PathValue,
 	SectionSlotProps,
 	StandardSchema,
 	StructuralNodeName,
@@ -84,6 +94,7 @@ import type {
 	SubmitSlotProps,
 } from "./types.js"
 import { useFieldOptions } from "./use-field-options.js"
+import { useSnapshot } from "./use-snapshot.js"
 import {
 	attachValueCoordinatorCapability,
 	createValueCoordinator,
@@ -143,8 +154,81 @@ export type FormSubmitDetails<
 	}> | null
 }
 
-/** Configuration used to bind a definition to React Hook Form. */
-export type UseFormOptions<
+/** An issue that application code reports for a typed input path. */
+export type FormIssueInput<Schema extends StandardSchema> = {
+	/** The user-facing message. */
+	readonly message: string
+	/** The input path that the issue selects, or none for a form issue. */
+	readonly path?: FieldPath<FormInput<Schema>>
+}
+
+/** Values supplied to the validator of one submit action. */
+export type FormActionValidateDetails<Schema extends StandardSchema> = {
+	/** The validated and possibly transformed schema output. */
+	readonly value: FormOutput<Schema>
+	/** The editable input snapshot used for this submission. */
+	readonly input: FormInput<Schema>
+}
+
+/** The validator and handler of one submit action. */
+export type FormActionConfig<
+	Schema extends StandardSchema,
+	Context = unknown,
+> = {
+	/** Whether Enter in a single-line field runs this action. */
+	readonly implicit?: boolean
+	/** Returns action issues after successful schema validation. */
+	readonly validate?: (
+		details: FormActionValidateDetails<Schema>,
+	) =>
+		| readonly FormIssueInput<Schema>[]
+		| Promise<readonly FormIssueInput<Schema>[]>
+	/** Handles a submission that passed schema and action validation. */
+	readonly onSubmit: (
+		details: FormSubmitDetails<Schema, Context>,
+	) => unknown | Promise<unknown>
+}
+
+/** Named submit actions configured for one form. */
+export type FormActionsConfig<
+	Schema extends StandardSchema,
+	Context = unknown,
+> = Readonly<Record<string, FormActionConfig<Schema, Context>>>
+
+/** A submit action bound to the form that created it. */
+export type FormAction<
+	Schema extends StandardSchema = AnyFormSchema,
+	Context = unknown,
+	Name extends string = string,
+> = {
+	/** The configured action name. */
+	readonly name: Name
+	/** The form binding that owns this action. */
+	readonly form: FormBinding<Schema, Context, Name>
+}
+
+/** The live submission state of one form. */
+export type FormSubmissionSnapshot<Name extends string = string> = {
+	/** The name of the running action, or null when no action runs. */
+	readonly action: Name | null
+}
+
+/** An external store with the live submission state of one form. */
+export type FormSubmission<Name extends string = string> = {
+	/** Returns the current immutable submission snapshot. */
+	getSnapshot(): FormSubmissionSnapshot<Name>
+	/** Calls the listener after the submission snapshot changes. */
+	subscribe(listener: () => void): () => void
+}
+
+/** Options for replacing external issues. */
+export type SetIssuesOptions<Schema extends StandardSchema> = {
+	/** A field to focus, or true to focus the first available invalid field. */
+	readonly focus?: FieldPath<FormInput<Schema>> | true
+}
+
+/** Options shared by every `useForm` configuration. */
+type BaseUseFormOptions<
 	Schema extends StandardSchema,
 	Context = unknown,
 > = ContextOption<Context> & {
@@ -162,11 +246,31 @@ export type UseFormOptions<
 	readonly readOnly?: boolean
 	/** The validation mode used after the first submit attempt. */
 	readonly reValidateMode?: Exclude<Mode, "all" | "onTouched">
-	/** Handles successful validation with output and matching input values. */
-	readonly onSubmit?: (
-		details: FormSubmitDetails<Schema, Context>,
-	) => unknown | Promise<unknown>
 }
+
+/** Configuration used to bind a definition to React Hook Form. */
+export type UseFormOptions<
+	Schema extends StandardSchema,
+	Context = unknown,
+	Actions extends FormActionsConfig<Schema, Context> = FormActionsConfig<
+		Schema,
+		Context
+	>,
+> = BaseUseFormOptions<Schema, Context> &
+	(
+		| {
+				/** Handles successful validation as the implicit `submit` action. */
+				readonly onSubmit?: (
+					details: FormSubmitDetails<Schema, Context>,
+				) => unknown | Promise<unknown>
+				readonly actions?: undefined
+		  }
+		| {
+				/** Named submit actions; the form has no `submit` shorthand action. */
+				readonly actions: Actions
+				readonly onSubmit?: undefined
+		  }
+	)
 
 /** Optional managed-update policy supplied while defining one form. */
 export type DefineFormOptions<
@@ -181,6 +285,7 @@ export type DefineFormOptions<
 export type FormBinding<
 	Schema extends StandardSchema = AnyFormSchema,
 	Context = unknown,
+	Actions extends string = string,
 > = {
 	/** The unchanged typed React Hook Form API. */
 	readonly api: NativeApi<Schema, Context>
@@ -195,6 +300,28 @@ export type FormBinding<
 	readonly context: Context
 	/** Atomically applies one managed value recipe through middleware. */
 	update(recipe: FormUpdateRecipe<FormValues<Schema>>): unknown
+	/** Submit actions with stable identity for `kit.Submit`. */
+	readonly actions: {
+		readonly [Name in Actions]: FormAction<Schema, Context, Name>
+	}
+	/** The live submission state, readable with `useSnapshot`. */
+	readonly submission: FormSubmission<Actions>
+	/** Replaces the external issues and optionally moves focus. */
+	setIssues(
+		issues: readonly FormIssueInput<Schema>[],
+		options?: SetIssuesOptions<Schema>,
+	): void
+	/** Selects a mounted generated array for managed row reconciliation. */
+	array<Path extends ArrayFieldPath<FormValues<Schema>>>(
+		path: Path,
+	): FormArray<
+		PathValue<
+			FormValues<Schema>,
+			Extract<Path, FieldPath<FormValues<Schema>>>
+		> extends readonly (infer Item)[]
+			? Item
+			: never
+	>
 }
 
 /** Native form props that remain under application control. */
@@ -249,10 +376,20 @@ type RuntimeForm = {
 	readonly errorSummaryRef: RefObject<HTMLElement | null>
 	/** The mounted native form element, when one exists. */
 	formElement: HTMLFormElement | null
-	/** The configured successful-submit handler. */
-	readonly onSubmit?: (
-		details: FormSubmitDetails<AnyFormSchema>,
-	) => unknown | Promise<unknown>
+	/** Action and external issues stored beside schema errors. */
+	readonly issues: FormIssueStore
+	/** The live submission state. */
+	readonly submission: FormSubmission
+	/** The action that `kit.Submit` without an action runs, when one exists. */
+	readonly defaultAction: string | undefined
+	/** The action that Enter in a single-line field runs, when one exists. */
+	readonly implicitAction: string | undefined
+	/** Runs one action unless another submission is pending. */
+	readonly submitAction: (
+		name: string,
+		submitter: FormSubmitDetails<AnyFormSchema>["submitter"],
+		formElement: HTMLFormElement,
+	) => Promise<void>
 	/** The latest resolved UI already retained by the generated fields. */
 	resolved?: ResolvedDefinition
 }
@@ -401,19 +538,39 @@ type UseForm<
 	ArrayOptions,
 	Context,
 	Grid extends number,
-> = <Schema extends StandardSchema>(
-	definition: FormDefinition<
-		Schema,
-		Controls,
-		Context,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Grid,
-		FormDefinitionUpdatePolicy<Schema, Context>
-	>,
-	options: UseFormOptions<Schema, Context>,
-) => FormBinding<Schema, Context>
+> = {
+	<Schema extends StandardSchema>(
+		definition: FormDefinition<
+			Schema,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+			FormDefinitionUpdatePolicy<Schema, Context>
+		>,
+		options: UseFormOptions<Schema, Context> & { readonly actions?: undefined },
+	): FormBinding<Schema, Context, "submit">
+	<
+		Schema extends StandardSchema,
+		const Actions extends FormActionsConfig<Schema, Context>,
+	>(
+		definition: FormDefinition<
+			Schema,
+			Controls,
+			Context,
+			FieldOptions,
+			SectionOptions,
+			ArrayOptions,
+			Grid,
+			FormDefinitionUpdatePolicy<Schema, Context>
+		>,
+		options: UseFormOptions<Schema, Context, Actions> & {
+			readonly actions: Actions
+		},
+	): FormBinding<Schema, Context, Extract<keyof Actions, string>>
+}
 
 /** A fixed registry, renderer, and React Hook Form integration. */
 export interface FormKit<
@@ -468,8 +625,22 @@ export interface FormKit<
 	}) => ReactElement
 	/** Renders the configured submit slot with current form state. */
 	readonly Submit: {
-		/** Renders static content through the configured submit slot. */
-		(props: Omit<ComponentPropsWithoutRef<"button">, "type">): ReactElement
+		/** Renders static content for an action or the `submit` shorthand action. */
+		<Schema extends StandardSchema>(
+			props: Omit<ComponentPropsWithoutRef<"button">, "type"> & {
+				/** The action that this button runs. */
+				readonly action?: FormAction<Schema, Context>
+			},
+		): ReactElement
+		/** Renders custom content with live state typed by the action form. */
+		<Schema extends StandardSchema>(
+			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
+				/** The action that this button runs. */
+				readonly action: FormAction<Schema, Context>
+				/** Renders custom content from live typed submit state. */
+				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
+			},
+		): ReactElement
 		/** Renders custom content with live state typed by the matching binding. */
 		<Schema extends StandardSchema>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
@@ -656,6 +827,9 @@ function assembleKit(
 		}
 		const inputRefs = useRef(new Map<string, HTMLElement>())
 		const errorSummaryRef = useRef<HTMLElement | null>(null)
+		const optionsRef = useRef(options)
+		optionsRef.current = options
+		const issuesRef = useRef<FormIssueStore | undefined>(undefined)
 		const api = useReactHookForm<
 			FormValues<Schema>,
 			unknown,
@@ -672,6 +846,7 @@ function assembleKit(
 					FormValues<Schema>,
 					FormOutput<Schema>
 				>,
+				(values) => issuesRef.current?.current(values) ?? [],
 			),
 			shouldFocusError: true,
 			shouldUnregister: false,
@@ -731,6 +906,40 @@ function assembleKit(
 		}
 		const commit = commitRef.current
 		const coordinator = coordinatorRef.current
+		const bindingRef = useRef<FormBinding<Schema, unknown> | undefined>(
+			undefined,
+		)
+		const runtimeRef = useRef<RuntimeForm | undefined>(undefined)
+		const submissionRef = useRef<FormSubmissionRuntime | undefined>(undefined)
+		if (submissionRef.current === undefined) {
+			const issues = createFormIssueStore(
+				() =>
+					apiRef.current as unknown as UseFormReturn<
+						FieldValues,
+						unknown,
+						unknown
+					>,
+			)
+			issuesRef.current = issues
+			submissionRef.current = createFormSubmissionRuntime({
+				issues,
+				options: options as UseFormOptions<AnyFormSchema>,
+				getBinding: () => bindingRef.current as unknown as FormBinding,
+				getOptions: () => optionsRef.current as UseFormOptions<AnyFormSchema>,
+				getRuntime: () => runtimeRef.current as RuntimeForm,
+			})
+		}
+		const submission = submissionRef.current
+		useLayoutEffect(
+			() =>
+				api.subscribe({
+					formState: { values: true },
+					callback: () => {
+						submission.issues.clearChanged(apiRef.current.getValues())
+					},
+				}),
+			[api, submission],
+		)
 
 		const binding = useMemo(() => {
 			const instance: FormBinding<Schema, unknown> = {
@@ -738,6 +947,26 @@ function assembleKit(
 				definition: fixedDefinition,
 				context: options.context,
 				update: coordinator.update,
+				actions: submission.actions as unknown as FormBinding<
+					Schema,
+					unknown
+				>["actions"],
+				submission: submission.store,
+				setIssues: submission.setIssues as FormBinding<
+					Schema,
+					unknown
+				>["setIssues"],
+				array: (path) => ({
+					reconcile: (keys, options) =>
+						reconcileGeneratedArray(
+							runtimeForms.get(instance) as RuntimeForm,
+							path,
+							keys,
+							options as unknown as Parameters<
+								typeof reconcileGeneratedArray
+							>[3],
+						),
+				}),
 			}
 			attachValueCoordinatorCapability(instance, coordinator)
 			const diagnosticTarget = getValueCoordinatorCapability(coordinator)
@@ -751,9 +980,13 @@ function assembleKit(
 					readErrorDisplay(options.errorDisplay, "useForm") ?? kitErrorDisplay,
 				errorSummaryRef,
 				formElement: null,
+				defaultAction: submission.defaultAction,
+				implicitAction: submission.implicitAction,
 				inputRefs: inputRefs.current,
-				onSubmit: options.onSubmit as RuntimeForm["onSubmit"],
+				issues: submission.issues,
 				readOnly: options.readOnly === true,
+				submission: submission.store,
+				submitAction: submission.submitAction,
 			} as unknown as RuntimeForm
 			attachFormDiagnosticsRuntime(instance, runtime)
 			return {
@@ -768,9 +1001,11 @@ function assembleKit(
 			options.context,
 			options.disabled,
 			options.errorDisplay,
-			options.onSubmit,
 			options.readOnly,
+			submission,
 		])
+		bindingRef.current = binding.instance
+		runtimeRef.current = binding.runtime
 		runtimeForms.set(binding.instance, binding.runtime)
 		return binding.instance
 	}) as UseForm<
@@ -810,37 +1045,33 @@ function assembleKit(
 							ref={(element) => {
 								runtimeForm.formElement = element
 							}}
+							onKeyDown={(event) => {
+								nativeProps.onKeyDown?.(event)
+								// The onSubmit shorthand keeps native implicit submission and its submitter.
+								if (runtimeForm.defaultAction !== undefined) return
+								if (!isImplicitSubmitKey(event)) return
+								event.preventDefault()
+								const name = runtimeForm.implicitAction
+								if (runtimeForm.disabled || name === undefined) return
+								void runtimeForm.submitAction(name, null, event.currentTarget)
+							}}
 							onReset={(event) => {
 								event.preventDefault()
+								runtimeForm.issues.forget()
 								form.api.reset()
 							}}
 							onSubmit={(event) => {
 								event.preventDefault()
 								if (runtimeForm.disabled) return
-								const formElement = event.currentTarget
-								const submitter = snapshotSubmitter(event.nativeEvent)
-								const input = cloneFormValue(
-									form.api.getValues(),
-								) as FormValues<Schema>
-								void form.api.handleSubmit(
-									async (value) => {
-										await runtimeForm.onSubmit?.({
-											form: form as unknown as FormBinding,
-											input,
-											submitter,
-											value,
-										})
-									},
-									(errors) => {
-										setTimeout(() => {
-											focusErrorSummaryFallback(
-												errors,
-												formElement,
-												runtimeForm,
-											)
-										}, 0)
-									},
-								)(event)
+								const name =
+									submitterAction(event.nativeEvent) ??
+									runtimeForm.implicitAction
+								if (name === undefined) return
+								void runtimeForm.submitAction(
+									name,
+									snapshotSubmitter(event.nativeEvent),
+									event.currentTarget,
+								)
 							}}
 						>
 							{children}
@@ -875,33 +1106,47 @@ function assembleKit(
 	/** Renders the kit submit slot with live form state. */
 	function Submit<Schema extends StandardSchema>(
 		props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
+			readonly action?: FormAction<Schema, unknown>
 			readonly binding?: FormBinding<Schema, unknown>
 			readonly children?:
 				| ReactNode
 				| ((props: SubmitSlotProps<Schema>) => ReactNode)
 		},
 	) {
-		const { binding, children, ...nativeProps } = props
+		const { action, binding, children, ...nativeProps } = props
 		const runtime = useRuntimeForm()
 		if (binding !== undefined && runtimeForms.get(binding) !== runtime) {
 			throw new Error("Submit binding must match the surrounding Form")
 		}
+		if (action !== undefined && runtimeForms.get(action.form) !== runtime) {
+			throw new Error("Submit action must belong to the surrounding Form")
+		}
+		const actionName = action?.name ?? runtime.defaultAction
+		if (actionName === undefined) {
+			throw new Error(
+				"Submit requires an action when useForm configures actions",
+			)
+		}
+		const isPending = useSnapshot(runtime.submission).action !== null
 		const state = useFormState({ control: runtime.api.control })
 		const values = useWatch({ control: runtime.api.control })
 		const Slot = slots.Submit
 		const renderProps: SubmitSlotProps<Schema> = {
 			buttonProps: {
 				...nativeProps,
+				"data-fp-action": actionName,
 				disabled:
 					props.disabled === true ||
 					runtime.disabled ||
+					isPending ||
 					state.isValidating ||
 					state.isSubmitting,
 				type: "submit",
-			},
+			} as SubmitSlotProps<Schema>["buttonProps"],
+			isPending,
 			isSubmitting: state.isSubmitting,
 			isDirty: state.isDirty,
-			canSubmit: !state.isValidating && !state.isSubmitting,
+			canSubmit: !isPending && !state.isValidating && !state.isSubmitting,
 			values: values as DeepReadonly<FormInput<Schema>>,
 		}
 		if (typeof children === "function") {
@@ -1120,7 +1365,8 @@ function GeneratedField({
 	const dirty = fieldState.isDirty
 	const touched = fieldState.isTouched
 	const validating = fieldState.isValidating
-	const showErrors = touched || formState.submitCount > 0
+	const showErrors =
+		touched || formState.submitCount > 0 || form.issues.has(path)
 	const { displayErrors, errorIds, errors } = useGeneratedIssues(
 		fieldState.error,
 		path,
@@ -1266,6 +1512,11 @@ function GeneratedArray({
 		control: form.api.control,
 		name: path,
 	})
+	useLayoutEffect(
+		() =>
+			registerGeneratedArray(form.api.control, path, { append, move, remove }),
+		[form.api.control, path, append, move, remove],
+	)
 	const previousFieldIds = useRef<readonly string[] | undefined>(undefined)
 	const fieldIds = useMemo(() => {
 		const next = fields.map((field) => field.id)
@@ -1284,7 +1535,8 @@ function GeneratedArray({
 	const dirty = fieldState.isDirty
 	const touched = fieldState.isTouched
 	const validating = fieldState.isValidating
-	const showErrors = touched || formState.submitCount > 0
+	const showErrors =
+		touched || formState.submitCount > 0 || form.issues.has(path)
 	const { displayErrors, errorIds } = useGeneratedIssues(
 		fieldState.error,
 		path,
@@ -1452,7 +1704,7 @@ function ErrorSummary({
 	const formId = useFormId()
 	const state = useFormState({ control: form.api.control })
 	const Slot = slots.ErrorMessage
-	if (state.submitCount === 0) return null
+	if (state.submitCount === 0 && form.issues.list().length === 0) return null
 
 	const summaryIssues = fieldErrorsToIssues(state.errors).filter((issue) => {
 		if (issue.path === "root" || issue.path?.startsWith("root.")) return true
@@ -1706,6 +1958,200 @@ function useFormId(): string {
 /** Creates a DOM-safe ID for an input path within a form. */
 function createDomId(prefix: string, value: string): string {
 	return `${prefix}-${encodeURIComponent(value).replaceAll(".", "%2E")}`
+}
+
+/** Private submission state shared by one binding and its runtime form. */
+type FormSubmissionRuntime = {
+	readonly actions: Readonly<Record<string, FormAction>>
+	readonly defaultAction: string | undefined
+	readonly implicitAction: string | undefined
+	readonly issues: FormIssueStore
+	readonly store: FormSubmission
+	readonly setIssues: FormBinding["setIssues"]
+	readonly submitAction: RuntimeForm["submitAction"]
+}
+
+/** Fixes action names and creates the submission entry point of one form. */
+function createFormSubmissionRuntime({
+	getBinding,
+	getOptions,
+	getRuntime,
+	issues,
+	options,
+}: {
+	readonly getBinding: () => FormBinding
+	readonly getOptions: () => UseFormOptions<AnyFormSchema>
+	readonly getRuntime: () => RuntimeForm
+	readonly issues: FormIssueStore
+	readonly options: UseFormOptions<AnyFormSchema>
+}): FormSubmissionRuntime {
+	if (options.actions !== undefined && options.onSubmit !== undefined) {
+		throw new TypeError("useForm accepts onSubmit or actions, not both")
+	}
+	const configured = options.actions
+	const names = configured === undefined ? ["submit"] : Object.keys(configured)
+	const implicitNames =
+		configured === undefined
+			? ["submit"]
+			: names.filter((name) => configured[name]?.implicit === true)
+	if (implicitNames.length > 1) {
+		throw new TypeError("useForm accepts at most one implicit action")
+	}
+	const actions = Object.freeze(
+		Object.fromEntries(
+			names.map((name) => [
+				name,
+				Object.freeze({
+					name,
+					get form() {
+						return getBinding()
+					},
+				}),
+			]),
+		),
+	)
+
+	let snapshot: FormSubmissionSnapshot = Object.freeze({ action: null })
+	const listeners = new Set<() => void>()
+	const publish = (action: string | null): void => {
+		snapshot = Object.freeze({ action })
+		for (const listener of listeners) listener()
+	}
+	const store: FormSubmission = {
+		getSnapshot: () => snapshot,
+		subscribe(listener) {
+			listeners.add(listener)
+			return () => listeners.delete(listener)
+		},
+	}
+
+	const readAction = (
+		name: string,
+	): Partial<FormActionConfig<AnyFormSchema>> => {
+		const current = getOptions()
+		if (current.actions === undefined) return { onSubmit: current.onSubmit }
+		const action = current.actions[name]
+		if (action === undefined) {
+			throw new Error(`Form action "${name}" is no longer configured`)
+		}
+		return action
+	}
+
+	return {
+		actions,
+		defaultAction: configured === undefined ? "submit" : undefined,
+		implicitAction: implicitNames[0],
+		issues,
+		store,
+		setIssues(nextIssues, setOptions) {
+			issues.replace("external", nextIssues as readonly FormIssue[])
+			if (setOptions?.focus !== undefined) {
+				focusIssue(getRuntime(), setOptions.focus)
+			}
+		},
+		async submitAction(name, submitter, formElement) {
+			if (snapshot.action !== null) return
+			publish(name)
+			try {
+				const runtime = getRuntime()
+				const action = readAction(name)
+				const input = cloneFormValue(runtime.api.getValues())
+				issues.replace("action", [])
+				issues.replace("external", [])
+				await runtime.api.handleSubmit(
+					async (value) => {
+						const actionIssues =
+							(await action.validate?.({ input, value })) ?? []
+						if (actionIssues.length > 0) {
+							issues.replace("action", actionIssues as readonly FormIssue[])
+							focusIssue(runtime, true)
+							return
+						}
+						await action.onSubmit?.({
+							form: getBinding(),
+							input,
+							submitter,
+							value,
+						})
+					},
+					(errors) => {
+						setTimeout(() => {
+							focusErrorSummaryFallback(errors, formElement, runtime)
+						}, 0)
+					},
+				)()
+			} finally {
+				publish(null)
+			}
+		},
+	}
+}
+
+/** Input types where Enter requests implicit submission in HTML. */
+const implicitSubmitInputTypes = new Set([
+	"date",
+	"datetime-local",
+	"email",
+	"month",
+	"number",
+	"password",
+	"search",
+	"tel",
+	"text",
+	"time",
+	"url",
+	"week",
+])
+
+/** Tests whether a key event requests implicit submission from a single-line field. */
+function isImplicitSubmitKey(event: KeyboardEvent<HTMLFormElement>): boolean {
+	const target = event.target
+	return (
+		event.key === "Enter" &&
+		!event.defaultPrevented &&
+		!event.nativeEvent.isComposing &&
+		target instanceof HTMLElement &&
+		target.tagName === "INPUT" &&
+		implicitSubmitInputTypes.has((target as HTMLInputElement).type)
+	)
+}
+
+/** Reads the action of the `kit.Submit` button that submitted the form. */
+function submitterAction(event: Event): string | undefined {
+	if (!("submitter" in event)) return undefined
+	const { submitter } = event
+	if (!(submitter instanceof HTMLElement)) return undefined
+	return submitter.getAttribute("data-fp-action") ?? undefined
+}
+
+/** Focuses an issue field after render, or the error summary when it is unavailable. */
+function focusIssue(form: RuntimeForm, target: string | true): void {
+	setTimeout(() => {
+		const errors = form.api.formState.errors
+		const paths =
+			target === true
+				? [...form.api.control._names.mount].filter((path) =>
+						hasFieldError(errors, path),
+					)
+				: [target]
+		for (const path of paths) {
+			if (focusField(form, path)) return
+		}
+		form.errorSummaryRef.current?.focus()
+	}, 0)
+}
+
+/** Focuses one registered field when it is enabled and visible. */
+function focusField(form: RuntimeForm, path: string): boolean {
+	const input = form.inputRefs.get(path)
+	if (input?.matches(":disabled")) return false
+	const document = form.formElement?.ownerDocument ?? globalThis.document
+	const before = document.activeElement
+	form.api.setFocus(path)
+	const active = document.activeElement
+	if (active === null || active === document.body) return false
+	if (input !== undefined) return input === active || input.contains(active)
+	return active !== before || active.getAttribute("name") === path
 }
 
 function snapshotSubmitter(
