@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/r13v/form-please/compare/v1.9.1...v1.10.0) (2026-10-08)
+
+
+### Features
+
+* add submit actions, external issues, and array reconcile ([#40](https://github.com/r13v/form-please/issues/40)) ([6a00f8e](https://github.com/r13v/form-please/commit/6a00f8ed423382e89ba60456ee35aba547317e4b))
+
 ## [1.9.1](https://github.com/r13v/form-please/compare/v1.9.0...v1.9.1) (2026-10-03)
 
 
