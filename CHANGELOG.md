@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/r13v/form-please/compare/v1.10.0...v1.11.0) (2026-10-11)
+
+
+### Features
+
+* capture submit errors and allow kit.Submit outside Form ([#46](https://github.com/r13v/form-please/issues/46)) ([742319c](https://github.com/r13v/form-please/commit/742319ceaaf07ad3a0a3e1227270f8dd129a67ae)), closes [#42](https://github.com/r13v/form-please/issues/42) [#43](https://github.com/r13v/form-please/issues/43)
+
 ## [1.10.0](https://github.com/r13v/form-please/compare/v1.9.1...v1.10.0) (2026-10-08)
 
 
