@@ -207,8 +207,8 @@ component-local form instance.
 | `FormActionsConfig<Schema, Context>` | The `actions` record accepted by `useForm`. |
 | `FormActionValidateDetails<Schema>` | Parsed output and schema input passed to an action `validate`. |
 | `FormAction<Schema, Context, Name>` | A bound action from `form.actions`. |
-| `FormSubmission<Name>` | External store of the running action. |
-| `FormSubmissionSnapshot<Name>` | `{ action }` snapshot of `FormSubmission`. |
+| `FormSubmission<Name>` | External store of the running action and the last `onSubmit` rejection. |
+| `FormSubmissionSnapshot<Name>` | `{ action, error }` snapshot of `FormSubmission`. `error` is `{ value }` or `null`. |
 | `FormIssueInput<Schema>` | An issue with a typed optional path for `validate` and `setIssues`. |
 | `SetIssuesOptions<Schema>` | The `focus` option of `setIssues`. |
 | `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |

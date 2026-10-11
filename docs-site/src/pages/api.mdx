@@ -448,10 +448,29 @@ Enter in a single-line field runs the `implicit` action. Without an implicit
 action, Enter does not submit the form. At most one action can be implicit.
 A native submit that does not come from `kit.Submit` also runs the implicit
 action. `onSubmit` is the shorthand for `actions: { submit: { implicit: true, onSubmit } }`.
+
+To render `kit.Submit` outside `kit.Form`, for example in a dialog footer, set
+`binding` or `action`. Set the native `form` attribute to the Form `id`.
+`kit.Submit` does not read the ID of the Form. Set an explicit `id` on the Form.
+
+```tsx
+<>
+  <kit.Form form={form} id="review-form">
+    <kit.Fields />
+  </kit.Form>
+  <kit.Submit action={form.actions.decline} form="review-form">Decline</kit.Submit>
+</>
+```
 With the shorthand, Enter keeps native implicit submission and its `submitter`.
 
 `form.submission` is an external store. `useSnapshot(form.submission).action`
 gives the name of the running action, or `null`.
+`useSnapshot(form.submission).error` gives the rejection of the last action
+`onSubmit` as `{ value }`, or `null`. The wrapper object keeps a rejection with
+`undefined` or another falsy value. Form, Please catches only this rejection. An
+error from the schema, from `validate`, or from the runtime is not caught. The
+next accepted submit and `setIssues` set `error` to `null`. The React Hook Form
+`formState.isSubmitSuccessful` is `false` after a rejection.
 
 ### External issues
 
@@ -646,11 +665,12 @@ lifecycle rules, envelope encoding, migrations, conflicts, and adapters.
 | --- | --- |
 | `kit.Form` | Requires a binding from the same kit. Accepts native form props except owned submit, reset, action, and validation props. |
 | `kit.Fields` | Renders the resolved definition. It renders optional children after generated fields. |
-| `kit.Submit` | Accepts button props except `type` and an `action` from `form.actions`. Without `action`, it runs the `onSubmit` shorthand action. The configured submit slot always receives `type="submit"`. |
+| `kit.Submit` | Accepts button props except `type`, an `action` from `form.actions`, and a `binding`. Without `action`, it runs the `onSubmit` shorthand action. Inside `kit.Form`, `binding` and `action` must match the surrounding form. Outside `kit.Form`, `binding` or `action` selects the form, and the native `form` attribute must match the Form `id`. The configured submit slot always receives `type="submit"`. |
 | `kit.AutoForm` | Renders `Form`, the error summary, `Fields`, and then its children. |
 
-`Fields` and `Submit` must be descendants of the matching `kit.Form`.
-`AutoForm` provides that form context automatically.
+`Fields` must be a descendant of the matching `kit.Form`. `Submit` must be a
+descendant too, unless it has `binding` or `action`. `AutoForm` provides that
+form context automatically.
 
 `Form` prevents native submission and connects the Form, Please submit wrapper
 to raw `form.api.handleSubmit`. A reset event calls `form.api.reset()`. It sets

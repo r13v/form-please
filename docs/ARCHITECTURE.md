@@ -396,11 +396,20 @@ On a successful submit:
 `useForm` accepts `onSubmit` or named `actions`. `onSubmit` is the shorthand
 for an implicit `submit` action. `kit.Submit` marks its button with the action
 name, and the native submit handler selects that action, or the implicit action
-for Enter and other native submits. One synchronous entry point locks the form
-before async work. An action `validate` runs after the schema passes. With
+for Enter and other native submits. Outside `kit.Form`, `kit.Submit` selects
+its runtime form through `binding` or `action`, and the native `form` attribute
+connects the button to the Form `id`; the same submit handler reads its action.
+One synchronous entry point locks the form before async work. An action `validate` runs after the schema passes. With
 explicit `actions`, `kit.Form` handles Enter in single-line inputs itself so a
 native first-button submitter cannot select the wrong action; the `onSubmit`
 shorthand keeps native implicit submission and its `submitter` snapshot.
+
+The wrapper catches only a rejection of the action `onSubmit`. It throws a
+private truthy marker through RHF `handleSubmit`, so RHF sets
+`isSubmitSuccessful` to `false` and rethrows. After `handleSubmit`, the runtime
+publishes the marker value as `submission.error = { value }`. Other errors, such
+as schema, `validate`, or runtime errors, propagate unchanged. An accepted submit
+and `setIssues` set `error` to `null`.
 
 Action issues and `setIssues` external issues live in a private issue store
 beside schema errors. The store writes them to RHF errors, and the resolver
