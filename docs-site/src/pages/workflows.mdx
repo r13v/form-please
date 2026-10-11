@@ -154,6 +154,29 @@ mapped path and focus after that screen renders. Keep other failures in
 application state. See [Server issues are not schema
 issues](/how-it-works#server-issues-are-not-schema-issues).
 
+### Share one wrapper for server issues
+
+Write the issue mapping once as an `onSubmit` wrapper. Each form then calls its
+request function without its own `try` and `catch` block.
+
+```tsx twoslash
+// [!include ~/snippets/workflow-api-issues.tsx]
+```
+
+The wrapper rethrows the error after `setIssues`. Form, Please catches a
+rejection of `onSubmit` and keeps it in
+`useSnapshot(form.submission).error` as `{ value }`. Use this value for a request
+failure banner. The next accepted submit and `setIssues` set `error` to `null`.
+
+The user can edit a field while the request runs. A server issue for that path
+then attaches to the new value. To prevent this, the wrapper compares the
+current value at each path with the submitted `input` and skips changed paths.
+The example uses `JSON.stringify` for this comparison. Use a deep equality
+function for values such as `Date` or `File`.
+
+If the wrapper skips every server issue, it adds one form issue. The error
+summary then shows that the save failed.
+
 ## 5. Separate draft and validated actions
 
 A draft can contain incomplete or invalid input. Use `type="button"` for **Save

@@ -211,6 +211,12 @@ export type FormAction<
 export type FormSubmissionSnapshot<Name extends string = string> = {
 	/** The name of the running action, or null when no action runs. */
 	readonly action: Name | null
+	/**
+	 * The rejection of the last action `onSubmit`, or null. The wrapper object
+	 * keeps a rejection with `undefined` or another falsy value visible. A new
+	 * accepted submission and `setIssues` set it to null.
+	 */
+	readonly error: { readonly value: unknown } | null
 }
 
 /** An external store with the live submission state of one form. */
@@ -628,15 +634,28 @@ export interface FormKit<
 		/** Renders static content for an action or the `submit` shorthand action. */
 		<Schema extends StandardSchema>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type"> & {
-				/** The action that this button runs. */
+				/**
+				 * The action that this button runs. Outside `Form`, the action
+				 * selects the form. Set the native `form` attribute to the Form `id`.
+				 */
 				readonly action?: FormAction<Schema, Context>
+				/**
+				 * The form binding. Outside `Form`, the binding selects the form.
+				 * Set the native `form` attribute to the Form `id`.
+				 */
+				readonly binding?: FormBinding<Schema, Context>
 			},
 		): ReactElement
 		/** Renders custom content with live state typed by the action form. */
 		<Schema extends StandardSchema>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
-				/** The action that this button runs. */
+				/**
+				 * The action that this button runs. Outside `Form`, the action
+				 * selects the form. Set the native `form` attribute to the Form `id`.
+				 */
 				readonly action: FormAction<Schema, Context>
+				/** The form binding. It must own the action. */
+				readonly binding?: FormBinding<Schema, Context>
 				/** Renders custom content from live typed submit state. */
 				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
 			},
@@ -644,7 +663,10 @@ export interface FormKit<
 		/** Renders custom content with live state typed by the matching binding. */
 		<Schema extends StandardSchema>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
-				/** The binding mounted by the surrounding `Form`. */
+				/**
+				 * The binding of the surrounding `Form`. Outside `Form`, the binding
+				 * selects the form. Set the native `form` attribute to the Form `id`.
+				 */
 				readonly binding: FormBinding<Schema, Context>
 				/** Renders custom content from live typed submit state. */
 				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
@@ -1103,10 +1125,61 @@ function assembleKit(
 		)
 	}
 
+	/**
+	 * Selects the runtime form of `kit.Submit`. Inside `kit.Form`, the
+	 * binding and the action must match the surrounding form. Outside
+	 * `kit.Form`, the binding or the action selects the form.
+	 */
+	function resolveSubmitRuntime(
+		surrounding: RuntimeForm | null,
+		binding: object | undefined,
+		action: { readonly form: object } | undefined,
+	): RuntimeForm {
+		const fromBinding =
+			binding === undefined ? undefined : runtimeForms.get(binding)
+		const fromAction =
+			action === undefined ? undefined : runtimeForms.get(action.form)
+		if (surrounding !== null) {
+			if (binding !== undefined && fromBinding !== surrounding) {
+				throw new Error("Submit binding must match the surrounding Form")
+			}
+			if (action !== undefined && fromAction !== surrounding) {
+				throw new Error("Submit action must belong to the surrounding Form")
+			}
+			return surrounding
+		}
+		if (binding === undefined && action === undefined) {
+			throw new Error("Submit outside Form requires a binding or an action")
+		}
+		const runtime = fromBinding ?? fromAction
+		if (runtime === undefined) {
+			throw new Error(
+				"Submit binding or action is not mounted by this form kit",
+			)
+		}
+		if (
+			binding !== undefined &&
+			action !== undefined &&
+			fromBinding !== fromAction
+		) {
+			throw new Error("Submit action must belong to the Submit binding")
+		}
+		return runtime
+	}
+
 	/** Renders the kit submit slot with live form state. */
 	function Submit<Schema extends StandardSchema>(
 		props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
+			/**
+			 * The action that the button runs. Outside `kit.Form`, the action
+			 * also selects the form. Set the native `form` attribute to the
+			 * Form `id`.
+			 */
 			readonly action?: FormAction<Schema, unknown>
+			/**
+			 * The form binding. Outside `kit.Form`, the binding selects the
+			 * form. Set the native `form` attribute to the Form `id`.
+			 */
 			readonly binding?: FormBinding<Schema, unknown>
 			readonly children?:
 				| ReactNode
@@ -1114,13 +1187,11 @@ function assembleKit(
 		},
 	) {
 		const { action, binding, children, ...nativeProps } = props
-		const runtime = useRuntimeForm()
-		if (binding !== undefined && runtimeForms.get(binding) !== runtime) {
-			throw new Error("Submit binding must match the surrounding Form")
-		}
-		if (action !== undefined && runtimeForms.get(action.form) !== runtime) {
-			throw new Error("Submit action must belong to the surrounding Form")
-		}
+		const runtime = resolveSubmitRuntime(
+			useContext(FormContext),
+			binding,
+			action,
+		)
 		const actionName = action?.name ?? runtime.defaultAction
 		if (actionName === undefined) {
 			throw new Error(
@@ -1960,6 +2031,17 @@ function createDomId(prefix: string, value: string): string {
 	return `${prefix}-${encodeURIComponent(value).replaceAll(".", "%2E")}`
 }
 
+/**
+ * Carries an action `onSubmit` rejection through RHF `handleSubmit`. RHF tests
+ * the rethrown value by truthiness, so the marker object keeps falsy rejections.
+ */
+class SubmitHandlerRejection {
+	readonly value: unknown
+	constructor(value: unknown) {
+		this.value = value
+	}
+}
+
 /** Private submission state shared by one binding and its runtime form. */
 type FormSubmissionRuntime = {
 	readonly actions: Readonly<Record<string, FormAction>>
@@ -2011,10 +2093,13 @@ function createFormSubmissionRuntime({
 		),
 	)
 
-	let snapshot: FormSubmissionSnapshot = Object.freeze({ action: null })
+	let snapshot: FormSubmissionSnapshot = Object.freeze({
+		action: null,
+		error: null,
+	})
 	const listeners = new Set<() => void>()
-	const publish = (action: string | null): void => {
-		snapshot = Object.freeze({ action })
+	const publish = (next: Partial<FormSubmissionSnapshot>): void => {
+		snapshot = Object.freeze({ ...snapshot, ...next })
 		for (const listener of listeners) listener()
 	}
 	const store: FormSubmission = {
@@ -2045,13 +2130,15 @@ function createFormSubmissionRuntime({
 		store,
 		setIssues(nextIssues, setOptions) {
 			issues.replace("external", nextIssues as readonly FormIssue[])
+			if (snapshot.error !== null) publish({ error: null })
 			if (setOptions?.focus !== undefined) {
 				focusIssue(getRuntime(), setOptions.focus)
 			}
 		},
 		async submitAction(name, submitter, formElement) {
 			if (snapshot.action !== null) return
-			publish(name)
+			publish({ action: name, error: null })
+			let error: FormSubmissionSnapshot["error"] = null
 			try {
 				const runtime = getRuntime()
 				const action = readAction(name)
@@ -2067,12 +2154,16 @@ function createFormSubmissionRuntime({
 							focusIssue(runtime, true)
 							return
 						}
-						await action.onSubmit?.({
-							form: getBinding(),
-							input,
-							submitter,
-							value,
-						})
+						try {
+							await action.onSubmit?.({
+								form: getBinding(),
+								input,
+								submitter,
+								value,
+							})
+						} catch (rejection) {
+							throw new SubmitHandlerRejection(rejection)
+						}
 					},
 					(errors) => {
 						setTimeout(() => {
@@ -2080,8 +2171,11 @@ function createFormSubmissionRuntime({
 						}, 0)
 					},
 				)()
+			} catch (thrown) {
+				if (!(thrown instanceof SubmitHandlerRejection)) throw thrown
+				error = { value: thrown.value }
 			} finally {
-				publish(null)
+				publish({ action: null, error })
 			}
 		},
 	}

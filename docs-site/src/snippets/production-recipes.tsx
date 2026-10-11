@@ -134,6 +134,29 @@ function SavingProfile({ profile }: { readonly profile: Profile }) {
 }
 // [!endregion async-submit]
 
+// [!region dialog-submit]
+function ProfileDialog({ profile }: { readonly profile: Profile }) {
+	const form = nativeFormKit.useForm(profileDefinition, {
+		defaultValues: profile,
+		onSubmit: async ({ value }) => {
+			await updateProfile(value)
+		},
+	})
+
+	return (
+		<dialog open aria-labelledby="profile-dialog-title">
+			<h2 id="profile-dialog-title">Edit profile</h2>
+			<nativeFormKit.AutoForm form={form} id="profile-dialog-form" />
+			<footer>
+				<nativeFormKit.Submit binding={form} form="profile-dialog-form">
+					Save profile
+				</nativeFormKit.Submit>
+			</footer>
+		</dialog>
+	)
+}
+// [!endregion dialog-submit]
+
 // [!region server-response]
 const serverProfileResultSchema = z.discriminatedUnion("ok", [
 	z.object({
