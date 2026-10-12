@@ -3373,6 +3373,127 @@ describe("submit actions and external issues", () => {
 		expect(approve).not.toHaveBeenCalled()
 	})
 
+	it("accepts bindings of a narrower forContext kit in the base kit components", async () => {
+		type AppContext = { readonly isNew: boolean }
+		type InviteContext = AppContext & { readonly teams: readonly string[] }
+		const appKit = kit.forContext<AppContext>()
+		const inviteKit = appKit.forContext<InviteContext>()
+		const inviteDefinition = inviteKit.defineForm(schema, {
+			ui: [
+				{
+					kind: "field",
+					path: "name",
+					control: "text",
+					label: (_values, { context }) => context.teams.join(", "),
+				},
+			],
+		})
+		const save = vi.fn()
+		const skip = vi.fn()
+
+		function Footer<Schema extends StandardSchema, Context extends AppContext>({
+			binding,
+			action,
+		}: {
+			readonly binding: FormBinding<Schema, Context, "save" | "skip">
+			readonly action: FormAction<Schema, Context, "skip">
+		}) {
+			return (
+				<>
+					<appKit.Submit
+						action={binding.actions.save}
+						binding={binding}
+						form="invite-form"
+					>
+						{/* An implicit any parameter here fails the typecheck. */}
+						{({ buttonProps }) => <button {...buttonProps}>Save</button>}
+					</appKit.Submit>
+					<appKit.Submit action={action} form="invite-form">
+						Skip
+					</appKit.Submit>
+				</>
+			)
+		}
+
+		function Shell<Schema extends StandardSchema, Context extends AppContext>({
+			form,
+		}: {
+			readonly form: FormBinding<Schema, Context>
+		}) {
+			return (
+				<>
+					<appKit.Form form={form} id="invite-form">
+						<appKit.Fields />
+					</appKit.Form>
+					<appKit.AutoForm form={form} id="invite-auto-form" />
+				</>
+			)
+		}
+
+		function View() {
+			const form = inviteKit.useForm(inviteDefinition, {
+				context: { isNew: true, teams: ["Core", "Docs"] },
+				defaultValues: { name: "Ada" },
+				actions: {
+					save: { onSubmit: ({ value }) => save(value) },
+					skip: { onSubmit: ({ value }) => skip(value) },
+				},
+			})
+			// @ts-expect-error A narrower binding is not a base binding.
+			const widened: FormBinding<typeof schema, AppContext> = form
+			void widened
+			return (
+				<>
+					<Shell form={form} />
+					<Footer action={form.actions.skip} binding={form} />
+				</>
+			)
+		}
+
+		function Unrelated({
+			form,
+		}: {
+			readonly form: FormBinding<typeof schema, { readonly other: true }>
+		}) {
+			return (
+				<>
+					{/* @ts-expect-error The binding context must extend the kit context. */}
+					<appKit.Submit binding={form}>Save</appKit.Submit>
+					{/* @ts-expect-error The binding context must extend the kit context. */}
+					<appKit.AutoForm form={form} />
+					{/* @ts-expect-error The binding context must extend the kit context. */}
+					<appKit.Form form={form} />
+				</>
+			)
+		}
+		void Unrelated
+
+		function BindingChildren({
+			form,
+		}: {
+			readonly form: FormBinding<typeof schema, InviteContext>
+		}) {
+			return (
+				<appKit.Submit binding={form}>
+					{({ values }) => {
+						expectTypeOf(values.name).toEqualTypeOf<string>()
+						// @ts-expect-error The values follow the binding schema.
+						void values.nonexistent
+						return "Save"
+					}}
+				</appKit.Submit>
+			)
+		}
+		void BindingChildren
+
+		render(<View />)
+		expect(screen.getAllByLabelText("Core, Docs")).toHaveLength(2)
+		fireEvent.click(screen.getByRole("button", { name: "Save" }))
+		await waitFor(() => expect(save).toHaveBeenCalledWith({ name: "Ada" }))
+		fireEvent.click(screen.getByRole("button", { name: "Skip" }))
+		await waitFor(() => expect(skip).toHaveBeenCalledWith({ name: "Ada" }))
+	})
+
 	it("rejects a Submit outside Form without a matching binding or action", () => {
 		const errors = vi.spyOn(console, "error").mockImplementation(() => {})
 		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
