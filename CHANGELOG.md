@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/r13v/form-please/compare/v1.11.0...v1.12.0) (2026-10-12)
+
+
+### Features
+
+* accept forContext bindings in base kit Form, AutoForm, and Submit ([#49](https://github.com/r13v/form-please/issues/49)) ([87edf11](https://github.com/r13v/form-please/commit/87edf11b750bbd2d53fd57613652c1ead1b663dc)), closes [#48](https://github.com/r13v/form-please/issues/48)
+
 ## [1.11.0](https://github.com/r13v/form-please/compare/v1.10.0...v1.11.0) (2026-10-11)
 
 
