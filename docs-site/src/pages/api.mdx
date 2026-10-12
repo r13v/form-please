@@ -363,6 +363,11 @@ controls.
 The method does not create or clone a registry. Its context type must extend
 the current kit context.
 
+`Form`, `AutoForm`, and `Submit` of a kit accept a binding of a narrower
+`forContext` view. A shared component can render `appKit.Submit` for a binding
+of type `FormBinding<Schema, Context>` with `Context extends AppContext`.
+`FormBinding` itself stays invariant in its context.
+
 ## `useForm`
 
 `kit.useForm(definition, options)` creates a component-local `FormBinding`.

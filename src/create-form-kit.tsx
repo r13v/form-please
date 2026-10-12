@@ -621,8 +621,11 @@ export interface FormKit<
 		Grid
 	>
 	/** Provides form contexts and owns native submit and reset events. */
-	readonly Form: <Schema extends StandardSchema>(
-		props: FormProps<Schema, Context>,
+	readonly Form: <
+		Schema extends StandardSchema,
+		BindingContext extends Context = Context,
+	>(
+		props: FormProps<Schema, BindingContext>,
 	) => ReactElement
 	/** Renders resolved definition nodes followed by optional application content. */
 	readonly Fields: (props: {
@@ -632,50 +635,53 @@ export interface FormKit<
 	/** Renders the configured submit slot with current form state. */
 	readonly Submit: {
 		/** Renders static content for an action or the `submit` shorthand action. */
-		<Schema extends StandardSchema>(
+		<Schema extends StandardSchema, BindingContext extends Context = Context>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type"> & {
 				/**
 				 * The action that this button runs. Outside `Form`, the action
 				 * selects the form. Set the native `form` attribute to the Form `id`.
 				 */
-				readonly action?: FormAction<Schema, Context>
+				readonly action?: FormAction<Schema, BindingContext>
 				/**
 				 * The form binding. Outside `Form`, the binding selects the form.
 				 * Set the native `form` attribute to the Form `id`.
 				 */
-				readonly binding?: FormBinding<Schema, Context>
+				readonly binding?: FormBinding<Schema, BindingContext>
 			},
 		): ReactElement
 		/** Renders custom content with live state typed by the action form. */
-		<Schema extends StandardSchema>(
+		<Schema extends StandardSchema, BindingContext extends Context = Context>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
 				/**
 				 * The action that this button runs. Outside `Form`, the action
 				 * selects the form. Set the native `form` attribute to the Form `id`.
 				 */
-				readonly action: FormAction<Schema, Context>
+				readonly action: FormAction<Schema, BindingContext>
 				/** The form binding. It must own the action. */
-				readonly binding?: FormBinding<Schema, Context>
+				readonly binding?: FormBinding<Schema, BindingContext>
 				/** Renders custom content from live typed submit state. */
 				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
 			},
 		): ReactElement
 		/** Renders custom content with live state typed by the matching binding. */
-		<Schema extends StandardSchema>(
+		<Schema extends StandardSchema, BindingContext extends Context = Context>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
 				/**
 				 * The binding of the surrounding `Form`. Outside `Form`, the binding
 				 * selects the form. Set the native `form` attribute to the Form `id`.
 				 */
-				readonly binding: FormBinding<Schema, Context>
+				readonly binding: FormBinding<Schema, BindingContext>
 				/** Renders custom content from live typed submit state. */
 				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
 			},
 		): ReactElement
 	}
 	/** Composes `Form`, the error summary, and generated fields. */
-	readonly AutoForm: <Schema extends StandardSchema>(
-		props: AutoFormProps<Schema, Context>,
+	readonly AutoForm: <
+		Schema extends StandardSchema,
+		BindingContext extends Context = Context,
+	>(
+		props: AutoFormProps<Schema, BindingContext>,
 	) => ReactElement
 	/** Returns a type-only view of this kit for a narrower context contract. */
 	readonly forContext: <NextContext extends Context>() => FormKit<
