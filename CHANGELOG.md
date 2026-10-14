@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.1](https://github.com/r13v/form-please/compare/v1.12.0...v1.12.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* keep issues with their row on generated array move and remove ([#51](https://github.com/r13v/form-please/issues/51)) ([7506c9c](https://github.com/r13v/form-please/commit/7506c9c03740695df23936e7c4b241fcd8a13f24))
+
 ## [1.12.0](https://github.com/r13v/form-please/compare/v1.11.0...v1.12.0) (2026-10-12)
 
 
