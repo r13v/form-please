@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-31
+- Amended by: [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md), [ADR 0016](0016-coordinate-managed-value-updates-before-react-hook-form.md)
 
 ## Context
 
@@ -41,3 +42,21 @@ React 19 Action boundary still requires a field with a serializing control.
   runtime callers still receive canonical path grammar checks.
 - Generated metadata and native serialization remain opt-in through field and
   array nodes rather than being inferred from imperative access.
+
+## Amendment
+
+The `FormData` serialization and React 19 Action parts of this decision are
+stale. [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md) made React Hook Form values the submitted values. Controls have no
+browser serialization mode, and `onSubmit` receives the editable input and the
+schema output. See [Validation and submission](../ARCHITECTURE.md#validation-and-submission).
+
+The command API and the registered-field gate are also stale. The form has no
+`setValue`, `setValues`, or `unsetValue` commands and no runtime path check for
+them. [ADR 0016](0016-coordinate-managed-value-updates-before-react-hook-form.md)
+replaced them: application code changes values through the raw React Hook Form
+API in `form.api` or through the managed `form.update` recipe. The raw API
+bypasses managed hooks and middleware. TypeScript still types both entry points
+from the schema input.
+
+The main decision remains valid: application code can change any schema input
+value without a fake UI field.

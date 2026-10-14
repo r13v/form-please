@@ -91,6 +91,20 @@ function mount(
 	return binding
 }
 
+/** Finds a row action button of the top-level rows array, not of nested children. */
+function rowAction(index: number, name: string): HTMLElement {
+	const row = document.querySelector(
+		`[data-fp-node="array-item"][data-fp-path="rows.${index}"]`,
+	)
+	const button = screen
+		.getAllByRole("button", { name })
+		.find(
+			(candidate) => candidate.closest('[data-fp-node="array-item"]') === row,
+		)
+	if (button === undefined) throw new Error(`Expected ${name} on row ${index}`)
+	return button
+}
+
 describe("managed array reconciliation", () => {
 	it("keeps edited rows, DOM identity, touched and errors with the selected person", () => {
 		const form = mount()
@@ -223,6 +237,37 @@ describe("managed array reconciliation", () => {
 			target: { value: "Sam renamed" },
 		})
 		expect(screen.queryByText("Sam is unavailable.")).toBeNull()
+	})
+
+	it("keeps a schema issue with the same person after a generated move", async () => {
+		const form = mount()
+		act(() => form.api.setValue("rows.1.name", "x"))
+		await act(() => form.api.trigger())
+		fireEvent.click(rowAction(1, "Move item 2 up"))
+		expect(form.api.getValues().rows.map((row) => row.id)).toEqual([
+			"sam",
+			"alex",
+		])
+		expect(
+			fieldErrorToIssues(
+				form.api.getFieldState("rows.0.name").error,
+				"rows.0.name",
+			),
+		).toEqual([{ message: "Name too short", path: "rows.0.name" }])
+		expect(form.api.getFieldState("rows.1.name").error).toBeUndefined()
+	})
+
+	it("keeps an external issue with the same person after a generated remove of a previous row", () => {
+		const form = mount()
+		act(() =>
+			form.setIssues([{ path: "rows.1.name", message: "Sam is unavailable." }]),
+		)
+		fireEvent.click(rowAction(0, "Remove item 1"))
+		expect(form.api.getValues().rows.map((row) => row.id)).toEqual(["sam"])
+		expect(form.api.getFieldState("rows.0.name").error?.message).toBe(
+			"Sam is unavailable.",
+		)
+		expect(screen.getByText("Sam is unavailable.")).toBeTruthy()
 	})
 
 	it("clears external issues of fields that the update policy changes", () => {

@@ -137,9 +137,10 @@
 		"site:verify:preview": "npm run site:test && npm run test:docs && BASE_URL=http://127.0.0.1:4175 BASE_PATH=/form-please npm run site:build && npm run test:markdown --prefix docs-site && BASE_PATH=/form-please npm run test:output --prefix docs-site && npm run site:test:e2e",
 		"site:verify:production": "BASE_PATH=/form-please npm run site:build && BASE_PATH=/form-please EXPECT_PRODUCTION_URL=true npm run test:output --prefix docs-site",
 		"site:verify": "npm run site:verify:preview && npm run site:verify:production",
-		"package:check": "npm run build && publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./testing",
+		"package:check": "npm run build && npm run package:lint",
+		"package:lint": "publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./testing",
 		"knip": "knip --workspace . --workspace docs-site",
-		"verify": "npm run check && npm run test && npm run test:types && npm run test:browser && npm run test:package && npm run test:registry && npm run test:smoke && npm run package:check && npm run knip"
+		"verify": "npm run check && npm run test && npm run build && npm run typecheck && npm run test:browser && vitest run --config vitest.package.config.ts && npm run test:registry && npm run test:smoke && npm run package:lint && npm run knip"
 	},
 	"repository": {
 		"type": "git",
