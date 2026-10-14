@@ -73,11 +73,16 @@ remain optional because only the Material UI preset uses them.
 | `src/definition.ts` | Materialize authoring builders, validate, normalize, and synchronously resolve UI definitions |
 | `src/standard-schema-resolver.ts` | Validate through Standard Schema once and translate all issues to and from RHF errors |
 | `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
+| `src/form-submission.ts` | Submission runtime: action selection, submit snapshots, action validation, and external issues |
+| `src/form-issues.ts` | Store action and external issues beside schema errors and remap them with array rows |
+| `src/form-value.ts` | Clone and compare editable form values while preserving browser-owned leaf values |
+| `src/array-reconcile.ts` | Register mounted generated arrays and reconcile their rows through one managed transaction |
 | `src/diagnostics.ts` | Provide the dormant package-private observer bridge and optional-feature registry |
 | `src/devtools/devtools.tsx` | Bind RHF DevTools and render the Form Please diagnostic drawer |
 | `src/devtools/store.ts` | Aggregate bounded form-local diagnostic snapshots for the optional UI |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
 | `src/field-options.ts` | Execute tracked field-options resolvers for both React and headless testing |
+| `src/use-field-options.ts` | Resolve one static or reactive field-options source in React |
 | `src/generated-array.ts` | Share generated array defaults, paths, and value guards between React and headless testing |
 | `src/testing/definition-tester.ts` | Inspect production definition resolution and exercise managed control, array, context, and middleware transitions |
 | `src/history/history.ts` | Retain managed input positions, navigate them through the coordinator, and import or export in-memory journals |
@@ -85,6 +90,8 @@ remain optional because only the Material UI preset uses them.
 | `src/persistence/persistence.ts` | Restore and autosave complete editable input through the coordinator and an application adapter |
 | `src/persistence/use-persistence.ts` | Restore a configured persistence feature after mount and expose its current snapshot |
 | `src/persistence/encoding.ts` | Encode, decode, version, migrate, and validate the persistence envelope |
+| `src/persistence/codecs.ts` | Provide the opt-in `Date` persistence codec |
+| `src/persistence/local-storage.ts` | Adapt lazy browser storage access to the persistence transport contract |
 | `src/resource.ts` | Pure `ResourceState`, `matchResource`, and `fromResource` helpers |
 | `src/use-snapshot.ts` | Adapt any external store with `subscribe` and `getSnapshot` to React |
 | `src/index.ts` | Canonical root exports |
@@ -224,7 +231,15 @@ Form values because unregistration is disabled.
 - `api`: the unchanged typed RHF `UseFormReturn`;
 - `definition`: the fixed normalized definition;
 - `context`: the Form, Please runtime context;
-- `update`: the managed Immer-recipe entry point.
+- `update`: the managed Immer-recipe entry point;
+- `actions`: one stable `FormAction` for each configured action name, for
+  `kit.Submit`;
+- `submission`: an external store with the running action and the last action
+  `onSubmit` rejection;
+- `setIssues`: the entry point that replaces external issues and optionally
+  moves focus;
+- `array(path)`: a typed selection of one mounted generated array for
+  `reconcile`.
 
 The binding belongs to the exact kit that created it. Another kit's `Form`
 rejects it before rendering.
@@ -458,6 +473,18 @@ Generated arrays use RHF `useFieldArray`. Paths contain current numeric indexes,
 while each React row key uses RHF's stable `field.id`. Managed add, remove, and
 move proposals can be cancelled or extended with dependent value patches, then
 delegate to native `append`, `remove`, and `move` to preserve row IDs.
+Remove and move also remap schema issue paths and stored external issues, so
+each issue stays with its row.
+
+`form.array(path).reconcile(keys, { key, create })` sets the rows to the
+selected keys in the given order. It keeps each row whose key is selected,
+removes the other rows, and calls `create` for each new key. One managed
+transaction with the `reconcile` action carries the change, then native
+`remove`, `append`, and `move` apply it. Middleware cannot change the selected
+keys, their order, nested arrays in the rows, or another generated array's
+structure. Keys must be unique strings or numbers. The array must be mounted:
+generated array rendering registers its native operations, and `reconcile`
+throws when no generated array at that path is mounted.
 Middleware cannot change the source array length or order beyond the proposed
 action. The transaction must not change another generated array's structure
 because `setValues` cannot synchronize its private row IDs. Dependent values

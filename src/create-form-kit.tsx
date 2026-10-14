@@ -5,7 +5,6 @@ import {
 	type ComponentType,
 	createContext,
 	createElement,
-	type KeyboardEvent,
 	memo,
 	type ReactElement,
 	type ReactNode,
@@ -55,6 +54,13 @@ import {
 	publishFormDiagnosticEvent,
 } from "./diagnostics.js"
 import { createFormIssueStore, type FormIssueStore } from "./form-issues.js"
+import {
+	createFormSubmissionRuntime,
+	type FormSubmissionRuntime,
+	isImplicitSubmitKey,
+	snapshotSubmitter,
+	submitterAction,
+} from "./form-submission.js"
 import { cloneFormValue } from "./form-value.js"
 import {
 	cloneItemDefault,
@@ -66,6 +72,7 @@ import {
 	fieldErrorsToIssues,
 	fieldErrorToIssues,
 	hasFieldError,
+	remapArraySchemaIssues,
 } from "./standard-schema-resolver.js"
 import type {
 	ArrayFieldPath,
@@ -954,7 +961,15 @@ function assembleKit(
 				options: options as UseFormOptions<AnyFormSchema>,
 				getBinding: () => bindingRef.current as unknown as FormBinding,
 				getOptions: () => optionsRef.current as UseFormOptions<AnyFormSchema>,
-				getRuntime: () => runtimeRef.current as RuntimeForm,
+				getForm: () => {
+					const runtime = runtimeRef.current as RuntimeForm
+					return {
+						api: runtime.api,
+						focusIssue: (target) => focusIssue(runtime, target),
+						focusErrorSummaryFallback: (errors, formElement) =>
+							focusErrorSummaryFallback(errors, formElement, runtime),
+					}
+				},
 			})
 		}
 		const submission = submissionRef.current
@@ -1834,14 +1849,32 @@ function dispatchArrayAction(
 	commitArray: (transaction: ValueTransaction<FieldValues, unknown>) => void,
 ): unknown {
 	const arrayPath = fieldPathSegments(form.api.getValues(), path)
+	const commit = (transaction: ValueTransaction<FieldValues, unknown>) => {
+		commitArray(transaction)
+		form.commit(transaction)
+	}
 	return form.dispatch(
 		(draft) => recipe(getMutableArrayValue(draft, path)),
 		source,
 		{
 			arrayPath,
 			commit: (transaction) => {
-				commitArray(transaction)
-				form.commit(transaction)
+				if (source.action === "append") return commit(transaction)
+				// The recipe applied to old row indexes maps each kept row to its new index.
+				const rows = getMutableArrayValue(form.api.getValues(), path).map(
+					(_, index) => index,
+				)
+				recipe(rows)
+				const indexes = new Map(
+					rows.map((oldIndex, newIndex) => [oldIndex, newIndex]),
+				)
+				// Issue paths must follow their rows before RHF moves error branches.
+				remapArraySchemaIssues(
+					form.api.getFieldState(path).error,
+					path,
+					indexes,
+				)
+				form.issues.remapArray(path, indexes, () => commit(transaction))
 			},
 		},
 	)
@@ -2037,193 +2070,6 @@ function createDomId(prefix: string, value: string): string {
 	return `${prefix}-${encodeURIComponent(value).replaceAll(".", "%2E")}`
 }
 
-/**
- * Carries an action `onSubmit` rejection through RHF `handleSubmit`. RHF tests
- * the rethrown value by truthiness, so the marker object keeps falsy rejections.
- */
-class SubmitHandlerRejection {
-	readonly value: unknown
-	constructor(value: unknown) {
-		this.value = value
-	}
-}
-
-/** Private submission state shared by one binding and its runtime form. */
-type FormSubmissionRuntime = {
-	readonly actions: Readonly<Record<string, FormAction>>
-	readonly defaultAction: string | undefined
-	readonly implicitAction: string | undefined
-	readonly issues: FormIssueStore
-	readonly store: FormSubmission
-	readonly setIssues: FormBinding["setIssues"]
-	readonly submitAction: RuntimeForm["submitAction"]
-}
-
-/** Fixes action names and creates the submission entry point of one form. */
-function createFormSubmissionRuntime({
-	getBinding,
-	getOptions,
-	getRuntime,
-	issues,
-	options,
-}: {
-	readonly getBinding: () => FormBinding
-	readonly getOptions: () => UseFormOptions<AnyFormSchema>
-	readonly getRuntime: () => RuntimeForm
-	readonly issues: FormIssueStore
-	readonly options: UseFormOptions<AnyFormSchema>
-}): FormSubmissionRuntime {
-	if (options.actions !== undefined && options.onSubmit !== undefined) {
-		throw new TypeError("useForm accepts onSubmit or actions, not both")
-	}
-	const configured = options.actions
-	const names = configured === undefined ? ["submit"] : Object.keys(configured)
-	const implicitNames =
-		configured === undefined
-			? ["submit"]
-			: names.filter((name) => configured[name]?.implicit === true)
-	if (implicitNames.length > 1) {
-		throw new TypeError("useForm accepts at most one implicit action")
-	}
-	const actions = Object.freeze(
-		Object.fromEntries(
-			names.map((name) => [
-				name,
-				Object.freeze({
-					name,
-					get form() {
-						return getBinding()
-					},
-				}),
-			]),
-		),
-	)
-
-	let snapshot: FormSubmissionSnapshot = Object.freeze({
-		action: null,
-		error: null,
-	})
-	const listeners = new Set<() => void>()
-	const publish = (next: Partial<FormSubmissionSnapshot>): void => {
-		snapshot = Object.freeze({ ...snapshot, ...next })
-		for (const listener of listeners) listener()
-	}
-	const store: FormSubmission = {
-		getSnapshot: () => snapshot,
-		subscribe(listener) {
-			listeners.add(listener)
-			return () => listeners.delete(listener)
-		},
-	}
-
-	const readAction = (
-		name: string,
-	): Partial<FormActionConfig<AnyFormSchema>> => {
-		const current = getOptions()
-		if (current.actions === undefined) return { onSubmit: current.onSubmit }
-		const action = current.actions[name]
-		if (action === undefined) {
-			throw new Error(`Form action "${name}" is no longer configured`)
-		}
-		return action
-	}
-
-	return {
-		actions,
-		defaultAction: configured === undefined ? "submit" : undefined,
-		implicitAction: implicitNames[0],
-		issues,
-		store,
-		setIssues(nextIssues, setOptions) {
-			issues.replace("external", nextIssues as readonly FormIssue[])
-			if (snapshot.error !== null) publish({ error: null })
-			if (setOptions?.focus !== undefined) {
-				focusIssue(getRuntime(), setOptions.focus)
-			}
-		},
-		async submitAction(name, submitter, formElement) {
-			if (snapshot.action !== null) return
-			publish({ action: name, error: null })
-			let error: FormSubmissionSnapshot["error"] = null
-			try {
-				const runtime = getRuntime()
-				const action = readAction(name)
-				const input = cloneFormValue(runtime.api.getValues())
-				issues.replace("action", [])
-				issues.replace("external", [])
-				await runtime.api.handleSubmit(
-					async (value) => {
-						const actionIssues =
-							(await action.validate?.({ input, value })) ?? []
-						if (actionIssues.length > 0) {
-							issues.replace("action", actionIssues as readonly FormIssue[])
-							focusIssue(runtime, true)
-							return
-						}
-						try {
-							await action.onSubmit?.({
-								form: getBinding(),
-								input,
-								submitter,
-								value,
-							})
-						} catch (rejection) {
-							throw new SubmitHandlerRejection(rejection)
-						}
-					},
-					(errors) => {
-						setTimeout(() => {
-							focusErrorSummaryFallback(errors, formElement, runtime)
-						}, 0)
-					},
-				)()
-			} catch (thrown) {
-				if (!(thrown instanceof SubmitHandlerRejection)) throw thrown
-				error = { value: thrown.value }
-			} finally {
-				publish({ action: null, error })
-			}
-		},
-	}
-}
-
-/** Input types where Enter requests implicit submission in HTML. */
-const implicitSubmitInputTypes = new Set([
-	"date",
-	"datetime-local",
-	"email",
-	"month",
-	"number",
-	"password",
-	"search",
-	"tel",
-	"text",
-	"time",
-	"url",
-	"week",
-])
-
-/** Tests whether a key event requests implicit submission from a single-line field. */
-function isImplicitSubmitKey(event: KeyboardEvent<HTMLFormElement>): boolean {
-	const target = event.target
-	return (
-		event.key === "Enter" &&
-		!event.defaultPrevented &&
-		!event.nativeEvent.isComposing &&
-		target instanceof HTMLElement &&
-		target.tagName === "INPUT" &&
-		implicitSubmitInputTypes.has((target as HTMLInputElement).type)
-	)
-}
-
-/** Reads the action of the `kit.Submit` button that submitted the form. */
-function submitterAction(event: Event): string | undefined {
-	if (!("submitter" in event)) return undefined
-	const { submitter } = event
-	if (!(submitter instanceof HTMLElement)) return undefined
-	return submitter.getAttribute("data-fp-action") ?? undefined
-}
-
 /** Focuses an issue field after render, or the error summary when it is unavailable. */
 function focusIssue(form: RuntimeForm, target: string | true): void {
 	setTimeout(() => {
@@ -2252,24 +2098,6 @@ function focusField(form: RuntimeForm, path: string): boolean {
 	if (active === null || active === document.body) return false
 	if (input !== undefined) return input === active || input.contains(active)
 	return active !== before || active.getAttribute("name") === path
-}
-
-function snapshotSubmitter(
-	event: Event,
-): FormSubmitDetails<AnyFormSchema>["submitter"] {
-	if (!("submitter" in event)) return null
-	const { submitter } = event
-	if (
-		typeof submitter !== "object" ||
-		submitter === null ||
-		!("name" in submitter) ||
-		typeof submitter.name !== "string" ||
-		!("value" in submitter) ||
-		typeof submitter.value !== "string"
-	) {
-		return null
-	}
-	return Object.freeze({ name: submitter.name, value: submitter.value })
 }
 
 /** Converts resolved node state to structural DOM props and data attributes. */

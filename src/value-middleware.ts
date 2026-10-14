@@ -224,6 +224,24 @@ export function attachValueCoordinatorCapability(
 	})
 }
 
+/** Claims one managed feature slot on a coordinator capability; throws when the slot is taken. */
+export function claimFeature(
+	capability: object,
+	key: symbol,
+	feature: object,
+	message: string,
+): void {
+	if (readFeatureClaim(capability, key) !== undefined) {
+		throw new TypeError(message)
+	}
+	Object.defineProperty(capability, key, { value: feature })
+}
+
+/** Reads the feature that claimed one slot on a coordinator capability. */
+export function readFeatureClaim(capability: object, key: symbol): unknown {
+	return (capability as Record<PropertyKey, unknown>)[key]
+}
+
 type TransactionDispatch<Input extends FieldValues, Context> = (
 	transaction: ValueTransaction<Input, Context>,
 ) => unknown

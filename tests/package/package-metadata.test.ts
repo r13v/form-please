@@ -63,15 +63,15 @@ describe("package metadata", () => {
 	})
 
 	it("checks every published entrypoint with the strict publish tooling", () => {
-		const packageCheck = packageJson.scripts["package:check"]
+		const packageLint = packageJson.scripts["package:lint"]
 		const published = Object.keys(packageJson.exports).filter(
 			(entrypoint) =>
 				!entrypoint.endsWith(".css") && entrypoint !== "./package.json",
 		)
 
-		expect(packageCheck).toContain("publint --strict")
-		expect(packageCheck).toContain("--profile node16")
-		expect(packageCheck).toContain(`--entrypoints ${published.join(" ")}`)
+		expect(packageLint).toContain("publint --strict")
+		expect(packageLint).toContain("--profile node16")
+		expect(packageLint).toContain(`--entrypoints ${published.join(" ")}`)
 	})
 
 	it("keeps the structural stylesheet explicit", async () => {

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-31
+- Amended by: [Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership)
 
 ## Context
 
@@ -68,3 +69,10 @@ base kit or an incompatible sibling.
   serializable React Server Components boundary.
 - Explicitly erasing presentation generics also erases the corresponding
   compile-time compatibility protection.
+
+## Amendment
+
+The `extend` part of this decision is stale. Kits do not support runtime
+extension, so a slot cannot be replaced after `createFormKit`. A definition
+works only with its exact kit. See [Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership). The typed presentation content and
+slot options contract remains valid.

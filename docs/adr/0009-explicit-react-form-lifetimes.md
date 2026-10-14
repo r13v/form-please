@@ -1,6 +1,6 @@
 # ADR 0009: Expose explicit React form lifetimes
 
-- Status: Accepted
+- Status: Superseded by [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md)
 - Date: 2026-08-02
 - Amends: [ADR 0002](0002-add-only-form-kit-extension.md), [ADR 0008](0008-reducer-core-and-open-middleware.md)
 
@@ -80,3 +80,10 @@ authority for permanent disconnection.
   initialization must not activate external resources before binding.
 - The rename is intentionally breaking and does not retain two competing hook
   names.
+
+## Supersession
+
+[ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md) replaced the three lifetime operations. `kit.useForm` creates one
+`FormBinding` for the component lifetime. `kit.createForm`,
+`kit.useCreateForm`, and `kit.useBindForm` do not exist. The public
+`kit.useForm` name returned with this new meaning.

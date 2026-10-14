@@ -9,9 +9,11 @@ import {
 } from "../form-value.js"
 import type { FormInput, StandardSchema } from "../types.js"
 import {
+	claimFeature,
 	type FormMiddlewareApi,
 	type FormMiddlewareNext,
 	getValueCoordinatorCapability,
+	readFeatureClaim,
 	type ValueCoordinatorCapability,
 	type ValueTransaction,
 	type ValueTransactionSource,
@@ -112,7 +114,12 @@ export function createHistoryMiddleware(
 		api: FormMiddlewareApi<Input>,
 	) => {
 		const capability = getValueCoordinatorCapability<Input, Context>(api)
-		claimHistoryCapability(capability, feature)
+		claimFeature(
+			capability,
+			historyFeatureClaimKey,
+			feature,
+			"A form can configure only one history feature",
+		)
 		const state = new HistoryState(capability, limit, groupWindow)
 		states.set(
 			capability,
@@ -128,7 +135,10 @@ export function createHistoryMiddleware(
 		value(form: object) {
 			const capability = getValueCoordinatorCapability(form)
 			const state = states.get(capability)
-			if (state === undefined || readHistoryClaim(capability) !== feature) {
+			if (
+				state === undefined ||
+				readFeatureClaim(capability, historyFeatureClaimKey) !== feature
+			) {
 				throw new TypeError(
 					"This history feature is not configured for the supplied form",
 				)
@@ -435,20 +445,6 @@ class HistoryState<Input extends FieldValues, Context> {
 		this.#snapshot = next
 		for (const listener of [...this.#listeners]) listener()
 	}
-}
-
-function claimHistoryCapability(
-	capability: object,
-	feature: HistoryFeature,
-): void {
-	if (readHistoryClaim(capability) !== undefined) {
-		throw new TypeError("A form can configure only one history feature")
-	}
-	Object.defineProperty(capability, historyFeatureClaimKey, { value: feature })
-}
-
-function readHistoryClaim(capability: object): unknown {
-	return (capability as Record<PropertyKey, unknown>)[historyFeatureClaimKey]
 }
 
 function createHistorySnapshot(index: number, length: number): HistorySnapshot {

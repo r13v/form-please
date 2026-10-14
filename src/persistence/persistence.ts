@@ -9,9 +9,11 @@ import {
 } from "../form-value.js"
 import type { StandardSchema } from "../types.js"
 import {
+	claimFeature,
 	type FormMiddlewareApi,
 	type FormMiddlewareNext,
 	getValueCoordinatorCapability,
+	readFeatureClaim,
 	type ValueCoordinatorCapability,
 	type ValueTransaction,
 	type ValueTransactionSource,
@@ -160,7 +162,12 @@ export function createPersistenceMiddleware(
 		api: FormMiddlewareApi<Input>,
 	) => {
 		const capability = getValueCoordinatorCapability<Input, Context>(api)
-		claimPersistenceCapability(capability, feature)
+		claimFeature(
+			capability,
+			persistenceFeatureClaimKey,
+			feature,
+			"A form can configure only one persistence feature",
+		)
 		const state = new PersistenceState(capability, normalized)
 		states.set(
 			capability,
@@ -176,7 +183,10 @@ export function createPersistenceMiddleware(
 		value(form: FormBinding) {
 			const capability = getValueCoordinatorCapability(form)
 			const state = states.get(capability)
-			if (state === undefined || readPersistenceClaim(capability) !== feature) {
+			if (
+				state === undefined ||
+				readFeatureClaim(capability, persistenceFeatureClaimKey) !== feature
+			) {
 				throw new TypeError(
 					"This persistence feature is not configured for the supplied form",
 				)
@@ -660,24 +670,6 @@ class PersistenceState<Input extends FieldValues, Context> {
 		this.#snapshot = snapshot
 		for (const listener of [...this.#listeners]) listener()
 	}
-}
-
-function claimPersistenceCapability(
-	capability: object,
-	feature: PersistenceFeature,
-): void {
-	if (readPersistenceClaim(capability) !== undefined) {
-		throw new TypeError("A form can configure only one persistence feature")
-	}
-	Object.defineProperty(capability, persistenceFeatureClaimKey, {
-		value: feature,
-	})
-}
-
-function readPersistenceClaim(capability: object): unknown {
-	return (capability as Record<PropertyKey, unknown>)[
-		persistenceFeatureClaimKey
-	]
 }
 
 function normalizeOptions(

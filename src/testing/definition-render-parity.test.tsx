@@ -1,5 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
-import { fireEvent, render, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { createFormKit, type DefineFormOptions } from "../create-form-kit.js"
@@ -157,6 +157,106 @@ describe("definition tester parity", () => {
 		})
 	})
 })
+
+type ArrayValues = { readonly speakers: readonly { readonly name: string }[] }
+
+const arraySchema: StandardSchemaV1<ArrayValues> = {
+	"~standard": {
+		version: 1,
+		vendor: "definition-render-parity-array",
+		validate: (value) => ({ value: value as ArrayValues }),
+	},
+}
+const arrayValues: ArrayValues = {
+	speakers: [{ name: "Ada" }, { name: "Grace" }],
+}
+
+function defineArrayForm(afterUpdate: () => void) {
+	return kit.defineForm(
+		arraySchema,
+		(ui) => [
+			ui.array("speakers", {
+				children: (item) => [item.field("name", { control: "text" })],
+				itemDefault: { name: "" },
+				label: "Speakers",
+			}),
+		],
+		{ afterUpdate },
+	)
+}
+
+describe("definition tester array parity", () => {
+	it.each([
+		{
+			button: "Add item",
+			run: (tester: ArrayTester) => tester.append("speakers"),
+		},
+		{
+			button: "Move item 1 down",
+			run: (tester: ArrayTester) => tester.move("speakers", 0, 1),
+		},
+		{
+			button: "Remove item 1",
+			run: (tester: ArrayTester) => tester.remove("speakers", 0),
+		},
+	])("matches the mounted form for $button", ({ button, run }) => {
+		const context = { canEdit: true, canView: true, locale: "en" }
+		const afterUpdate = vi.fn()
+		const arrayDefinition = defineArrayForm(afterUpdate)
+		let readRenderedValues = (): ArrayValues | undefined => undefined
+		const tester = createDefinitionTester(arrayDefinition, {
+			context,
+			values: arrayValues,
+		})
+		render(
+			<ArrayForm
+				context={context}
+				definition={arrayDefinition}
+				exposeValues={(read) => {
+					readRenderedValues = read
+				}}
+			/>,
+		)
+
+		fireEvent.click(screen.getByRole("button", { name: button }))
+		expect(afterUpdate).toHaveBeenCalledTimes(1)
+		const tested = run(tester)
+
+		expect(tested.committed).toBe(true)
+		expect(readRenderedValues()).toEqual(tested.after.values)
+		expect(afterUpdate).toHaveBeenCalledTimes(2)
+		expect(afterUpdate.mock.calls[0]?.[0]).toMatchObject({
+			nextValues: tested.transaction?.nextValues,
+			patches: tested.transaction?.patches,
+			source: tested.transaction?.source,
+		})
+	})
+})
+
+type ArrayTester = ReturnType<
+	typeof createDefinitionTester<ReturnType<typeof defineArrayForm>>
+>
+
+function ArrayForm({
+	context,
+	definition,
+	exposeValues,
+}: {
+	readonly context: Context
+	readonly definition: ReturnType<typeof defineArrayForm>
+	readonly exposeValues: (read: () => ArrayValues) => void
+}) {
+	const form = kit.useForm(definition, {
+		context,
+		defaultValues: arrayValues,
+	})
+	exposeValues(() => form.api.getValues())
+	return (
+		<kit.Form form={form}>
+			<kit.Fields />
+		</kit.Form>
+	)
+}
 
 function LifecycleForm({
 	context,
