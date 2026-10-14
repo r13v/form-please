@@ -78,3 +78,4 @@ Status: `[ ]` todo, `[~]` in progress, `[x]` done, `[v]` verified by Codex.
   `test:browser` blocked: local Playwright Chromium binary is missing
   (`npx playwright install` not run). CI runs it.
 - Codex verified items 2 (after ADR 0005 fix), 5, 6, 7, 8 (131/131 targeted tests). All items verified.
+- `test:browser` passes locally (5/5) after installing Playwright Chromium. Full verify is green.
