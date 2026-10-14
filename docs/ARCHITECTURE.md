@@ -475,6 +475,13 @@ move proposals can be cancelled or extended with dependent value patches, then
 delegate to native `append`, `remove`, and `move` to preserve row IDs.
 Remove and move also remap schema issue paths and stored external issues, so
 each issue stays with its row.
+Middleware cannot change the source array length or order beyond the proposed
+action. The transaction must not change another generated array's structure
+because `setValues` cannot synchronize its private row IDs. Dependent values
+join the same final React render, although raw RHF subscribers may see the
+native array operation before the final value commit. Item defaults are cloned
+before insertion. Applications still need a schema-owned ID when row identity
+must survive serialization or a new form instance.
 
 `form.array(path).reconcile(keys, { key, create })` sets the rows to the
 selected keys in the given order. It keeps each row whose key is selected,
@@ -485,13 +492,6 @@ keys, their order, nested arrays in the rows, or another generated array's
 structure. Keys must be unique strings or numbers. The array must be mounted:
 generated array rendering registers its native operations, and `reconcile`
 throws when no generated array at that path is mounted.
-Middleware cannot change the source array length or order beyond the proposed
-action. The transaction must not change another generated array's structure
-because `setValues` cannot synchronize its private row IDs. Dependent values
-join the same final React render, although raw RHF subscribers may see the
-native array operation before the final value commit. Item defaults are cloned
-before insertion. Applications still need a schema-owned ID when row identity
-must survive serialization or a new form instance.
 
 History and persistence restore are deliberate exceptions to the normal
 generated-array commit path. They reset the complete RHF value tree so every
