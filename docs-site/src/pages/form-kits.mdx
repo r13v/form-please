@@ -94,6 +94,9 @@ project, keep the kit and the component that calls `useForm` behind a
 3. Submit an invalid form and confirm that the first invalid control receives focus.
 4. Confirm that labels, descriptions, and visible errors are announced by a screen reader.
 5. Test disabled and readonly fields, plus add, move, and remove actions when the kit supports arrays.
+6. Connect `input.id`, `input.ref`, the description and error IDs, `meta.invalid`, and `blur()` to the element that receives focus. See [Connect a custom control](/accessibility#connect-a-custom-control).
+7. Load the options of a select-like control late, and confirm that the control keeps the saved value. A control must call `setValue` only for a user action. An empty or incomplete `options` collection is not a user action.
+8. Replace the options while an option has focus. Confirm that focus moves to the current element for the same value, not to the page or the dialog container.
 
 The project kit is now usable. The remaining sections document the complete
 control and slot contracts for replacing more of the baseline.
