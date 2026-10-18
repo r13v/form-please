@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.2](https://github.com/r13v/form-please/compare/v1.12.1...v1.12.2) (2026-10-18)
+
+
+### Bug Fixes
+
+* keep React elements intact in readonly context ([#53](https://github.com/r13v/form-please/issues/53)) ([655bbd9](https://github.com/r13v/form-please/commit/655bbd9aa91b1e06827c8e097fb55059234036dc))
+
 ## [1.12.1](https://github.com/r13v/form-please/compare/v1.12.0...v1.12.1) (2026-10-14)
 
 
