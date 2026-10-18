@@ -853,7 +853,7 @@ function assembleKit(
 		const fixedDefinition = useRef(definition).current
 		if (!definitions.has(fixedDefinition)) {
 			throw new TypeError(
-				"kit.useForm requires a definition from this exact form kit",
+				"kit.useForm requires a definition from this exact form kit. If this error appears after a hot reload, reload the page or remount the component that calls kit.useForm.",
 			)
 		}
 		const fixedDefaultValues = useRef(options.defaultValues).current

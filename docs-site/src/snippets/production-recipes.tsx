@@ -361,6 +361,58 @@ export function AtomicValuesRecipe() {
 }
 // [!endregion atomic-values]
 
+// [!region projected-value]
+const presetAmounts = ["10.00", "50.00", "100.00"] as const
+
+type AmountPreset = (typeof presetAmounts)[number] | "custom"
+
+function amountPreset(amount: string): AmountPreset {
+	return presetAmounts.find((preset) => preset === amount) ?? "custom"
+}
+
+const donationSchema = z
+	.object({
+		amount: z.string().regex(/^\d+\.\d{2}$/, "Enter an amount, such as 25.00"),
+		amountPreset: z.enum([...presetAmounts, "custom"]),
+	})
+	.transform(({ amount }) => ({ amount }))
+
+const donationDefinition = nativeFormKit.defineForm(
+	donationSchema,
+	(ui) => [
+		ui.field("amountPreset", {
+			control: "select",
+			label: "Amount",
+			options: [
+				...presetAmounts.map((value) => ({ value, label: `$${value}` })),
+				{ value: "custom", label: "Other amount" },
+			],
+		}),
+		ui.field("amount", { control: "text", label: "Exact amount" }),
+	],
+	{
+		beforeUpdate(draft, { source }) {
+			if (source.type === "control" && source.path === "amountPreset") {
+				if (draft.amountPreset !== "custom") draft.amount = draft.amountPreset
+				return
+			}
+			draft.amountPreset = amountPreset(draft.amount)
+		},
+	},
+)
+
+function donationInput(amount: string) {
+	return { amount, amountPreset: amountPreset(amount) }
+}
+
+function DonationForm(props: { readonly savedAmount: string }) {
+	const form = nativeFormKit.useForm(donationDefinition, {
+		defaultValues: donationInput(props.savedAmount),
+	})
+	return <nativeFormKit.AutoForm form={form} />
+}
+// [!endregion projected-value]
+
 // [!region draft-subscription]
 export function DraftSubscriptionRecipe() {
 	const [savedDraft, setSavedDraft] = useState<Profile>()

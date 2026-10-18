@@ -161,6 +161,26 @@ inside an active transaction. Use an RHF subscription when you only need to
 observe values; subscriptions run after commit and cannot make dependent
 changes atomic.
 
+## Edit one value with two controls
+
+Use a second schema path when two controls show one value, for example a preset
+select and an exact amount. Do not render two fields for one path: they share
+one DOM `id` and one focus target.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:projected-value]
+```
+
+`amount` holds the value. `amountPreset` is a projection of `amount`. When the
+user selects a preset, the `beforeUpdate` hook writes the preset to `amount`.
+For all other managed updates, including `form.update`, the hook computes
+`amountPreset` from `amount` in the same commit. The schema transform removes
+`amountPreset`, so `onSubmit` receives only `amount`.
+
+`defaultValues`, `reset`, and direct `form.api` calls do not run the hook.
+Compute both fields with one function, such as `donationInput`, for each of
+these inputs.
+
 ## Apply one update to multiple fields
 
 Form, Please requires React Hook Form 7.76.1 or newer.

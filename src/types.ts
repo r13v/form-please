@@ -32,8 +32,16 @@ export type FormOutput<Schema extends StandardSchemaV1> =
 type Primitive = bigint | boolean | null | number | string | symbol | undefined
 /** A browser or language object that recursive readonly conversion must preserve. */
 type NativeLeaf = Blob | Date | File | RegExp
-/** A terminal value in a recursively readonly data structure. */
-type Leaf = ((...args: never[]) => unknown) | NativeLeaf | Primitive
+/**
+ * A terminal value in a recursively readonly data structure. A React element
+ * is immutable, and recursive conversion of its `type` breaks assignment to
+ * React content.
+ */
+type Leaf =
+	| ((...args: never[]) => unknown)
+	| NativeLeaf
+	| Primitive
+	| ReactElement
 
 /** Makes nested objects and arrays readonly while preserving leaf values. */
 export type DeepReadonly<Value> = Value extends Leaf

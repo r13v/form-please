@@ -55,6 +55,21 @@ validation](/middleware#form-state-and-validation).
 Load the data first, and then mount the form component. See [Load an edit-form
 baseline](/recipes#load-an-edit-form-baseline) and [`useForm`](/api#useform).
 
+## `kit.useForm` requires a definition from this exact form kit
+
+`kit.useForm` accepts only a definition that the same kit instance created.
+The hook keeps its first definition for the complete mount. See [Definition
+lifetime](/definitions#definition-lifetime).
+
+If this error appears after a hot reload, the cause can be the development
+server. A hot reload can create a new kit instance and keep the hook state of a
+mounted component. The mounted component then holds a definition from the
+previous kit. Reload the page, or give the component that calls `kit.useForm` a
+new `key` to remount it. A remount discards the unsaved values of that form.
+
+If the error appears without a hot reload, import the definition and the kit
+from the same module. Two calls to `createFormKit` create two different kits.
+
 ## Next steps
 
 - [Learn the rules that each form follows](/how-it-works)
