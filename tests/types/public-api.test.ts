@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec"
+import type { ReactElement } from "react"
 
 import {
 	type ArrayFieldPath,
@@ -339,6 +340,23 @@ kit.defineForm(fragmentHostSchema, {
 		privilegedFragment.fields({ at: "shippingAddress" }),
 	],
 })
+
+type BadgeContext = {
+	readonly badge: ReactElement
+	readonly labels: { hint: ReactElement }
+}
+
+baseKit.forContext<BadgeContext>().defineForm(schema, (ui) => [
+	ui.field("name", {
+		control: "text",
+		label: (_values, { context }) => context.badge,
+		description: (_values, { context }) => {
+			// @ts-expect-error Context objects stay deeply readonly.
+			context.labels.hint = context.badge
+			return context.labels.hint
+		},
+	}),
+])
 
 const definition = kit.defineForm(schema, {
 	ui: [

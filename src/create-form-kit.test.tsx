@@ -256,6 +256,21 @@ describe("form kit", () => {
 		)
 	})
 
+	it("rejects a definition owned by another form kit", () => {
+		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
+
+		function View() {
+			otherKit.useForm(definition as never, {
+				defaultValues: { name: "Ada" },
+			})
+			return null
+		}
+
+		expect(() => render(<View />)).toThrow(
+			"kit.useForm requires a definition from this exact form kit. If this error appears after a hot reload, reload the page or remount the component that calls kit.useForm.",
+		)
+	})
+
 	it("rejects a form binding owned by another form kit", () => {
 		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
 

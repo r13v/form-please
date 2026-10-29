@@ -58,7 +58,7 @@ describe form state.
 | `StandardSchema<Input, Output>` | Describes a Standard Schema validator. `Output` defaults to `Input`. |
 | `FormInput<Schema>` | Extracts the schema input type. |
 | `FormOutput<Schema>` | Extracts the schema output type. |
-| `DeepReadonly<Value>` | Recursively models a readonly value. It does not freeze data at runtime. |
+| `DeepReadonly<Value>` | Recursively models a readonly value. Functions, dates, files, and React elements keep their types. It does not freeze data at runtime. |
 
 ## Field paths
 

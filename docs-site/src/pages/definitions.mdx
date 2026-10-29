@@ -422,6 +422,12 @@ Sections and render nodes require an explicit `id`. Fields and arrays derive an
 ID from their path when you omit `id`. IDs must be non-empty and unique in the
 same path scope.
 
+Render one field for each path in a form. The DOM `id`, the label link, and the
+focus target of a field come from its path, not from its node `id`. Two fields
+with the same path and different node IDs therefore share one DOM `id`. To show
+two controls for one value, see [Edit one value with two
+controls](/recipes#edit-one-value-with-two-controls).
+
 Use RHF dot syntax for both object properties and array indexes:
 
 ```tsx
@@ -475,6 +481,40 @@ function Editor() {
 Passing a different definition to an existing hook does not replace its first
 definition. When the definition must change, remount the component with a React
 `key`.
+
+Do not put data that changes in a definition that a component creates. The
+hook keeps the first definition, so the form continues to show the first data.
+Pass the data through `context`, and read it in a resolver. The resolver gets
+the current context on each render, and the unsaved values stay.
+
+```tsx
+const teamSchema = z.object({ team: z.string().min(1) })
+
+const teamKit = nativeFormKit.forContext<{
+	readonly teams: readonly string[]
+	readonly locked: boolean
+}>()
+
+const teamDefinition = teamKit.defineForm(teamSchema, (ui) => [
+	ui.field("team", {
+		control: "select",
+		// Do not write `options: props.teams` in a component-scoped definition.
+		options: ({ context }) => context.teams,
+		disabled: (_values, { context }) => context.locked,
+	}),
+])
+
+function TeamEditor(props: {
+	readonly teams: readonly string[]
+	readonly locked: boolean
+}) {
+	const form = teamKit.useForm(teamDefinition, {
+		defaultValues: { team: "" },
+		context: { teams: props.teams, locked: props.locked },
+	})
+	return <teamKit.AutoForm form={form} />
+}
+```
 
 ## Next steps
 
