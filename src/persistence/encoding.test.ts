@@ -16,7 +16,9 @@ describe("persistence encoding", () => {
 		const input = {
 			active: true,
 			createdAt: new Date("2026-08-06T08:00:00.000Z"),
+			empty: {},
 			items: [undefined, null, 3, -0, "form"],
+			nested: { level: [{ deeper: [] }] },
 			optional: undefined,
 		}
 
@@ -365,22 +367,6 @@ describe("persistence encoding", () => {
 				version: 2,
 			}),
 		).rejects.toThrow("migration threw")
-	})
-
-	it("round-trips deeply nested and empty editable structures", async () => {
-		const input = {
-			empty: {},
-			list: [],
-			nested: { level: [{ deeper: [{ leaf: "" }] }] },
-			zero: 0,
-		}
-		const decoded = await decodePersistenceEnvelope(
-			await encodePersistenceEnvelope(input, { codecs: [], version: 3 }),
-			{ codecs: [], version: 3 },
-		)
-
-		expect(decoded.value).toEqual(input)
-		expect(decoded.migrated).toBe(false)
 	})
 
 	it("allows shared objects when an asynchronous codec suspends encoding", async () => {

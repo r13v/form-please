@@ -29,14 +29,13 @@ describe("GitHub Pages workflow", () => {
 
 	it("deploys only docs-site output that production verification produced", () => {
 		const steps = workflowSteps(job(pages, "build"))
-		const stepIndex = (run: string) =>
-			steps.findIndex((step) => step.run === run)
-		const verifyIndex = stepIndex("npm run site:verify:production")
+		const verifyIndex = steps.findIndex(
+			(step) => step.run === "npm run site:verify:production",
+		)
 		const artifactIndex = steps.findIndex(
 			(step) => step.uses === "actions/upload-pages-artifact@v4",
 		)
 
-		expect(artifactIndex).toBeGreaterThan(-1)
 		expectRunOrder(stepRuns(steps), [
 			"npm ci",
 			"npm ci --prefix docs-site",

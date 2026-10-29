@@ -43,11 +43,8 @@ export function commitManagedTransaction<
 		)
 	}
 	if (!shouldValidateManagedTransaction(api, transaction, validation)) return
-	const paths = patchedFieldPaths(transaction.patches)
 	void api.trigger(
-		paths === undefined || paths.length === 0
-			? undefined
-			: (paths as Parameters<typeof api.trigger>[0]),
+		patchedFieldPaths(transaction.patches) as Parameters<typeof api.trigger>[0],
 	)
 }
 

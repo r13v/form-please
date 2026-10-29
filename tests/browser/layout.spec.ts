@@ -66,14 +66,10 @@ test.describe("form-please/layout.css", () => {
 			),
 		})
 
-		await expectComputedStyle(page.locator("form"), "gap", "7px")
-		await expectComputedStyle(
-			page.locator("#section-grid"),
-			"column-gap",
-			"24px",
-		)
-		await expectComputedStyle(page.locator("#section-grid"), "row-gap", "18px")
-		await expectComputedStyle(page.locator("#item"), "gap", "13px")
+		await expect(page.locator("form")).toHaveCSS("gap", "7px")
+		await expect(page.locator("#section-grid")).toHaveCSS("column-gap", "24px")
+		await expect(page.locator("#section-grid")).toHaveCSS("row-gap", "18px")
+		await expect(page.locator("#item")).toHaveCSS("gap", "13px")
 
 		const first = await boundingBox(page.locator("#field-1"))
 		const second = await boundingBox(page.locator("#field-2"))
@@ -236,12 +232,11 @@ function sectionMarkup({
 	readonly children: string
 	readonly span?: "1" | "2" | "3" | "4" | "full"
 }): string {
-	const spanAttribute =
-		span === undefined ? "" : ` data-fp-span="${escapeHtml(span)}"`
+	const spanAttribute = span === undefined ? "" : ` data-fp-span="${span}"`
 
 	return [
-		`<section id="${escapeHtml(id)}" data-fp-node="section"${spanAttribute} style="width: ${width}px;">`,
-		`<div id="${escapeHtml(id)}-grid" data-fp-layout="grid" data-fp-columns="${columns}">`,
+		`<section id="${id}" data-fp-node="section"${spanAttribute} style="width: ${width}px;">`,
+		`<div id="${id}-grid" data-fp-layout="grid" data-fp-columns="${columns}">`,
 		children,
 		"</div>",
 		"</section>",
@@ -249,7 +244,7 @@ function sectionMarkup({
 }
 
 function fieldMarkup(id: string, span: "1" | "2" | "3" | "4" | "full" = "1") {
-	return `<div id="${escapeHtml(id)}" data-fp-node="field" data-fp-span="${span}" style="min-height: 24px;"></div>`
+	return `<div id="${id}" data-fp-node="field" data-fp-span="${span}" style="min-height: 24px;"></div>`
 }
 
 async function expectFirstRowCount(
@@ -269,14 +264,6 @@ async function expectFirstRowCount(
 	expect(firstRow).toBe(expectedColumns)
 }
 
-async function expectComputedStyle(
-	locator: Locator,
-	property: "column-gap" | "gap" | "row-gap",
-	value: string,
-) {
-	await expect(locator).toHaveCSS(property, value)
-}
-
 async function boundingBox(locator: Locator) {
 	const box = await locator.boundingBox()
 	expect(box).not.toBeNull()
@@ -293,8 +280,4 @@ function withoutContainerQueries(css: string): string {
 	expect(firstContainerQuery).toBeGreaterThan(0)
 
 	return `${css.slice(0, firstContainerQuery)}\n}`
-}
-
-function escapeHtml(value: string): string {
-	return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;")
 }

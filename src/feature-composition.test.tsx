@@ -22,7 +22,7 @@ const schema = z.object({ name: z.string() })
 
 describe("history with persistence", () => {
 	it("treats a persistence restore as a history boundary", async () => {
-		const storage = createMemoryAdapter(
+		const adapter = createMemoryAdapter(
 			await encodePersistenceEnvelope(
 				{ name: "Persisted" },
 				{ codecs: [], version: 1 },
@@ -30,7 +30,7 @@ describe("history with persistence", () => {
 		)
 		const history = createHistoryMiddleware()
 		const persistence = createPersistenceMiddleware({
-			adapter: storage.adapter,
+			adapter,
 			key: "profile",
 			version: 1,
 		})
@@ -68,7 +68,7 @@ describe("restores with whenHidden", () => {
 	})
 
 	it("keeps hidden values from a persistence restore and brings them back on undo", async () => {
-		const storage = createMemoryAdapter(
+		const adapter = createMemoryAdapter(
 			await encodePersistenceEnvelope(
 				{ accountType: "personal", companyName: "Kept in draft" },
 				{ codecs: [], version: 1 },
@@ -76,7 +76,7 @@ describe("restores with whenHidden", () => {
 		)
 		const history = createHistoryMiddleware()
 		const persistence = createPersistenceMiddleware({
-			adapter: storage.adapter,
+			adapter,
 			key: "company",
 			version: 1,
 		})
@@ -136,10 +136,5 @@ function createMemoryAdapter(initial: JsonValue | undefined) {
 			stored = undefined
 		},
 	}
-	return {
-		adapter,
-		get value() {
-			return stored
-		},
-	}
+	return adapter
 }

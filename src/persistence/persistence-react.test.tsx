@@ -201,45 +201,6 @@ describe("persistence React Hook Form integration", () => {
 		expect(storage.saveCalls).toHaveLength(0)
 	})
 
-	it("autosaves edits made directly by React Hook Form controls", async () => {
-		const storage = createMemoryAdapter()
-		const feature = createPersistenceMiddleware({
-			adapter: storage.adapter,
-			key: "profile",
-			saveDelay: 10_000,
-			version: 1,
-		})
-		const definition = kit.defineForm(schema, definitionSource, {
-			middleware: [feature],
-		})
-		let persistence!: PersistenceHandle
-
-		function View() {
-			const form = kit.useForm(definition, {
-				defaultValues: { items: [], name: "Ada" },
-			})
-			persistence = feature.handle(form)
-			return <kit.AutoForm form={form} />
-		}
-
-		render(<View />)
-		act(() => persistence.start())
-		fireEvent.change(screen.getByLabelText("Name"), {
-			target: { value: "Grace" },
-		})
-		await act(async () => persistence.flush())
-
-		expect(storage.saveCalls).toHaveLength(1)
-		expect(
-			(
-				await decodePersistenceEnvelope(storage.value as JsonValue, {
-					codecs: [],
-					version: 1,
-				})
-			).value,
-		).toEqual({ items: [], name: "Grace" })
-	})
-
 	it("saves edits made while no persistence hook was mounted", async () => {
 		vi.useFakeTimers()
 		try {

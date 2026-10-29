@@ -21,7 +21,6 @@ export default {
 	},
 	ignore: ["tests/fixtures/**"],
 	ignoreDependencies: ["form-please", "zod"],
-	ignoreFiles: [],
 	workspaces: {
 		".": {
 			entry: packageEntries().map(({ source }) => source),

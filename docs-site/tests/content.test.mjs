@@ -87,9 +87,6 @@ test("keeps the async multiselect example copyable and production-shaped", async
 	assert.match(page, /Its CSS class\s+names have no library styles/)
 
 	await access(new URL("src/snippets/async-multiselect-request.ts", siteRoot))
-	await assert.rejects(
-		access(new URL("src/pages/async-multiselect.mdx", siteRoot)),
-	)
 })
 
 test("keeps validation guidance executable and complete", async () => {

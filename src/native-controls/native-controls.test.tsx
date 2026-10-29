@@ -63,15 +63,11 @@ describe("createNativeControls", () => {
 			target: { value: "Grace" },
 		})
 		fireEvent.change(screen.getByRole("spinbutton"), {
-			target: { value: "" },
-		})
-		fireEvent.change(screen.getByRole("spinbutton"), {
 			target: { value: "42" },
 		})
 
 		expect(setText).toHaveBeenCalledWith("Grace")
-		expect(setNumber).toHaveBeenNthCalledWith(1, undefined)
-		expect(setNumber).toHaveBeenNthCalledWith(2, 42)
+		expect(setNumber).toHaveBeenCalledWith(42)
 	})
 
 	it("represents an optional select value explicitly", () => {

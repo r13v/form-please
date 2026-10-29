@@ -439,7 +439,6 @@ function assembleKit(
 				issues: submission.issues,
 				readOnly: options.readOnly === true,
 				resetSubmission: submission.reset,
-				submission: submission.store,
 				submitAction: submission.submitAction,
 			} as unknown as RuntimeForm
 			attachFormDiagnosticsRuntime(instance, runtime)

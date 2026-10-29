@@ -31,13 +31,7 @@ type ResourceStatus = AnyResourceState["status"]
 type ResourceBranch<
 	Resource extends AnyResourceState,
 	Status extends ResourceStatus,
-> = Extract<
-	Resource,
-	{
-		/** The resource branch discriminator to select. */
-		readonly status: Status
-	}
->
+> = Extract<Resource, { readonly status: Status }>
 /** Handlers that map each resource branch to an application value. */
 type ResourceCases<
 	Resource extends AnyResourceState,

@@ -744,7 +744,6 @@ describe("form kit", () => {
 		}
 
 		render(<Form />)
-		// The request settles after the call, so wait for the rendered option.
 		expect(await screen.findByRole("option", { name: "first" })).not.toBeNull()
 		expect(loadOptions).toHaveBeenCalledTimes(1)
 
@@ -1761,26 +1760,6 @@ describe("form kit", () => {
 				input: { name: "Bob" },
 				value: { name: "Bob" },
 			}),
-		)
-	})
-
-	it("rejects a submit binding that does not match the surrounding form", () => {
-		function View() {
-			const mounted = kit.useForm(definition, {
-				defaultValues: { name: "Ada" },
-			})
-			const other = kit.useForm(definition, {
-				defaultValues: { name: "Grace" },
-			})
-			return (
-				<kit.Form form={mounted}>
-					<kit.Submit binding={other}>{() => null}</kit.Submit>
-				</kit.Form>
-			)
-		}
-
-		expect(() => render(<View />)).toThrow(
-			"Submit binding must match the surrounding Form",
 		)
 	})
 

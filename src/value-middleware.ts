@@ -868,7 +868,6 @@ function isPathPrefix(
 	)
 }
 
-/** Compares two Immer segment paths. */
 function samePath(
 	left: readonly (string | number)[],
 	right: readonly (string | number)[],

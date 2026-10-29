@@ -47,7 +47,6 @@ const nodeKindTraits = {
 type RuntimeNode = NormalizedNode & {
 	/** Preserves normalized node properties without widening their contracts. */
 	readonly [key: string]: unknown
-	/** The node category used by resolution. */
 	readonly kind: NodeKind
 	/** Normalized child templates for sections and arrays. */
 	readonly children?: readonly RuntimeNode[]
@@ -656,11 +655,8 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 		pathPrefix: string,
 		idPrefix: string,
 		parent: {
-			/** Whether the parent is visible. */
 			readonly visible: boolean
-			/** Whether the parent is disabled. */
 			readonly disabled: boolean
-			/** Whether the parent is read-only. */
 			readonly readOnly: boolean
 			/** The parent grid column count, when it defines a grid. */
 			readonly columns?: number
@@ -1156,7 +1152,6 @@ function resolveOptional<Value = unknown, Context = unknown>(
 		value as (
 			resolverValues: unknown,
 			details: {
-				/** The readonly runtime context for the resolver. */
 				readonly context: Readonly<Context>
 			},
 		) => unknown

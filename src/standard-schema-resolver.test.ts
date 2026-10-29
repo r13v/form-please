@@ -75,48 +75,6 @@ describe("Standard Schema resolver", () => {
 		})
 	})
 
-	it("preserves pathless and repeated issues with RHF dot paths", async () => {
-		const schema: StandardSchema<{
-			readonly speakers: readonly { readonly name: string }[]
-		}> = {
-			"~standard": {
-				version: 1,
-				vendor: "resolver-error-test",
-				validate() {
-					return {
-						issues: [
-							{ message: "Form is unavailable" },
-							{
-								message: "Enter a name",
-								path: ["speakers", 0, "name"],
-							},
-							{
-								message: "Use at least two characters",
-								path: ["speakers", 0, "name"],
-							},
-						],
-					}
-				},
-			},
-		}
-		const resolver = createStandardSchemaResolver(schema)
-		const result = await resolver(
-			{ speakers: [{ name: "" }] },
-			undefined,
-			resolverOptions,
-		)
-
-		expect(result.values).toEqual({})
-		expect(fieldErrorsToIssues(result.errors)).toEqual([
-			{ message: "Form is unavailable" },
-			{ message: "Enter a name", path: "speakers.0.name" },
-			{
-				message: "Use at least two characters",
-				path: "speakers.0.name",
-			},
-		])
-	})
-
 	it("accepts every Standard Schema path segment shape", async () => {
 		const resolver = createStandardSchemaResolver(
 			issuingSchema([

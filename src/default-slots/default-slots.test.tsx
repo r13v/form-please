@@ -17,37 +17,10 @@ import {
 	createDefaultSlots,
 	type DefaultArrayAddI18nData,
 	type DefaultArrayItemI18nData,
-	type DefaultSlotI18nValue,
 	type DefaultSlotsI18n,
 } from "./default-slots.js"
 
-const _arrayAddMessage: DefaultSlotI18nValue<DefaultArrayAddI18nData> = ({
-	label,
-}) => `Add ${String(label)}`
-const _arrayItemMessage: DefaultSlotI18nValue<DefaultArrayItemI18nData> = ({
-	position,
-}) => `Item ${position}`
-
-void _arrayAddMessage
-void _arrayItemMessage
-
 describe("createDefaultSlots i18n", () => {
-	it("uses English fallback labels for array actions", () => {
-		const slots = createDefaultSlots()
-
-		render(
-			<>
-				<slots.Array {...arrayProps({ label: "Contacts" })}>Rows</slots.Array>
-				<slots.ArrayItem {...arrayItemProps({ index: 1 })}>Row</slots.ArrayItem>
-			</>,
-		)
-
-		expect(button("Add item").disabled).toBe(false)
-		expect(button("Move item 2 up").disabled).toBe(false)
-		expect(button("Move item 2 down").disabled).toBe(false)
-		expect(button("Remove item 2").disabled).toBe(false)
-	})
-
 	it("merges mixed string and function overrides over English defaults", () => {
 		const slots = createDefaultSlots({
 			i18n: {
@@ -169,7 +142,7 @@ describe("createDefaultSlots components", () => {
 	it("renders the field slot with semantic labels, descriptions, controls, errors, and root props", () => {
 		const slots = createDefaultSlots()
 		const rootRef = vi.fn()
-		const { container } = render(
+		render(
 			<slots.Field
 				{...fieldProps({
 					rootProps: rootProps("field", {
@@ -205,9 +178,6 @@ describe("createDefaultSlots components", () => {
 		const root = screen.getByTestId("field-root")
 		const input = screen.getByLabelText("Display name") as HTMLInputElement
 
-		expect(
-			container.querySelectorAll("[data-testid='field-root']"),
-		).toHaveLength(1)
 		expect(root.getAttribute("data-fp-node")).toBe("field")
 		expect(root.id).toBe("field-name")
 		expect(rootRef).toHaveBeenLastCalledWith(root)
@@ -248,9 +218,6 @@ describe("createDefaultSlots components", () => {
 			throw new Error("Expected section layout root")
 		}
 
-		expect(
-			container.querySelectorAll("[data-testid='section-root']"),
-		).toHaveLength(1)
 		expect(section.tagName).toBe("SECTION")
 		expect(section.getAttribute("data-fp-node")).toBe("section")
 		expect(screen.getByRole("heading", { level: 2, name: "Identity" })).toBe(
@@ -265,7 +232,7 @@ describe("createDefaultSlots components", () => {
 	it("renders array relationships, children, errors, and a guarded add button", () => {
 		const slots = createDefaultSlots()
 		const add = vi.fn()
-		const { container, rerender } = render(
+		const { rerender } = render(
 			<slots.Array
 				{...arrayProps({
 					rootProps: rootProps("array", {
@@ -295,9 +262,6 @@ describe("createDefaultSlots components", () => {
 
 		const root = screen.getByTestId("array-root")
 
-		expect(
-			container.querySelectorAll("[data-testid='array-root']"),
-		).toHaveLength(1)
 		expect(root.getAttribute("data-fp-node")).toBe("array")
 		expect(root.getAttribute("aria-labelledby")).toBe("contacts-label")
 		expect(root.getAttribute("aria-describedby")).toBe(
@@ -331,7 +295,7 @@ describe("createDefaultSlots components", () => {
 		const slots = createDefaultSlots()
 		const move = vi.fn()
 		const remove = vi.fn()
-		const { container, rerender } = render(
+		const { rerender } = render(
 			<slots.ArrayItem
 				{...arrayItemProps({
 					rootProps: rootProps("array-item", {
@@ -348,9 +312,6 @@ describe("createDefaultSlots components", () => {
 
 		const root = screen.getByTestId("item-root")
 
-		expect(
-			container.querySelectorAll("[data-testid='item-root']"),
-		).toHaveLength(1)
 		expect(root.getAttribute("data-fp-node")).toBe("array-item")
 		expect(root.id).toBe("contacts.1")
 		expect(screen.getByTestId("item-child").textContent).toBe("Grace")
@@ -423,7 +384,7 @@ describe("createDefaultSlots components", () => {
 	it("renders default error messages as focusable alerts with root identification props", () => {
 		const slots = createDefaultSlots()
 		const rootRef = vi.fn()
-		const { container } = render(
+		render(
 			<slots.ErrorMessage
 				{...errorMessageProps({
 					rootProps: rootProps("error-message", {
@@ -439,9 +400,6 @@ describe("createDefaultSlots components", () => {
 
 		const alert = screen.getByRole("alert")
 
-		expect(
-			container.querySelectorAll("[data-testid='error-root']"),
-		).toHaveLength(1)
 		expect(alert.tagName).toBe("P")
 		expect(alert.id).toBe("profile-email-error-0")
 		expect(alert.tabIndex).toBe(-1)

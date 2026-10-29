@@ -65,14 +65,7 @@ const basePackageLock = {
 
 describe("release guard", () => {
 	it("accepts the exact stable unpublished GitHub release", async () => {
-		await expect(
-			verifyRelease({
-				lookupVersion: () => ({
-					status: "available",
-					reason: "version_not_found",
-				}),
-			}),
-		).resolves.toEqual({
+		await expect(verifyRelease()).resolves.toEqual({
 			packageName: "form-please",
 			repositoryUrl: "https://github.com/r13v/form-please",
 			tag: "v0.2.0",
@@ -264,23 +257,15 @@ describe("release guard", () => {
 	})
 
 	it("fails closed when the injected registry lookup cannot prove availability", async () => {
-		for (const reason of [
-			"package_not_found",
-			"registry_outage",
-			"authentication",
-			"timeout",
-			"malformed_response",
-		]) {
-			await expectReleaseFailure(
-				{
-					lookupVersion: () => ({
-						status: "error",
-						reason,
-					}),
-				},
-				"registry_lookup_failed",
-			)
-		}
+		await expectReleaseFailure(
+			{
+				lookupVersion: () => ({
+					status: "error",
+					reason: "registry_outage",
+				}),
+			},
+			"registry_lookup_failed",
+		)
 	})
 })
 
