@@ -30,5 +30,3 @@ Outside `docs/`:
 
 - `CONTEXT.md` is the domain glossary.
 - `docs-site/AGENTS.md` owns the rules for the docs site pages, snippets and demos. Read it before you change `docs-site/`.
-
-Do not explain this interpretation back to the user unless asked. Let it show in the work.
