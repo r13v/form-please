@@ -1,17 +1,11 @@
 import { defineConfig } from "tsdown"
 
+import { packageEntries } from "./scripts/package-entries.mjs"
+
 export default defineConfig({
-	entry: {
-		index: "src/index.ts",
-		"default-slots": "src/default-slots/index.ts",
-		devtools: "src/devtools/index.ts",
-		history: "src/history/index.ts",
-		"native-controls": "src/native-controls/index.ts",
-		persistence: "src/persistence/index.ts",
-		"preset-native": "src/preset-native/index.ts",
-		"preset-mui": "src/preset-mui/index.ts",
-		testing: "src/testing/index.ts",
-	},
+	entry: Object.fromEntries(
+		packageEntries().map(({ name, source }) => [name, source]),
+	),
 	format: ["esm", "cjs"],
 	platform: "neutral",
 	fixedExtension: false,

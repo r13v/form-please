@@ -17,6 +17,7 @@ import {
 import { createPortal } from "react-dom"
 import type { Control, FieldValues } from "react-hook-form"
 import { useFormState } from "react-hook-form"
+import { assertNever } from "../assert-never.js"
 
 import {
 	type FormBinding,
@@ -1113,6 +1114,8 @@ function renderTab(
 			return <OptionsView snapshot={snapshot} />
 		case "features":
 			return <FeaturesView features={snapshot.features} />
+		default:
+			return assertNever(tab, 'Unsupported devtools tab "%s"')
 	}
 }
 

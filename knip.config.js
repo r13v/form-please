@@ -1,3 +1,5 @@
+import { packageEntries } from "./scripts/package-entries.mjs"
+
 const docsStyleCompiler = (source) => {
 	const imports = []
 	if (source.includes("@fontsource-variable/newsreader")) {
@@ -22,15 +24,7 @@ export default {
 	ignoreFiles: [],
 	workspaces: {
 		".": {
-			entry: [
-				"src/index.ts",
-				"src/default-slots/index.ts",
-				"src/devtools/index.ts",
-				"src/native-controls/index.ts",
-				"src/preset-native/index.ts",
-				"src/preset-mui/index.ts",
-				"src/testing/index.ts",
-			],
+			entry: packageEntries().map(({ source }) => source),
 			project: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 		},
 		"docs-site": {

@@ -31,11 +31,13 @@ import {
 	useWatch,
 } from "react-hook-form"
 import {
+	assertMountedArrayStructures,
 	commitRowOperation,
 	type FormArray,
 	reconcileGeneratedArray,
 	registerGeneratedArray,
 } from "./array-reconcile.js"
+import { assertNever } from "./assert-never.js"
 import {
 	createFormFragment,
 	hasWhenHidden,
@@ -906,6 +908,10 @@ function assembleKit(
 		>(undefined)
 		if (commitRef.current === undefined) {
 			commitRef.current = (transaction) => {
+				// Array sources check before their native row operations run.
+				if (transaction.source.type !== "array") {
+					assertMountedArrayStructures(apiRef.current.control, transaction)
+				}
 				commitManagedTransaction(
 					apiRef.current,
 					transaction,
@@ -1439,6 +1445,8 @@ function GeneratedNode({
 				disabled: node.disabled,
 				readOnly: node.readOnly,
 			})
+		default:
+			return assertNever(node, "Unsupported resolved node")
 	}
 }
 
@@ -1870,6 +1878,7 @@ function dispatchArrayAction(
 		{
 			arrayPath,
 			commit: (transaction) => {
+				assertMountedArrayStructures(form.api.control, transaction, path)
 				if (source.action === "append") {
 					commitArray(transaction)
 					return form.commit(transaction)

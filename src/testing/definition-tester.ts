@@ -1,4 +1,5 @@
 import { type FieldValues, set } from "react-hook-form"
+import { assertNever } from "../assert-never.js"
 
 import {
 	hasWhenHidden,
@@ -704,6 +705,8 @@ function snapshotNode<Definition extends FormDefinition>(
 				...common,
 				kind: "render",
 			}) as DefinitionRenderSnapshot
+		default:
+			return assertNever(node, "Unsupported resolved node")
 	}
 }
 

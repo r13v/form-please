@@ -61,6 +61,70 @@ describe("history with persistence", () => {
 	})
 })
 
+describe("restores with whenHidden", () => {
+	const companySchema = z.object({
+		accountType: z.string(),
+		companyName: z.string(),
+	})
+
+	it("keeps hidden values from a persistence restore and brings them back on undo", async () => {
+		const storage = createMemoryAdapter(
+			await encodePersistenceEnvelope(
+				{ accountType: "personal", companyName: "Kept in draft" },
+				{ codecs: [], version: 1 },
+			),
+		)
+		const history = createHistoryMiddleware()
+		const persistence = createPersistenceMiddleware({
+			adapter: storage.adapter,
+			key: "company",
+			version: 1,
+		})
+		const definition = kit.defineForm(
+			companySchema,
+			(ui) => [
+				ui.field("accountType", { control: "text", label: "Account type" }),
+				ui.field("companyName", {
+					control: "text",
+					label: "Company",
+					visible: (values) => values.accountType === "company",
+					whenHidden: "reset",
+				}),
+			],
+			{ middleware: [history, persistence] },
+		)
+		let form!: FormBinding<typeof companySchema>
+		let phase = ""
+		function View() {
+			form = kit.useForm(definition, {
+				defaultValues: { accountType: "company", companyName: "" },
+			})
+			phase = usePersistence(form, persistence).snapshot.phase
+			return <kit.AutoForm form={form} />
+		}
+		render(<View />)
+		await waitFor(() => expect(phase).toBe("active"))
+		expect(form.api.getValues().companyName).toBe("Kept in draft")
+
+		fireEvent.change(screen.getByLabelText("Account type"), {
+			target: { value: "company" },
+		})
+		fireEvent.change(screen.getByLabelText("Company"), {
+			target: { value: "Acme" },
+		})
+		fireEvent.change(screen.getByLabelText("Account type"), {
+			target: { value: "personal" },
+		})
+		expect(form.api.getValues().companyName).toBe("")
+
+		await act(() => history.handle(form).undo())
+		expect(form.api.getValues()).toEqual({
+			accountType: "company",
+			companyName: "Acme",
+		})
+	})
+})
+
 function createMemoryAdapter(initial: JsonValue | undefined) {
 	let stored = initial
 	const adapter: FormPersistenceAdapter = {

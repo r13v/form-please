@@ -32,6 +32,14 @@ describe("release-equivalent CI workflow", () => {
 		])
 	})
 
+	it("runs unit tests against the minimum supported React Hook Form", () => {
+		expectRunOrder(jobRuns(ci, "minimum-react-hook-form"), [
+			"npm ci",
+			"npm run rhf:minimum",
+			"npm test",
+		])
+	})
+
 	it("does not publish, mutate source, or require credentials", () => {
 		expect(ciWorkflow).not.toMatch(/\bnpm publish\b/)
 		expect(ciWorkflow).not.toMatch(/\bnpm version\b/)

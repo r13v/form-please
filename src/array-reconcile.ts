@@ -72,9 +72,8 @@ export function reconcileGeneratedArray(
 		readonly create: (key: string | number) => unknown
 	},
 ): unknown {
-	const arrays = mountedArrays.get(form.api.control)
-	const operations = arrays?.get(path)
-	if (arrays === undefined || operations === undefined) {
+	const operations = mountedArrays.get(form.api.control)?.get(path)
+	if (operations === undefined) {
 		throw new TypeError(
 			`Reconcile requires a mounted generated array at "${path}"`,
 		)
@@ -146,23 +145,7 @@ export function reconcileGeneratedArray(
 				for (const [index, row] of nextRows.entries()) {
 					assertNestedArraysUnchanged(row, finalRows[index])
 				}
-				for (const otherPath of arrays.keys()) {
-					if (otherPath === path || otherPath.startsWith(`${path}.`)) continue
-					const segments = fieldPathSegments(previousValues, otherPath)
-					if (
-						transaction.patches.some(
-							(patch) =>
-								patch.path.length <= segments.length + 1 &&
-								segments
-									.slice(0, patch.path.length)
-									.every((segment, index) => segment === patch.path[index]),
-						)
-					) {
-						throw new TypeError(
-							"Reconcile middleware cannot change another generated array structure",
-						)
-					}
-				}
+				assertMountedArrayStructures(form.api.control, transaction, path)
 				commitRowOperation(form, path, indexes, transaction, () => {
 					const workingKeys = [...currentKeys]
 					for (let index = workingKeys.length - 1; index >= 0; index--) {
@@ -190,6 +173,42 @@ export function reconcileGeneratedArray(
 			},
 		},
 	)
+}
+
+/**
+ * Rejects a managed transaction that changes the structure of a mounted
+ * generated array, except the active array and arrays inside its rows.
+ * RHF `setValues` cannot update the row state of `useFieldArray`.
+ */
+export function assertMountedArrayStructures(
+	control: object,
+	transaction: Parameters<ValueTransactionCommit<FieldValues, unknown>>[0],
+	activePath?: string,
+): void {
+	const arrays = mountedArrays.get(control)
+	if (arrays === undefined) return
+	for (const path of arrays.keys()) {
+		if (
+			activePath !== undefined &&
+			(path === activePath || path.startsWith(`${activePath}.`))
+		) {
+			continue
+		}
+		const segments = fieldPathSegments(transaction.previousValues, path)
+		if (
+			transaction.patches.some(
+				(patch) =>
+					patch.path.length <= segments.length + 1 &&
+					segments
+						.slice(0, patch.path.length)
+						.every((segment, index) => segment === patch.path[index]),
+			)
+		) {
+			throw new TypeError(
+				`A managed update cannot change the structure of the mounted generated array "${path}". Use its array actions or form.array(path).reconcile.`,
+			)
+		}
+	}
 }
 
 /** The runtime form parts that a native row operation needs. */

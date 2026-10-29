@@ -91,6 +91,26 @@ function mount(
 	return binding
 }
 
+/** Returns an error that the action throws or that React reports from an event handler. */
+function captureError(run: () => unknown): unknown {
+	let reported: unknown
+	const listener = (event: ErrorEvent) => {
+		reported = event.error
+		event.preventDefault()
+	}
+	window.addEventListener("error", listener)
+	try {
+		act(() => {
+			run()
+		})
+	} catch (error) {
+		return error
+	} finally {
+		window.removeEventListener("error", listener)
+	}
+	return reported
+}
+
 /** Finds a row action button of the top-level rows array, not of nested children. */
 function rowAction(index: number, name: string): HTMLElement {
 	const row = document.querySelector(
@@ -436,7 +456,7 @@ describe("managed array reconciliation", () => {
 			},
 		})
 		expect(() => form.array("rows").reconcile(["sam"], options)).toThrow(
-			"another generated array structure",
+			'cannot change the structure of the mounted generated array "otherRows"',
 		)
 		expect(form.api.getValues()).toEqual(initial)
 	})
@@ -449,6 +469,70 @@ describe("managed array reconciliation", () => {
 		})
 		act(() => form.array("rows").reconcile(["sam"], options))
 		expect(form.api.getValues().otherRows[0]?.name).toBe("Adjusted")
+	})
+
+	it.each([
+		[
+			"form.update",
+			{},
+			(form: FormBinding<typeof schema>) =>
+				form.update((draft) => {
+					draft.otherRows.push({ id: "three", name: "Third" })
+				}),
+		],
+		[
+			"a control update",
+			{
+				beforeUpdate: (draft: {
+					otherRows: { id: string; name: string }[]
+				}) => {
+					draft.otherRows.pop()
+				},
+			},
+			() =>
+				fireEvent.change(screen.getAllByLabelText("Name")[0] as HTMLElement, {
+					target: { value: "Changed" },
+				}),
+		],
+		[
+			"a generated append",
+			{
+				beforeUpdate: (draft: {
+					otherRows: { id: string; name: string }[]
+				}) => {
+					draft.otherRows.reverse()
+				},
+			},
+			() =>
+				fireEvent.click(
+					document.querySelector(
+						'[data-fp-node="array"][data-fp-path="rows"] > [data-fp-array-action="add"]',
+					) as HTMLElement,
+				),
+		],
+	] as const)(
+		"rejects a mounted generated array structure change from %s",
+		(_source, policy, run) => {
+			const form = mount(policy as Parameters<typeof mount>[0])
+			expect(captureError(() => run(form))).toEqual(
+				expect.objectContaining({
+					message: expect.stringContaining(
+						'cannot change the structure of the mounted generated array "otherRows"',
+					),
+				}),
+			)
+			expect(form.api.getValues()).toEqual(initial)
+		},
+	)
+
+	it("allows a structure change to a generated array that is not mounted", () => {
+		const form = mount({}, false)
+		act(() => {
+			form.update((draft) => {
+				draft.otherRows.push({ id: "three", name: "Third" })
+			})
+		})
+		expect(form.api.getValues().otherRows).toHaveLength(3)
 	})
 
 	it("supports a mounted nested array path without changing its parent selection", () => {

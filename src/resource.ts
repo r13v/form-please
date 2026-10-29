@@ -156,13 +156,9 @@ function matchResourceWithArguments<
 		case "error":
 			return cases.error(resource as ResourceBranch<Resource, "error">, ...args)
 		default: {
-			/** A runtime value with a status outside the typed resource union. */
-			const unsupported = resource as {
-				/** The unsupported runtime discriminator. */
-				readonly status?: unknown
-			}
+			const unsupported: never = resource
 			throw new TypeError(
-				`Unsupported resource status "${String(unsupported.status)}"`,
+				`Unsupported resource status "${String((unsupported as { readonly status?: unknown }).status)}"`,
 			)
 		}
 	}
