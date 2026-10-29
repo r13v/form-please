@@ -152,8 +152,8 @@ React render, not one raw RHF publication. Direct `form.api` operations bypass
 middleware, so keep invariant-preserving application actions on `form.update`.
 
 Only the proposed generated array action can change generated array length or
-order. Do not change another generated array's structure in the same
-transaction. Use that array's generated action to keep row IDs synchronized.
+order. A change to the row count of another mounted generated array in the
+same transaction throws a `TypeError`. Use that array's generated action to keep row IDs synchronized.
 Use raw `useFieldArray` methods only when bypassing middleware is intentional.
 
 Do not call `next` after `await`, call it twice, or start another managed update

@@ -340,9 +340,11 @@ The core does not branch on feature names. Another feature can read
 `isRestoring()` on the capability; history uses it to treat a restore from
 another feature as a non-undoable boundary.
 
-Every managed update that changes the structure of a mounted generated array,
-other than the array of its own `array` source, throws a `TypeError`, because
-`setValues` cannot update the row state of `useFieldArray`.
+Every managed update that changes the number of rows of a mounted generated
+array, other than the array of its own `array` source, throws a `TypeError`,
+because `setValues` cannot update the row state of `useFieldArray`. Arrays
+inside the rows of the source array are compared with the same row after the
+action. A change of values that keeps the row count is allowed.
 
 Managed changes follow `mode` and `reValidateMode` through one public RHF
 `trigger` call after commit. `isDirty` remains a whole-value RHF comparison;
@@ -507,7 +509,8 @@ Remove and move also remap schema issue paths and stored external issues, so
 each issue stays with its row.
 Middleware cannot change the source array length or order beyond the proposed
 action. An index outside the array throws a `RangeError` in the React runtime
-and in the headless tester, because both use one `applyArrayAction`. The transaction must not change another generated array's structure
+and in the headless tester, because both use one `applyArrayAction`. The
+transaction must not change the row count of another mounted generated array
 because `setValues` cannot synchronize its private row IDs. Dependent values
 join the same final React render, although raw RHF subscribers may see the
 native array operation before the final value commit. Item defaults are cloned

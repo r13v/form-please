@@ -612,19 +612,22 @@ function dispatchArrayAction(
 		{
 			arrayPath,
 			commit: (transaction) => {
-				assertMountedArrayStructures(form.api.control, transaction, path)
-				if (action.action === "append") {
-					commitArray(transaction)
-					return form.commit(transaction)
-				}
 				// The action applied to old row indexes maps each kept row to its new index.
 				const rows = getMutableArrayValue(form.api.getValues(), path).map(
 					(_, index) => index,
 				)
-				applyArrayAction(rows, path, action)
+				if (action.action !== "append") applyArrayAction(rows, path, action)
 				const indexes = new Map(
 					rows.map((oldIndex, newIndex) => [oldIndex, newIndex]),
 				)
+				assertMountedArrayStructures(form.api.control, transaction, {
+					path,
+					indexes,
+				})
+				if (action.action === "append") {
+					commitArray(transaction)
+					return form.commit(transaction)
+				}
 				commitRowOperation(form, path, indexes, transaction, () =>
 					commitArray(transaction),
 				)

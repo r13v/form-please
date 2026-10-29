@@ -1,4 +1,4 @@
-import type { FieldError, FieldValues } from "react-hook-form"
+import { type FieldError, type FieldValues, get } from "react-hook-form"
 import type { FormIssueStore } from "./form-issues.js"
 
 import {
@@ -6,7 +6,7 @@ import {
 	cloneFormValue,
 	isFormValueObject,
 } from "./form-value.js"
-import { fieldPathSegments, getMutableArrayValue } from "./generated-array.js"
+import { getMutableArrayValue } from "./generated-array.js"
 import { remapArraySchemaIssues } from "./standard-schema-resolver.js"
 import type { DeepReadonly } from "./types.js"
 import type {
@@ -145,7 +145,10 @@ export function reconcileGeneratedArray(
 				for (const [index, row] of nextRows.entries()) {
 					assertNestedArraysUnchanged(row, finalRows[index])
 				}
-				assertMountedArrayStructures(form.api.control, transaction, path)
+				assertMountedArrayStructures(form.api.control, transaction, {
+					path,
+					indexes,
+				})
 				commitRowOperation(form, path, indexes, transaction, () => {
 					const workingKeys = [...currentKeys]
 					for (let index = workingKeys.length - 1; index >= 0; index--) {
@@ -176,38 +179,44 @@ export function reconcileGeneratedArray(
 }
 
 /**
- * Rejects a managed transaction that changes the structure of a mounted
- * generated array, except the active array and arrays inside its rows.
- * RHF `setValues` cannot update the row state of `useFieldArray`.
+ * Rejects a managed transaction that changes the number of rows of a mounted
+ * generated array. RHF `setValues` cannot update the rows of `useFieldArray`.
+ * The active array of a generated action is exempt; `indexes` maps each of
+ * its kept rows from the old to the new index, so arrays inside its rows are
+ * compared with the same row.
  */
 export function assertMountedArrayStructures(
 	control: object,
 	transaction: Parameters<ValueTransactionCommit<FieldValues, unknown>>[0],
-	activePath?: string,
+	active?: {
+		readonly path: string
+		readonly indexes: ReadonlyMap<number, number>
+	},
 ): void {
 	const arrays = mountedArrays.get(control)
 	if (arrays === undefined) return
 	for (const path of arrays.keys()) {
+		if (path === active?.path) continue
+		let nextPath = path
+		if (active !== undefined && path.startsWith(`${active.path}.`)) {
+			const [index, ...rest] = path.slice(active.path.length + 1).split(".")
+			const nextIndex = active.indexes.get(Number(index))
+			// A removed row takes its nested arrays with it.
+			if (nextIndex === undefined) continue
+			nextPath = [active.path, nextIndex, ...rest].join(".")
+		}
+		const previous = get(transaction.previousValues, path)
+		const next = get(transaction.nextValues, nextPath)
 		if (
-			activePath !== undefined &&
-			(path === activePath || path.startsWith(`${activePath}.`))
+			Array.isArray(previous) &&
+			Array.isArray(next) &&
+			previous.length === next.length
 		) {
 			continue
 		}
-		const segments = fieldPathSegments(transaction.previousValues, path)
-		if (
-			transaction.patches.some(
-				(patch) =>
-					patch.path.length <= segments.length + 1 &&
-					segments
-						.slice(0, patch.path.length)
-						.every((segment, index) => segment === patch.path[index]),
-			)
-		) {
-			throw new TypeError(
-				`A managed update cannot change the structure of the mounted generated array "${path}". Use its array actions or form.array(path).reconcile.`,
-			)
-		}
+		throw new TypeError(
+			`A managed update cannot change the number of rows of the mounted generated array "${path}". Use its array actions or form.array(path).reconcile.`,
+		)
 	}
 }
 

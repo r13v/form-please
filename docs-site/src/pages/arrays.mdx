@@ -128,7 +128,8 @@ middleware, which can cancel the action or add dependent value patches. The
 source operation still uses native `useFieldArray` methods so row IDs survive.
 
 Middleware cannot change the source array length or order beyond the proposed
-generated action. It must not change another generated array's structure.
+generated action. A change to the row count of another mounted generated array
+throws a `TypeError`.
 Dependent changes join the same final React render, but raw RHF subscriptions
 can observe the native array operation before those changes. Use each array's
 generated action for a managed structural change because `setValues` cannot

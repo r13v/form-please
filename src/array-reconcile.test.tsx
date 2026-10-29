@@ -452,11 +452,11 @@ describe("managed array reconciliation", () => {
 	it("rejects structural edits to another generated array before changing either array", () => {
 		const form = mount({
 			beforeUpdate: (draft) => {
-				draft.otherRows.reverse()
+				draft.otherRows.pop()
 			},
 		})
 		expect(() => form.array("rows").reconcile(["sam"], options)).toThrow(
-			'cannot change the structure of the mounted generated array "otherRows"',
+			'cannot change the number of rows of the mounted generated array "otherRows"',
 		)
 		expect(form.api.getValues()).toEqual(initial)
 	})
@@ -500,7 +500,7 @@ describe("managed array reconciliation", () => {
 				beforeUpdate: (draft: {
 					otherRows: { id: string; name: string }[]
 				}) => {
-					draft.otherRows.reverse()
+					draft.otherRows.push({ id: "three", name: "Third" })
 				},
 			},
 			() =>
@@ -517,13 +517,65 @@ describe("managed array reconciliation", () => {
 			expect(captureError(() => run(form))).toEqual(
 				expect.objectContaining({
 					message: expect.stringContaining(
-						'cannot change the structure of the mounted generated array "otherRows"',
+						'cannot change the number of rows of the mounted generated array "otherRows"',
 					),
 				}),
 			)
 			expect(form.api.getValues()).toEqual(initial)
 		},
 	)
+
+	it.each([
+		[
+			"a replaced row",
+			(draft: { otherRows: { id: string; name: string }[] }) => {
+				draft.otherRows[0] = { id: "one", name: "Replaced" }
+			},
+		],
+		[
+			"a mapped array",
+			(draft: { otherRows: { id: string; name: string }[] }) => {
+				draft.otherRows = draft.otherRows.map((row) => ({
+					...row,
+					name: `${row.name}!`,
+				}))
+			},
+		],
+	] as const)(
+		"allows %s that keeps the row count of a mounted array",
+		(_name, recipe) => {
+			const form = mount()
+			act(() => {
+				form.update(recipe as never)
+			})
+			expect(form.api.getValues().otherRows).toHaveLength(2)
+		},
+	)
+
+	it("rejects a generated append that also adds a row to a nested array of an existing row", () => {
+		const form = mount({
+			beforeUpdate: (draft, transaction) => {
+				if (transaction.source.type !== "array") return
+				draft.rows[0]?.children.push({ title: "Extra" })
+			},
+		})
+		expect(
+			captureError(() =>
+				fireEvent.click(
+					document.querySelector(
+						'[data-fp-node="array"][data-fp-path="rows"] > [data-fp-array-action="add"]',
+					) as HTMLElement,
+				),
+			),
+		).toEqual(
+			expect.objectContaining({
+				message: expect.stringContaining(
+					'mounted generated array "rows.0.children"',
+				),
+			}),
+		)
+		expect(form.api.getValues()).toEqual(initial)
+	})
 
 	it("allows a structure change to a generated array that is not mounted", () => {
 		const form = mount({}, false)

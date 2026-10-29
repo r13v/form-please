@@ -606,7 +606,8 @@ Generated controls and `form.update` publish final values with one RHF
 `useFieldArray` row IDs; their dependent patches join the same final React
 render, although raw RHF subscribers can observe an intermediate array state.
 Array middleware cannot change the source array length or order beyond the
-source action. It must not change another generated array's structure.
+source action. A change to the row count of another mounted generated array
+throws a `TypeError`.
 
 Only the proposed generated array action can change generated array length or
 order. `setValues` cannot synchronize the private row IDs in `useFieldArray`.

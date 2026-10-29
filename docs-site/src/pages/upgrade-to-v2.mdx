@@ -44,26 +44,26 @@ the keys.
 
 ## Change the rows of a generated array
 
-A managed update that adds, removes, or reorders the rows of a mounted
-generated array throws a `TypeError`. This applies to `form.update`, to
+A managed update that changes the number of rows of a mounted generated array
+throws a `TypeError`. This applies to `form.update`, to
 `beforeUpdate` and middleware patches, and to an update from another field or
 array. React Hook Form (RHF) cannot keep the row state of that array in sync,
 so version 1 rendered the wrong rows.
 
 Use the actions of the array, or select its rows with
 `form.array(path).reconcile`. Read [Reconcile selected rows](/reconcile). A
-change to a value inside a row is still allowed.
+change of values that keeps the row count is still allowed.
 
 ## Reference
 
 | Change | Version 1 | Version 2 |
 | --- | --- | --- |
 | Material UI array messages | `addItem`, `removeItem`, `moveItemUp`, `moveItemDown` | `arrayAdd`, `arrayRemove`, `arrayMoveUp`, `arrayMoveDown` |
-| Structural update of another mounted generated array | Accepted, rows out of sync | `TypeError` |
+| Row count change of another mounted generated array | Accepted, rows out of sync | `TypeError` |
 | `move` of an `ArrayItem` slot to an index outside the array | Ignored | `RangeError` |
 | Invalid index in a definition tester array action | `TypeError` | `RangeError` |
 | `tester.setValue` on a disabled, read-only, or hidden field | Changes the value | Returns `committed: false` |
-| Asynchronous `form.update` recipe or `itemDefault` factory that returns a non-object | Unclear error or wrong value | `TypeError` |
+| Asynchronous `form.update` recipe, or an `itemDefault` that is not a plain object | Unclear error or wrong value | `TypeError` |
 | Undo after a persistence restore | Goes back to the default values | Stops at the restored draft |
 | Managed value update after submit with `mode: "all"` | Not validated with `reValidateMode` `onBlur` or `onSubmit` | Validated, as a native RHF input is |
 | Devtools Features tab | Lists history and persistence | Lists each configured feature |
