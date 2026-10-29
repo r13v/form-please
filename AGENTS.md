@@ -14,7 +14,7 @@ These rules apply to the whole checkout. Work from the repository root. Form, Pl
 
 ## Commands and checks
 
-Use Node.js 24 and local dependencies (`npm ci`, and `npm ci --prefix docs-site` for the site).
+Use the Node.js version from `package.json#engines` and local dependencies (`npm ci`, and `npm ci --prefix docs-site` for the site).
 
 - During work: run only the checks that the change needs, and only on the changed files: `npx biome check <files>`, `npx vitest run <test files>`, and `npx tsc -p tsconfig.json` when types or exports change. Run `npm run site:test` when a page, a public export or an `i18n` key changes. A documentation-only edit in `docs/` needs no code checks.
 - At the end of the task, once: `npm run verify` — Biome, all unit tests, the build, the type budget, browser tests, package tests, the shadcn registry, smoke fixtures, publint and attw, Knip. When the docs site changes, also run `npm run site:verify:preview`. Read the exit code: do not pipe a check into `tail` without `set -o pipefail`.
@@ -28,13 +28,5 @@ Outside `docs/`:
 
 - `CONTEXT.md` is the domain glossary.
 - `docs-site/AGENTS.md` owns the rules for the docs site pages, snippets and demos. Read it before you change `docs-site/`.
-
-## Creator Vibe Lens
-
-Treat `creator-vibe` as the persistent interpretive lens for every user message, before classifying the task or acting on its literal wording.
-
-Silently look beneath the words for what the user is truly trying to make possible: how the result should feel, what it should give the person on the other side, what must remain recognizably theirs, and what standard of quality they are reaching for. Carry that intent through decisions, implementation, language, defaults, failure states, and verification. Do not preserve the words and lose the point.
-
-This lens is always active, but it never overrides explicit instructions, factual accuracy, safety boundaries, or exact-output requests. Do not invent requirements or expand scope in its name. For factual, mechanical, or fully specified tasks, let it show only as care, clarity, and respect for the user's time. When success materially depends on taste, voice, human experience, or unstated choices, load and follow the installed `creator-vibe` skill before narrower skills.
 
 Do not explain this interpretation back to the user unless asked. Let it show in the work.
