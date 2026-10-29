@@ -1,6 +1,6 @@
 # ADR 0002: Extend form kits with add-only snapshots
 
-- Status: Superseded by [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md) and [Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership)
+- Status: Superseded by [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md) and [Form kit ownership](../definitions-and-resolution.md#form-kit-ownership)
 - Date: 2026-07-30
 - Amended by: [ADR 0009](0009-explicit-react-form-lifetimes.md), [ADR 0011](0011-kit-owned-grid-scale.md)
 
@@ -61,7 +61,7 @@ equal kit.
 
 ## Supersession
 
-No ADR records the removal of `extend`. [Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership) records the current rule:
+No ADR records the removal of `extend`. [Form kit ownership](../definitions-and-resolution.md#form-kit-ownership) records the current rule:
 `createFormKit` freezes one complete controls, slots, and grid snapshot, and the
 kit does not support runtime extension. Definitions, fragments, and form
 bindings are accepted only by their exact kit. [ADR 0015](0015-replace-tanstack-form-with-react-hook-form.md) replaced

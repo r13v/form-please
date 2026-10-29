@@ -163,7 +163,7 @@ Form, Please does not add caching or retries.
 - [API reference](https://r13v.github.io/form-please/api)
 - [Troubleshooting](https://r13v.github.io/form-please/troubleshooting)
 - [Shadcn registry adapter](https://r13v.github.io/form-please/examples/shadcn-valibot)
-- [Architecture map](docs/ARCHITECTURE.md)
+- [Architecture overview](docs/architecture-overview.md) and the other [design documents](docs/)
 - [Use with AI agents](https://r13v.github.io/form-please/ai-agents)
 - [LLM documentation index](https://r13v.github.io/form-please/llms.txt)
 - [Full documentation for LLMs](https://r13v.github.io/form-please/llms-full.txt)

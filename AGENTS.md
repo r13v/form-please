@@ -1,52 +1,33 @@
-# Form, Please
+# Form, Please: instructions for coding agents
 
-Before changing module boundaries, public entry points, form state,
-submission, or serialization, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+These rules apply to the whole checkout. Work from the repository root. Form, Please is a published npm library: its public API, its runtime behaviour and its docs site are contracts with applications.
 
-Run `npm run check` and `npm run knip` before reporting a task done.
+## Working rules
 
-Review each change against [CODING_STANDARDS.md](CODING_STANDARDS.md).
+1. **Think before coding.** State the significant assumptions and the success criteria. Research the available facts yourself; if an ambiguity changes the result, ask.
+2. **Read before writing.** Before a change, read the affected exports, their direct consumers and the shared modules. Do not replace a contract that you do not understand with a guess.
+3. **Surgical changes.** Change only what the task needs. Keep existing user changes. Do not include adjacent fixes and refactoring in the task.
+4. **Test intent.** A test must catch a broken contract, not reproduce the implementation. A fix comes with a test that fails without it.
+5. **Match conventions.** Follow `code-style-and-folders.md` and Biome. Discuss a harmful convention explicitly; do not silently create a second style.
+6. **Keep the glossary current.** When a change adds or renames a domain term or changes its meaning, update `CONTEXT.md` in the same change, as `glossary-format.md` specifies.
+7. **Breaking changes ship on a new major line.** Follow `releases-and-compatibility.md`. Do not edit `CHANGELOG.md`; release automation owns it.
 
-## Docs Coupling
+## Commands and checks
 
-The docs gates read the library source. When you add a public export to an
-entry in `package.json#exports`, name it in inline code in
-`docs-site/src/pages/api.mdx` or `types.mdx`. When you add or change an `i18n`
-key in `src/array-actions-i18n.ts` or `src/preset-mui/controls.tsx`, update the
-table in `docs-site/src/pages/localization.mdx`. Run
-`npm run site:test` to check both.
+Use Node.js 24 and local dependencies (`npm ci`, and `npm ci --prefix docs-site` for the site).
 
-## Guide Pages
+- During work: run only the checks that the change needs, and only on the changed files: `npx biome check <files>`, `npx vitest run <test files>`, and `npx tsc -p tsconfig.json` when types or exports change. Run `npm run site:test` when a page, a public export or an `i18n` key changes. A documentation-only edit in `docs/` needs no code checks.
+- At the end of the task, once: `npm run verify` — Biome, all unit tests, the build, the type budget, browser tests, package tests, the shadcn registry, smoke fixtures, publint and attw, Knip. When the docs site changes, also run `npm run site:verify:preview`. Read the exit code: do not pipe a check into `tail` without `set -o pipefail`.
+- `npm run check` and `npm run knip` also run in the pre-commit hook (`lefthook.yml`).
 
-Write each guide page in `docs-site/src/pages` in this order:
+## Documentation
 
-1. The problem that the page solves, in one or two sentences.
-2. One complete example and a live demo that runs the same code.
-3. The advantage over the usual alternative.
-4. An `Advanced use` section for less common cases.
-5. A `Reference` section for type shapes, ordering rules, and limits.
+Always run `find docs -name '*.md' | sort` at the beginning to get an overview of durable documents; the file names say what each one owns. Before you change code, read the owner document of each topic that the change touches, and `code-style-and-folders.md` before you write or review code. Before you change documentation, read `documentation-rules.md`; it also says which library changes must update the docs site. `docs/adr/` records the reasons behind the decisions. Defer ideas outside the task to `docs/backlog/` with the `backlog` skill.
 
-In the first example, write callbacks and options inline in `kit.defineForm`
-so that TypeScript infers their types. Do not use `satisfies`, explicit
-generic arguments, or standalone typed constants there. If a type annotation
-exists only because a snippet region splits the code, move the region boundary.
+Outside `docs/`:
 
-In example schemas, model fields that exist only in one variant with
-`z.discriminatedUnion`. Put a checkbox and its dependent fields in one nested
-object, and use the checkbox as the discriminator. Use `.refine` with `path` for
-a rule that relates fields. Use `.superRefine` only when one rule adds more than
-one issue.
-
-Write prose in Simplified Technical English (STE) clarity mode: one term for
-one concept, active voice, and one instruction in each sentence.
-
-## Reuse Before Adding Helpers
-
-Before creating a helper, search `src` for the same behavior, including helpers
-with different names. Reuse the existing implementation or move identical
-behavior into the narrowest shared module that fits its responsibility. Keep
-similar helpers separate when their contracts differ, and make that difference
-explicit; do not hide unrelated behavior in a generic utilities module.
+- `CONTEXT.md` is the domain glossary.
+- `docs-site/AGENTS.md` owns the rules for the docs site pages, snippets and demos. Read it before you change `docs-site/`.
 
 ## Creator Vibe Lens
 
@@ -57,7 +38,3 @@ Silently look beneath the words for what the user is truly trying to make possib
 This lens is always active, but it never overrides explicit instructions, factual accuracy, safety boundaries, or exact-output requests. Do not invent requirements or expand scope in its name. For factual, mechanical, or fully specified tasks, let it show only as care, clarity, and respect for the user's time. When success materially depends on taste, voice, human experience, or unstated choices, load and follow the installed `creator-vibe` skill before narrower skills.
 
 Do not explain this interpretation back to the user unless asked. Let it show in the work.
-
-## Rules
-
-Do not edit CHANGELOG.md, it is managed by automation.

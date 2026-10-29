@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-02
-- Amended by: [Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership)
+- Amended by: [Form kit ownership](../definitions-and-resolution.md#form-kit-ownership)
 
 Design systems use different layout vocabularies, so the fixed `1 | 2 | 3 | 4`
 scale made otherwise portable definitions depend on Form, Please's shipped CSS.
@@ -30,5 +30,5 @@ slots, keeping responsive policy and design-system styling outside core.
 The `kit.extend({ grid: [...] })` part of this decision is stale, and so is
 definition use in a kit with a superset scale. `createFormKit` receives the
 complete grid scale once, and a definition works only with its exact kit. See
-[Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership). The kit-owned finite scale, its validation, and the `"full"` span
+[Form kit ownership](../definitions-and-resolution.md#form-kit-ownership). The kit-owned finite scale, its validation, and the `"full"` span
 remain valid.

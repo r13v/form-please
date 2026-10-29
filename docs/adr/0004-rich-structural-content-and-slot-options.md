@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-31
-- Amended by: [Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership)
+- Amended by: [Form kit ownership](../definitions-and-resolution.md#form-kit-ownership)
 
 ## Context
 
@@ -74,5 +74,5 @@ base kit or an incompatible sibling.
 
 The `extend` part of this decision is stale. Kits do not support runtime
 extension, so a slot cannot be replaced after `createFormKit`. A definition
-works only with its exact kit. See [Form-kit ownership](../ARCHITECTURE.md#form-kit-ownership). The typed presentation content and
+works only with its exact kit. See [Form kit ownership](../definitions-and-resolution.md#form-kit-ownership). The typed presentation content and
 slot options contract remains valid.
