@@ -729,8 +729,9 @@ describe("form kit", () => {
 		}
 
 		render(<Form />)
-		await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(1))
-		expect(screen.getByRole("option", { name: "first" })).not.toBeNull()
+		// The request settles after the call, so wait for the rendered option.
+		expect(await screen.findByRole("option", { name: "first" })).not.toBeNull()
+		expect(loadOptions).toHaveBeenCalledTimes(1)
 
 		fireEvent.change(screen.getByLabelText("Unrelated value"), {
 			target: { value: "b" },
@@ -740,10 +741,8 @@ describe("form kit", () => {
 		fireEvent.change(screen.getByLabelText("Option query"), {
 			target: { value: "second" },
 		})
-		await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(2))
-		await waitFor(() =>
-			expect(screen.getByRole("option", { name: "second" })).not.toBeNull(),
-		)
+		expect(await screen.findByRole("option", { name: "second" })).not.toBeNull()
+		expect(loadOptions).toHaveBeenCalledTimes(2)
 		expect(readChoice()).toBe("first")
 	})
 

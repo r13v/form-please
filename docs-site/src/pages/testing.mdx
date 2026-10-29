@@ -106,6 +106,10 @@ focus, or DOM accessibility. Use component tests for those behaviors. This
 keeps definition tests fast without creating a second form runtime that can
 drift from production.
 
+The tester does not mount generated arrays. A mounted form rejects a managed
+update that changes the row count of another mounted generated array, but the
+tester accepts it. Use a component test for that rule.
+
 ## Next steps
 
 - [Fix a common problem](/troubleshooting)

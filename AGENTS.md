@@ -5,6 +5,8 @@ submission, or serialization, read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Run `npm run check` and `npm run knip` before reporting a task done.
 
+Review each change against [CODING_STANDARDS.md](CODING_STANDARDS.md).
+
 ## Docs Coupling
 
 The docs gates read the library source. When you add a public export to an
