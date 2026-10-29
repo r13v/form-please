@@ -59,7 +59,8 @@ A managed result includes:
 - `committed`, which is false for a no-op or cancelled proposal, and for an
   edit of a disabled, read-only, or hidden field or array that the UI cannot
   make;
-- the final committed `transaction`, including effective patches and values;
+- the final committed `transaction`, including effective patches and values,
+  or `undefined` when `committed` is false;
 - the middleware `result`;
 - the definition `before`, `after`, and exact `changes`.
 
@@ -102,13 +103,13 @@ that shared executor.
 
 The tester owns definition resolution and managed value proposals. It does not
 reimplement React Hook Form (RHF) validation, dirty or touched state, submission,
-focus, or DOM accessibility. Use component tests for those behaviors. This
+focus, field-array row IDs, or DOM accessibility. Use component tests for those behaviors. This
 keeps definition tests fast without creating a second form runtime that can
 drift from production.
 
 The tester does not mount generated arrays. A mounted form rejects a managed
-update that changes the row count of another mounted generated array, but the
-tester accepts it. Use a component test for that rule.
+update that changes the row count of a mounted generated array outside its
+actions, but the tester accepts it. Use a component test for that rule.
 
 ## Next steps
 

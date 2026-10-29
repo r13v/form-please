@@ -1,7 +1,6 @@
 # Form, Please Docs Site
 
 - This is an English-only Vocs site with clean path routes for static GitHub Pages.
-- Use STE skill
 - Keep authored pages in `src/pages` and let Vocs own navigation, search,
   syntax highlighting, Markdown output, and static rendering.
 - Complete copyable TypeScript programs live as physical snippets under
@@ -88,3 +87,20 @@
   to sitemap URLs and the robots sitemap reference. Keep `baseUrl` separate
   from `basePath`; canonical URLs already include both. Do not patch the
   `vocs` dependency.
+- Write each guide page in `src/pages` in this order: the problem that the page
+  solves, in one or two sentences; one complete example and a live demo that
+  runs the same code; the advantage over the usual alternative; an
+  `Advanced use` section for less common cases; a `Reference` section for type
+  shapes, ordering rules, and limits.
+- In the first example of a guide page, write callbacks and options inline in
+  `kit.defineForm` so that TypeScript infers their types. Do not use
+  `satisfies`, explicit generic arguments, or standalone typed constants there.
+  If a type annotation exists only because a snippet region splits the code,
+  move the region boundary.
+- In example schemas, model fields that exist only in one variant with
+  `z.discriminatedUnion`. Put a checkbox and its dependent fields in one nested
+  object, and use the checkbox as the discriminator. Use `.refine` with `path`
+  for a rule that relates fields. Use `.superRefine` only when one rule adds
+  more than one issue.
+- Write prose in Simplified Technical English (STE) clarity mode: one term for
+  one concept, active voice, and one instruction in each sentence.

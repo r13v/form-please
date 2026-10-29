@@ -33,9 +33,9 @@ must change field visibility.
 | Current screen and navigation history | Application state or the router |
 | Screen visibility | Form context and definition resolvers |
 | Draft storage | `form-please/persistence` and the application adapter |
+| Requests and confirmation receipts | Application request state |
 
 Read [Ownership](/how-it-works#ownership) for the general rule.
-| Requests and confirmation receipts | Application request state |
 
 Put a workflow value in the schema only when the server must store that value
 as domain data. For example, an approval `status` can be domain data. A current
@@ -166,7 +166,12 @@ request function without its own `try` and `catch` block.
 The wrapper rethrows the error after `setIssues`. Form, Please catches a
 rejection of `onSubmit` and keeps it in
 `useSnapshot(form.submission).error` as `{ value }`. Use this value for a request
-failure banner. The next accepted submit and `setIssues` set `error` to `null`.
+failure banner. The next accepted submit, `setIssues`, and a native form reset
+set `error` to `null`.
+
+Form, Please catches only the rejection of `onSubmit`. An error from `validate`
+or from the runtime is an unhandled rejection. Read
+[Submit actions](/api#submit-actions).
 
 The user can edit a field while the request runs. A server issue for that path
 then attaches to the new value. To prevent this, the wrapper compares the

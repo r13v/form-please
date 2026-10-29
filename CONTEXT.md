@@ -28,8 +28,8 @@ _Avoid_: Form store, Form Please runtime instance
 
 **Form Please Devtools**: An optional read-only development instrument that
 combines React Hook Form inspection with Form Please views of resolved UI,
-issue routing, updates, asynchronous options, history, and persistence. React
-Hook Form remains the sole owner of live form state.
+issue routing, updates, asynchronous options, and each configured managed
+feature, such as history and persistence. React Hook Form remains the sole owner of live form state.
 _Avoid_: Form store, Redux DevTools
 
 **React Hook Form API**: The state-owning React Hook Form API exposed unchanged
@@ -37,8 +37,8 @@ as `form.api`. Its direct mutations bypass Form Please middleware.
 _Avoid_: Form Please command API
 
 **Managed value update**: A value update initiated by a generated control,
-generated array action, `form.update`, or optional history restore, and
-therefore processed before it reaches the React Hook Form API. Every managed
+generated array action, `form.update`, `form.array(path).reconcile`, or
+feature restore, and therefore processed before it reaches the React Hook Form API. Every managed
 update uses the coordinator even when the form has no configured middleware.
 _Avoid_: Every React Hook Form update, raw API update
 
@@ -71,8 +71,8 @@ _Avoid_: React state setter, partial object patch, raw React Hook Form update
 
 **Value transaction**: A deeply readonly TypeScript view of a proposed managed
 value update containing the previous and proposed schema input, Immer patches,
-runtime context, and a discriminated `control`, `array`, `update`, or `history`
-source. Its proposed input is derived from its patches rather than accepted as
+runtime context, and a discriminated `control`, `array`, `update`, `history`,
+or `persistence` source. Its proposed input is derived from its patches rather than accepted as
 an independent source of truth. Transaction values are not frozen at runtime
 because React Hook Form requires mutable values.
 _Avoid_: React Hook Form notification, validation event, form event
@@ -174,7 +174,7 @@ API cannot preserve field-array identities and publish the complete transaction
 as one state change. Middleware can cancel the source operation and change row
 or dependent values, but cannot change the source array length or order beyond
 the source `append`, `remove`, or `move` operation. The transaction must not
-change another generated array's structure.
+change the number of rows of another mounted generated array.
 _Avoid_: Atomic value commit, raw array update
 
 **UI resolver**: A synchronous function that receives the complete deeply

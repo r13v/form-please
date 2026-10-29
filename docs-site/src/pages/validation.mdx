@@ -53,6 +53,10 @@ The first submit attempt can be valid or invalid. After that attempt, each edit
 runs the complete form-level schema. `useForm` can override `mode`,
 `reValidateMode`, and `delayError`; it does not expose a replacement resolver.
 
+A managed update follows the same `mode` and `reValidateMode` rules as a native
+RHF input. With `mode: "all"`, each managed update validates, also after a
+submit.
+
 ## Display issues
 
 Standard Schema issues become public `FormIssue` values:
@@ -72,6 +76,11 @@ shows issues after the field is touched or after a submit attempt.
 do not belong to a visible generated control. It also contains issues for
 disabled generated controls.
 
+React Hook Form reserves the top-level `root` key of its errors. A schema issue
+for an input path under `root` shows in the error summary with its original
+path. An action issue or an external issue cannot use a path under `root`. Read
+[External issues](/api#external-issues).
+
 Omit the issue path when the user cannot fix the issue in one field:
 
 ```tsx
@@ -88,8 +97,8 @@ After an invalid submit, RHF focuses its first registered invalid field,
 including an application-owned field. Focus order follows RHF registration
 order.
 
-If no generated control can receive focus, `kit.AutoForm` focuses the first
-error-summary item.
+If RHF does not move focus to an invalid field, `kit.AutoForm` focuses the
+first error-summary item.
 
 A custom control receives focus only when it attaches `input.ref`. Read
 [Accessibility](/accessibility) for the control contract.

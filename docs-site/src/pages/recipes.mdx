@@ -146,13 +146,16 @@ Forward the original patches, append dependent patches, or return without
 committed final value.
 
 Generated controls and `form.update` make one RHF value
-[publication](/glossary#publication). Generated
+[publication](/glossary#publication) when the update changes no top-level key
+that contains a mounted generated array. In such a key, each changed value
+makes its own publication, but the update still makes one final React render.
+Generated
 array actions retain native `useFieldArray` row identity and promise one final
 React render, not one raw RHF publication. Direct `form.api` operations bypass
 middleware, so keep invariant-preserving application actions on `form.update`.
 
-Only the proposed generated array action can change generated array length or
-order. A change to the row count of another mounted generated array in the
+Only the proposed generated array action can change the row count of a mounted
+generated array. A change to the row count of another mounted generated array in the
 same transaction throws a `TypeError`. Use that array's generated action to keep row IDs synchronized.
 Use raw `useFieldArray` methods only when bypassing middleware is intentional.
 

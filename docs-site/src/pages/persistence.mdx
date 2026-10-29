@@ -9,7 +9,8 @@ showAskAi: false
 Import `createPersistenceMiddleware` from `form-please/persistence` when a form
 needs a durable editable draft. React Hook Form (RHF) still owns the live values and
 form state, as [Ownership](/how-it-works#ownership) describes. Persistence
-stores only the complete schema input.
+stores only the complete schema input. It does not store RHF metadata, context,
+the default values, or managed history.
 
 ## Configure and restore
 
@@ -30,7 +31,8 @@ The hook starts restore only after the client mounts.
 - `"applied"`: the stored input became the live input;
 - `"empty"`: no stored draft exists;
 - `"cancelled"`: middleware did not commit the restore;
-- `"transformed"`: middleware changed the restored input;
+- `"transformed"`: middleware changed the restored input, and persistence
+  saves the changed input immediately;
 - `"conflict"`: live input changed while the adapter was loading.
 
 An applied restore uses the managed update pipeline with a
@@ -41,8 +43,9 @@ invalid input.
 
 ## Resolve a restore conflict
 
-Persistence never overwrites a local edit made while `load()` is pending. The
-handle enters the `conflict` phase and returns `"conflict"`. Call `start()` to
+Persistence never overwrites a local edit made while `load()` is pending. This
+applies also when `usePersistence` unmounts before the load ends. The handle
+enters the `conflict` phase and returns `"conflict"`. Call `start()` to
 keep the current form and save it. Remount the form if the user must discard the
 local input and try the load again.
 
@@ -55,6 +58,10 @@ immediately saves the current input.
 
 After restore or start, persistence observes all RHF value publications. This
 includes generated controls, `form.update`, and direct `form.api` changes.
+Persistence also saves edits made while no `usePersistence` hook is mounted.
+The next mount records them as one change. A save that is scheduled or in
+progress when the last `usePersistence` hook unmounts still saves the last
+observed input.
 Autosave uses a trailing 500 ms delay by default. Set `saveDelay` to another
 finite non-negative number.
 
@@ -75,7 +82,8 @@ rewrite. The next edit creates the draft again.
 
 Storage errors never roll back form values. A failed save reports
 `save.status === "failed"` with `operation: "save"` or `"clear"`. The next edit
-or `flush()` retries. A restore failure uses the top-level `failed` phase and can
+or `flush()` retries. Persistence does not retry in the background. A restore
+failure uses the top-level `failed` phase and can
 be retried with `restore()`.
 
 The optional `onError` callback receives the error and a
@@ -125,7 +133,9 @@ Each stored envelope contains the persistence protocol version, the application
 `version`, and the encoded payload. Increase `version` when the schema input
 shape changes. Supply `migrate(value, fromVersion, toVersion)` to convert the
 decoded old value. A successful migration is immediately rewritten in the
-current envelope.
+current envelope. The migration receives decoded values that are not
+trusted. Persistence does not validate the migration result or the restored
+draft against the Standard Schema.
 
 Plain values support `null`, booleans, strings, finite numbers, `undefined`,
 arrays, and plain objects. Unsupported values fail with their input path. Add
@@ -137,10 +147,14 @@ on submit, and a server must validate every submitted value again.
 
 ## Boundaries
 
-One form accepts one persistence feature. The feature does not synchronize
-multiple tabs or forms, save on page unload, retain RHF metadata, or persist
-managed history. The adapter can add cross-client coordination when the product
-requires it.
+One form accepts one persistence feature. A second persistence feature in the
+same `middleware` list makes `kit.useForm` throw a `TypeError`.
+`usePersistence(form, feature)` and `feature.handle(form)` throw a `TypeError`
+for a form that does not use that exact feature.
+
+The feature does not synchronize multiple tabs or forms, save on page unload,
+or write to several destinations. The adapter can add cross-client
+coordination or write to several destinations when the product requires it.
 
 One feature can serve several forms, but all of them use its one `key`. Create
 a separate feature with its own `key` for each form that is mounted at the same

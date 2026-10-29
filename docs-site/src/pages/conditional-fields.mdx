@@ -216,8 +216,12 @@ A resolver that returns `undefined` keeps the value. Do not repeat the
 becomes hidden.
 
 The form applies `whenHidden` in the same managed update as the edit. Value
-middleware, history, and persistence receive one transaction. One undo
-restores the edit and the reset value.
+middleware, history, and persistence receive one transaction with the source of
+the edit. One undo restores the edit and the reset value.
+
+A `whenHidden` write can hide another field. The form then applies the
+`whenHidden` value of that field in the same transaction. Each field receives
+at most one write in a transaction.
 
 The form does not apply `whenHidden` in these cases:
 
@@ -225,7 +229,7 @@ The form does not apply `whenHidden` in these cases:
 - The field was hidden before the edit.
 - A context change hides the field. Call `form.update` in the code that
   changes the context.
-- History or persistence restores values.
+- A managed feature, such as history or persistence, restores values.
 - `beforeUpdate` cancels the edit.
 
 `whenHidden` does not change submission or validation. The key stays in the
@@ -235,8 +239,11 @@ use a schema transform.
 In an array item, `"reset"` needs a value at the same path in `defaultValues`.
 An appended item has no such value, so the form throws a `TypeError`. Use
 `{ value }` for fields in array items. A structural array edit, such as
-append, remove, or move, does not apply `whenHidden` to the fields of that
-array.
+append, remove, move, or reconcile, does not apply `whenHidden` to the fields of
+that array.
+
+A `form.update` that reorders rows finds each moved row by its value. A field
+in a moved row that stays hidden or stays visible keeps its value.
 
 ## Keep conditional validation in the schema
 

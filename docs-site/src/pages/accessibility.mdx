@@ -20,7 +20,7 @@ control or slot must use them too.
 | Invalid state | `meta.invalid` is `true` only when the form shows field errors. The shipped controls set `aria-invalid` from it. | `src/generated-nodes.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-mui/controls.tsx` |
 | Required state | The control gets the resolved `required` value. The shipped controls set the native `required` attribute. `required` does not add a validation rule. Read [`required` is UI-only](/how-it-works#required-is-ui-only). | `src/generated-nodes.tsx`, `src/native-controls/native-controls.tsx`, `src/preset-mui/controls.tsx` |
 | Error announcement | The shipped `ErrorMessage` slots render each issue with `role="alert"`. | `src/default-slots/default-slots.tsx`, `src/preset-mui/slots.tsx` |
-| Array action labels | The default array item buttons have an `aria-label` from the kit `i18n` object. Read [Localization](/localization). | `src/default-slots/default-slots.tsx` |
+| Array action labels | The shipped array item buttons have an `aria-label` from the kit `i18n` object. Read [Localization](/localization). | `src/default-slots/default-slots.tsx`, `src/preset-mui/slots.tsx` |
 
 ## Connect a custom control
 

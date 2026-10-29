@@ -114,7 +114,8 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
   rule shared by every binding of that definition.
   Use value middleware and `form.update` when independent policies or dependent
   changes must compose atomically. Direct `form.api` changes bypass both.
-- Hidden fields preserve their values.
+- Hidden fields preserve their values. A field `whenHidden` action can reset
+  or replace the value when a managed update hides the field.
 - Array paths use RHF dot notation and rows use stable RHF keys.
 - RHF focuses the first registered invalid field. A focusable error summary is
   the fallback when no invalid field receives focus.
@@ -127,11 +128,12 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
 | --- | --- |
 | `form-please` | Form-kit construction, controls, resources, and shared types |
 | `form-please/default-slots` | Accessible structural slots and localization types |
+| `form-please/devtools` | Development drawer for resolved UI, managed updates, options, and features |
 | `form-please/history` | Optional managed value history, navigation, and journal transfer |
 | `form-please/native-controls` | Native HTML controls and option types |
 | `form-please/persistence` | Optional draft restore, autosave, migration, and storage adapters |
 | `form-please/preset-native` | Ready-to-use native form kit |
-| `form-please/preset-mui` | Material UI 9 form-kit factory |
+| `form-please/preset-mui` | Material UI 9 form-kit factory, controls, slots, and grid |
 | `form-please/testing` | Headless definition inspection and managed update testing |
 | `form-please/layout.css` | Optional structural grid and spacing CSS |
 
@@ -161,7 +163,7 @@ Form, Please does not add caching or retries.
 - [API reference](https://r13v.github.io/form-please/api)
 - [Troubleshooting](https://r13v.github.io/form-please/troubleshooting)
 - [Shadcn registry adapter](https://r13v.github.io/form-please/examples/shadcn-valibot)
-- [Architecture map](docs/ARCHITECTURE.md)
+- [Architecture overview](docs/architecture-overview.md) and the other [design documents](docs/)
 - [Use with AI agents](https://r13v.github.io/form-please/ai-agents)
 - [LLM documentation index](https://r13v.github.io/form-please/llms.txt)
 - [Full documentation for LLMs](https://r13v.github.io/form-please/llms-full.txt)

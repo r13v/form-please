@@ -12,8 +12,8 @@ section that explains the term.
 ## Managed update
 
 A managed update is a value change that goes through the managed update hooks and value middleware.
-Generated controls, generated array actions, `form.update`, history, and
-persistence restore make managed updates. Direct `form.api` calls and resets do
+Generated controls, generated array actions, `form.array(path).reconcile`,
+`form.update`, history, and persistence restore make managed updates. Direct `form.api` calls and resets do
 not. Read
 [Know which changes enter middleware](/middleware#changes-that-run-the-rules).
 
@@ -28,7 +28,9 @@ can forward the proposal, add dependent patches, or cancel it. Read
 A publication is one value notification that React Hook Form (RHF) sends to its
 subscribers.
 Generated controls and `form.update` make one publication for each managed
-update. Read [Keep dependent values atomic](/recipes#keep-dependent-values-atomic).
+update when the update changes no key that contains a mounted generated array.
+For such a key, each changed value in it makes one publication. Read
+[Keep dependent values atomic](/recipes#keep-dependent-values-atomic).
 
 ## React Hook Form (RHF)
 

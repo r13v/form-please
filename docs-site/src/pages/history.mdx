@@ -25,25 +25,38 @@ The returned handle includes a reactive `snapshot` with `canUndo`, `canRedo`,
 `index`, and `length`. It also keeps the underlying `getSnapshot()` and
 `subscribe()` external-store operations.
 
-One feature can serve several forms. Each form can configure only one history
-feature. `useHistory(form, feature)` and the lower-level `feature.handle(form)`
-reject a form that does not use that exact feature.
+One feature can serve several forms and keeps separate positions for each form.
+Each form can configure only one history feature. A second history feature in
+the same `middleware` list makes `kit.useForm` throw a `TypeError`.
+`useHistory(form, feature)` and the lower-level `feature.handle(form)` throw a
+`TypeError` for a form that does not use that exact feature.
 
 ## Know what history records
 
 History records successful managed value updates from generated controls,
 generated array actions, and `form.update`. It retains complete independent
-schema-input snapshots rather than patches or events.
+schema-input snapshots rather than patches or events. A cancelled update, or an
+update that commits values equal to the previous values, adds no position. A
+new managed update after undo removes the redo positions.
+
+History records the final committed values. This applies also when a
+middleware after history changes the patches, and when a later step throws
+after the commit.
 
 Initial values, native reset, direct `form.api` mutations, and
 application-owned `useFieldArray` operations bypass history. When raw values
 diverge, the next managed update or history operation makes those current
 values a new non-undoable boundary and discards the older branches.
 
+A restore from another feature, such as persistence, is also a boundary. Undo
+does not go back past the restored values.
+
 History never retains errors, touched state, validation, submission, focus,
 context, or the default-value baseline. Restore keeps the current RHF metadata,
 recalculates dirty state against the original defaults, and may regenerate
-private field-array row IDs.
+private field-array row IDs. Do not key application state on those row IDs
+across undo or redo. Restore validates the values by the form `mode`
+and `reValidateMode`, as a managed update does.
 
 ## Group and retain positions
 
@@ -70,7 +83,8 @@ for each operation and shows its result or its rejection:
 ```
 
 Operations report `"applied"`, `"unavailable"`, `"cancelled"`, or
-`"transformed"`. A transformed restore becomes a new group and removes its
+`"transformed"`. A cancelled operation does not move the position. A
+transformed restore becomes a new group and removes its
 redo branch. A post-commit failure rejects the operation without rolling back
 the committed values or history position.
 
