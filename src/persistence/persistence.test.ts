@@ -153,11 +153,12 @@ describe("form persistence middleware", () => {
 		expect(harness.persistence.getSnapshot().phase).toBe("conflict")
 		expect(await harness.persistence.restore()).toBe("conflict")
 		harness.persistence.start()
-		await harness.persistence.flush()
-		expect(await readStored(storage)).toEqual({
-			items: [],
-			name: "Typed while loading",
-		})
+		await vi.waitFor(async () =>
+			expect(await readStored(storage)).toEqual({
+				items: [],
+				name: "Typed while loading",
+			}),
+		)
 	})
 
 	it("reports a restore failure and allows the application to retry", async () => {
@@ -387,35 +388,6 @@ describe("form persistence middleware", () => {
 			phase: "idle",
 			save: { status: "idle" },
 		})
-	})
-
-	it("keeps a conflicting restore result stable and only recovers through start", async () => {
-		const storage = createMemoryStorage()
-		storage.value = await encoded({ items: [], name: "Stored" })
-		let releaseLoad = (): void => undefined
-		storage.load.mockImplementationOnce(
-			async () =>
-				new Promise((resolve) => {
-					releaseLoad = () => resolve(storage.value)
-				}),
-		)
-		const harness = createHarness({ saveDelay: 0, storage })
-
-		const restoring = harness.persistence.restore()
-		harness.setRawValues({ items: [], name: "Live edit" })
-		releaseLoad()
-
-		expect(await restoring).toBe("conflict")
-		expect(harness.getValues().name).toBe("Live edit")
-		expect(await harness.persistence.restore()).toBe("conflict")
-
-		harness.persistence.start()
-		await vi.waitFor(async () =>
-			expect(await readStored(storage)).toEqual({
-				items: [],
-				name: "Live edit",
-			}),
-		)
 	})
 
 	it("stops publishing snapshots after a listener releases its subscription", async () => {

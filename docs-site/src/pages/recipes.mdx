@@ -152,8 +152,8 @@ React render, not one raw RHF publication. Direct `form.api` operations bypass
 middleware, so keep invariant-preserving application actions on `form.update`.
 
 Only the proposed generated array action can change generated array length or
-order. Do not change another generated array's structure in the same
-transaction. Use that array's generated action to keep row IDs synchronized.
+order. A change to the row count of another mounted generated array in the
+same transaction throws a `TypeError`. Use that array's generated action to keep row IDs synchronized.
 Use raw `useFieldArray` methods only when bypassing middleware is intentional.
 
 Do not call `next` after `await`, call it twice, or start another managed update
@@ -183,7 +183,7 @@ these inputs.
 
 ## Apply one update to multiple fields
 
-Form, Please requires React Hook Form 7.76.1 or newer.
+Form, Please requires React Hook Form 7.81.0 or newer.
 
 Use raw `setValues` when one application action changes multiple fields but
 must deliberately bypass Form, Please middleware. One call updates the fields
@@ -203,7 +203,7 @@ new document baseline. Use `reset(nextInput)` for that operation. Use
 
 ## Save a draft with a subscription
 
-Requires React Hook Form 7.76.1 or newer, which is the package peer minimum.
+Requires React Hook Form 7.81.0 or newer, which is the package peer minimum.
 
 Use `subscribe` when an external process needs current form values. The
 subscription does not rerender the form when values change. This preview
@@ -222,7 +222,7 @@ mutation methods from the subscription callback.
 
 ## Validate one wizard step
 
-Requires React Hook Form 7.76.1 or newer, which is the package peer minimum.
+Requires React Hook Form 7.81.0 or newer, which is the package peer minimum.
 
 Use `trigger` with the paths for the current step. Use `setFocus` when the step
 contains an invalid field. Hidden fields [keep their

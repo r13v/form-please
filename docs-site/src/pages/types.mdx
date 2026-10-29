@@ -362,16 +362,29 @@ Import native control types from `form-please/native-controls`:
 Read [Native controls](/api#native-controls) for the props type of each
 control.
 
-### Default slot types
+### Array action message types
 
-Import default slot types from `form-please/default-slots`:
+Import the shared array action message types from `form-please`. The default
+slots and the Material UI preset use them:
 
 | Type | Purpose |
 | --- | --- |
-| `DefaultSlotsI18n` | The array action messages. Read [Localization](/localization#translate-the-form-kit-labels) for the keys. |
-| `DefaultSlotI18nValue<Data>` | A fixed string, or a function that gets readonly `Data` and returns a string. |
-| `DefaultArrayAddI18nData` | The `arrayAdd` data: the optional `label` of the array node. |
-| `DefaultArrayItemI18nData` | The item action data: the zero-based `index` and the one-based `position`. |
+| `ArrayActionsI18n` | The array action messages `arrayAdd`, `arrayRemove`, `arrayMoveUp`, and `arrayMoveDown`. Read [Localization](/localization#translate-the-form-kit-labels) for the keys. |
+| `I18nMessage<Data>` | A fixed string, or a function that gets readonly `Data` and returns a string. |
+| `ArrayAddI18nData` | The `arrayAdd` data: the optional `label` of the array node. |
+| `ArrayItemI18nData` | The item action data: the zero-based `index` and the one-based `position`. |
+
+### Default slot types
+
+Import default slot types from `form-please/default-slots`. Each type is an
+alias of the shared array action message type:
+
+| Type | Purpose |
+| --- | --- |
+| `DefaultSlotsI18n` | The same type as `ArrayActionsI18n`. |
+| `DefaultSlotI18nValue<Data>` | The same type as `I18nMessage<Data>`. |
+| `DefaultArrayAddI18nData` | The same type as `ArrayAddI18nData`. |
+| `DefaultArrayItemI18nData` | The same type as `ArrayItemI18nData`. |
 
 Read [Default slots](/api#default-slots) for the `i18n` option.
 
@@ -381,8 +394,8 @@ Import Material UI preset types from `form-please/preset-mui`:
 
 | Type | Purpose |
 | --- | --- |
-| `CreateMuiFormKitOptions` | Options for `createMuiFormKit`: an optional partial `i18n` object. |
-| `MuiFormKitI18n` | The messages `addItem`, `removeItem`, `moveItemUp`, `moveItemDown`, and `chooseFile`. |
+| `CreateMuiFormKitOptions` | Options for `createMuiFormKit`, `createMuiControls`, and `createMuiSlots`: an optional partial `i18n` object. |
+| `MuiFormKitI18n` | The `ArrayActionsI18n` messages and `chooseFile`. |
 | `MuiSelectOption` | One `select` or `select-multiple` option with a `value`, a `label`, and an optional `disabled` flag. |
 | `MuiRadioOption` | One `radio` option. It adds optional `radioProps` and `labelProps` to the `select` option fields. |
 | `MuiAutocompleteTextFieldProps` | The `textFieldProps` of the `autocomplete` and `autocomplete-multiple` controls. |

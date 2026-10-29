@@ -445,6 +445,25 @@ describe("submit actions and external issues", () => {
 		})
 	})
 
+	it("clears the submission error on a native form reset", async () => {
+		const onSubmit = vi.fn<() => Promise<void>>(() => Promise.reject(0))
+		const { form, submit } = renderRejectingForm({ onSubmit })
+		submit()
+		await waitFor(() =>
+			expect(form.current?.submission.getSnapshot().error).toEqual({
+				value: 0,
+			}),
+		)
+		const element = screen.getByRole("button", { name: "Save" }).closest("form")
+		act(() => {
+			fireEvent.reset(element as HTMLFormElement)
+		})
+		expect(form.current?.submission.getSnapshot()).toEqual({
+			action: null,
+			error: null,
+		})
+	})
+
 	it("does not capture validate failures or schema issues as submission errors", async () => {
 		const failure = new Error("Validator crashed")
 		const unhandled = captureUnhandledRejections()
@@ -534,37 +553,6 @@ describe("submit actions and external issues", () => {
 		const idle = await screen.findByRole("button", { name: "Send invite" })
 		expect((idle as HTMLButtonElement).disabled).toBe(false)
 		expect(onSubmit).toHaveBeenCalledTimes(1)
-	})
-
-	it("runs a named action from a Submit outside Form", async () => {
-		const approve = vi.fn()
-		const decline = vi.fn()
-		function View() {
-			const form = kit.useForm(reviewDefinition, {
-				defaultValues: { name: "Ada", reason: "Duplicate" },
-				actions: {
-					approve: { onSubmit: ({ value }) => approve(value) },
-					decline: { onSubmit: ({ value }) => decline(value) },
-				},
-			})
-			return (
-				<>
-					<kit.AutoForm form={form} id="review-form" />
-					<kit.Submit action={form.actions.decline} form="review-form">
-						Decline
-					</kit.Submit>
-				</>
-			)
-		}
-		render(<View />)
-		fireEvent.click(screen.getByRole("button", { name: "Decline" }))
-		await waitFor(() =>
-			expect(decline).toHaveBeenCalledWith({
-				name: "Ada",
-				reason: "Duplicate",
-			}),
-		)
-		expect(approve).not.toHaveBeenCalled()
 	})
 
 	it("accepts bindings of a narrower forContext kit in the base kit components", async () => {
@@ -688,7 +676,7 @@ describe("submit actions and external issues", () => {
 		await waitFor(() => expect(skip).toHaveBeenCalledWith({ name: "Ada" }))
 	})
 
-	it("rejects a Submit outside Form without a matching binding or action", () => {
+	it("rejects a Submit whose binding or action does not select its form", () => {
 		const errors = vi.spyOn(console, "error").mockImplementation(() => {})
 		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
 		function Bare() {
@@ -731,6 +719,21 @@ describe("submit actions and external issues", () => {
 				</kit.Form>
 			)
 		}
+		function InsideBindingMismatch() {
+			const mounted = kit.useForm(definition, {
+				defaultValues: { name: "Ada" },
+				onSubmit: vi.fn(),
+			})
+			const other = kit.useForm(definition, {
+				defaultValues: { name: "Grace" },
+				onSubmit: vi.fn(),
+			})
+			return (
+				<kit.Form form={mounted}>
+					<kit.Submit binding={other}>{() => null}</kit.Submit>
+				</kit.Form>
+			)
+		}
 		expect(() => render(<Bare />)).toThrow(
 			"Submit outside Form requires a binding or an action",
 		)
@@ -740,6 +743,9 @@ describe("submit actions and external issues", () => {
 		expect(() => render(<Foreign />)).toThrow("not mounted by this form kit")
 		expect(() => render(<InsideMismatch />)).toThrow(
 			"Submit action must belong to the surrounding Form",
+		)
+		expect(() => render(<InsideBindingMismatch />)).toThrow(
+			"Submit binding must match the surrounding Form",
 		)
 		errors.mockRestore()
 	})

@@ -1,4 +1,4 @@
-import type { FieldError, FieldValues } from "react-hook-form"
+import { type FieldError, type FieldValues, get } from "react-hook-form"
 import type { FormIssueStore } from "./form-issues.js"
 
 import {
@@ -6,7 +6,7 @@ import {
 	cloneFormValue,
 	isFormValueObject,
 } from "./form-value.js"
-import { fieldPathSegments, getMutableArrayValue } from "./generated-array.js"
+import { getMutableArrayValue } from "./generated-array.js"
 import { remapArraySchemaIssues } from "./standard-schema-resolver.js"
 import type { DeepReadonly } from "./types.js"
 import type {
@@ -33,6 +33,14 @@ export type ArrayOperations = {
 }
 
 const mountedArrays = new WeakMap<object, Map<string, ArrayOperations>>()
+
+/** Lists the top-level input keys that contain a mounted generated array. */
+export function mountedArrayRoots(control: object): ReadonlySet<string> {
+	const arrays = mountedArrays.get(control)
+	return new Set(
+		[...(arrays?.keys() ?? [])].map((path) => path.split(".")[0] as string),
+	)
+}
 
 /** Registers only mounted generated arrays; no separate live values are retained. */
 export function registerGeneratedArray(
@@ -72,9 +80,8 @@ export function reconcileGeneratedArray(
 		readonly create: (key: string | number) => unknown
 	},
 ): unknown {
-	const arrays = mountedArrays.get(form.api.control)
-	const operations = arrays?.get(path)
-	if (arrays === undefined || operations === undefined) {
+	const operations = mountedArrays.get(form.api.control)?.get(path)
+	if (operations === undefined) {
 		throw new TypeError(
 			`Reconcile requires a mounted generated array at "${path}"`,
 		)
@@ -146,44 +153,11 @@ export function reconcileGeneratedArray(
 				for (const [index, row] of nextRows.entries()) {
 					assertNestedArraysUnchanged(row, finalRows[index])
 				}
-				for (const otherPath of arrays.keys()) {
-					if (otherPath === path || otherPath.startsWith(`${path}.`)) continue
-					const segments = fieldPathSegments(previousValues, otherPath)
-					if (
-						transaction.patches.some(
-							(patch) =>
-								patch.path.length <= segments.length + 1 &&
-								segments
-									.slice(0, patch.path.length)
-									.every((segment, index) => segment === patch.path[index]),
-						)
-					) {
-						throw new TypeError(
-							"Reconcile middleware cannot change another generated array structure",
-						)
-					}
-				}
-				const arrayError = form.api.getFieldState(path).error
-				let rootError: FieldError | undefined = (
-					arrayError as
-						| (FieldError & { readonly root?: FieldError })
-						| undefined
-				)?.root
-				if (rootError === undefined && arrayError?.type !== undefined) {
-					rootError = {
-						type: arrayError.type,
-						message: arrayError.message,
-						types: arrayError.types,
-					}
-				}
-				let objectRowErrors: [string, unknown][] = []
-				if (!Array.isArray(arrayError)) {
-					objectRowErrors = Object.entries(arrayError ?? {}).filter(([index]) =>
-						/^(0|[1-9]\d*)$/.test(index),
-					)
-				}
-				remapArraySchemaIssues(arrayError, path, indexes)
-				form.issues.remapArray(path, indexes, () => {
+				assertMountedArrayStructures(form.api.control, transaction, {
+					path,
+					indexes,
+				})
+				commitRowOperation(form, path, indexes, transaction, () => {
 					const workingKeys = [...currentKeys]
 					for (let index = workingKeys.length - 1; index >= 0; index--) {
 						if (!selected.has(workingKeys[index] as string | number)) {
@@ -206,23 +180,110 @@ export function reconcileGeneratedArray(
 							workingKeys.splice(index, 0, moved as string | number)
 						}
 					}
-					// A schema can report the array error before indexed errors, producing an object branch.
-					// RHF native operations only remap array-shaped error branches.
-					if (objectRowErrors.length > 0) {
-						form.api.clearErrors(path)
-						for (const [oldIndex, error] of objectRowErrors) {
-							const newIndex = indexes.get(Number(oldIndex))
-							if (newIndex !== undefined)
-								form.api.setError(`${path}.${newIndex}`, error as FieldError)
-						}
-					}
-					if (rootError !== undefined)
-						form.api.setError(`${path}.root`, rootError)
-					form.commit(transaction)
 				})
 			},
 		},
 	)
+}
+
+/**
+ * Rejects a managed transaction that changes the number of rows of a mounted
+ * generated array. RHF `setValues` cannot update the rows of `useFieldArray`.
+ * The active array of a generated action is exempt; `indexes` maps each of
+ * its kept rows from the old to the new index, so arrays inside its rows are
+ * compared with the same row.
+ */
+export function assertMountedArrayStructures(
+	control: object,
+	transaction: Parameters<ValueTransactionCommit<FieldValues, unknown>>[0],
+	active?: {
+		readonly path: string
+		readonly indexes: ReadonlyMap<number, number>
+	},
+): void {
+	const arrays = mountedArrays.get(control)
+	if (arrays === undefined) return
+	for (const path of arrays.keys()) {
+		if (path === active?.path) continue
+		let nextPath = path
+		if (active !== undefined && path.startsWith(`${active.path}.`)) {
+			const [index, ...rest] = path.slice(active.path.length + 1).split(".")
+			const nextIndex = active.indexes.get(Number(index))
+			// A removed row takes its nested arrays with it.
+			if (nextIndex === undefined) continue
+			nextPath = [active.path, nextIndex, ...rest].join(".")
+		}
+		const previous = get(transaction.previousValues, path)
+		const next = get(transaction.nextValues, nextPath)
+		if (
+			Array.isArray(previous) &&
+			Array.isArray(next) &&
+			previous.length === next.length
+		) {
+			continue
+		}
+		throw new TypeError(
+			`A managed update cannot change the number of rows of the mounted generated array "${path}". Use its array actions or form.array(path).reconcile.`,
+		)
+	}
+}
+
+/** The runtime form parts that a native row operation needs. */
+type RowOperationForm = {
+	readonly api: {
+		getFieldState(path: string): { readonly error?: FieldError }
+		setError(path: string, error: FieldError): void
+		clearErrors(path: string): void
+	}
+	readonly commit: ValueTransactionCommit<FieldValues, unknown>
+	readonly issues: Pick<FormIssueStore, "remapArray">
+}
+
+/**
+ * Applies native row operations and commits the transaction so that schema and
+ * stored issues stay with their rows. `indexes` maps each kept old row index to its new index.
+ */
+export function commitRowOperation(
+	form: RowOperationForm,
+	path: string,
+	indexes: ReadonlyMap<number, number>,
+	transaction: Parameters<ValueTransactionCommit<FieldValues, unknown>>[0],
+	applyNative: () => void,
+): void {
+	const arrayError = form.api.getFieldState(path).error
+	let rootError: FieldError | undefined = (
+		arrayError as (FieldError & { readonly root?: FieldError }) | undefined
+	)?.root
+	if (rootError === undefined && arrayError?.type !== undefined) {
+		rootError = {
+			type: arrayError.type,
+			message: arrayError.message,
+			types: arrayError.types,
+		}
+	}
+	let objectRowErrors: [string, unknown][] = []
+	if (!Array.isArray(arrayError)) {
+		objectRowErrors = Object.entries(arrayError ?? {}).filter(([index]) =>
+			/^(0|[1-9]\d*)$/.test(index),
+		)
+	}
+	// Issue paths must follow their rows before RHF moves error branches.
+	remapArraySchemaIssues(arrayError, path, indexes)
+	form.issues.remapArray(path, indexes, () => {
+		applyNative()
+		// A schema can report the array error before indexed errors, producing an object branch.
+		// RHF native operations only remap array-shaped error branches.
+		if (objectRowErrors.length > 0) {
+			form.api.clearErrors(path)
+			for (const [oldIndex, error] of objectRowErrors) {
+				const newIndex = indexes.get(Number(oldIndex))
+				if (newIndex !== undefined)
+					form.api.setError(`${path}.${newIndex}`, error as FieldError)
+			}
+		}
+		if (rootError !== undefined) form.api.setError(`${path}.root`, rootError)
+		form.commit(transaction)
+	})
 }
 
 /** Rejects middleware changes to nested arrays of reconciled rows. */

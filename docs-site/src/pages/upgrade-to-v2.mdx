@@ -1,0 +1,70 @@
+---
+title: Upgrade to 2.0
+description: Change the Material UI messages, structural array updates, array item moves, and tests that version 2.0 makes stricter.
+showAskAi: false
+searchPriority: 2
+---
+
+# Upgrade to 2.0
+
+Version 2.0 rejects some updates that version 1 accepted and then rendered
+incorrectly. It also gives the Material UI preset the array message keys of
+the default slots. Find each change on this page and apply its fix.
+
+## Rename the Material UI messages
+
+The Material UI preset uses the same array action keys as the default slots.
+Each item message is a string or a callback that gets `index` and `position`.
+
+```tsx
+// Version 1
+createMuiFormKit({
+	i18n: {
+		addItem: "Add speaker",
+		removeItem: (position) => `Remove speaker ${position}`,
+		moveItemUp: (position) => `Move speaker ${position} up`,
+		moveItemDown: (position) => `Move speaker ${position} down`,
+	},
+})
+
+// Version 2
+createMuiFormKit({
+	i18n: {
+		arrayAdd: "Add speaker",
+		arrayRemove: ({ position }) => `Remove speaker ${position}`,
+		arrayMoveUp: ({ position }) => `Move speaker ${position} up`,
+		arrayMoveDown: ({ position }) => `Move speaker ${position} down`,
+	},
+})
+```
+
+One translation object now serves the default slots and the Material UI
+preset. Read [Localization](/localization#translate-the-form-kit-labels) for
+the keys.
+
+## Change the rows of a generated array
+
+A managed update that changes the number of rows of a mounted generated array
+throws a `TypeError`. This applies to `form.update`, to
+`beforeUpdate` and middleware patches, and to an update from another field or
+array. React Hook Form (RHF) cannot keep the row state of that array in sync,
+so version 1 rendered the wrong rows.
+
+Use the actions of the array, or select its rows with
+`form.array(path).reconcile`. Read [Reconcile selected rows](/reconcile). A
+change of values that keeps the row count is still allowed.
+
+## Reference
+
+| Change | Version 1 | Version 2 |
+| --- | --- | --- |
+| Minimum React Hook Form (RHF) peer | 7.76.1 | 7.81.0 |
+| Material UI array messages | `addItem`, `removeItem`, `moveItemUp`, `moveItemDown` | `arrayAdd`, `arrayRemove`, `arrayMoveUp`, `arrayMoveDown` |
+| Row count change of another mounted generated array | Accepted, rows out of sync | `TypeError` |
+| `move` of an `ArrayItem` slot to an index outside the array | Ignored | `RangeError` |
+| Invalid index in a definition tester array action | `TypeError` | `RangeError` |
+| `tester.setValue` on a disabled, read-only, or hidden field | Changes the value | Returns `committed: false` |
+| Asynchronous `form.update` recipe, or an `itemDefault` that is not a plain object | Unclear error or wrong value | `TypeError` |
+| Undo after a persistence restore | Goes back to the default values | Stops at the restored draft |
+| Managed value update after submit with `mode: "all"` | Not validated with `reValidateMode` `onBlur` or `onSubmit` | Validated, as a native RHF input is |
+| Devtools Features tab | Lists history and persistence | Lists each configured feature |

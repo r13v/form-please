@@ -41,7 +41,7 @@ import "form-please/layout.css"
 | `form-please/native-controls` | `createNativeControls` | Create the native HTML control registry. |
 | `form-please/persistence` | `createPersistenceMiddleware`, `createLocalStorageAdapter`, `createDateCodec`, `usePersistence` | Restore and autosave editable drafts through application storage. |
 | `form-please/preset-native` | `nativeFormKit` | Use the ready-made native kit with English slots. |
-| `form-please/preset-mui` | `createMuiFormKit` | Create a Material UI 9 kit. |
+| `form-please/preset-mui` | `createMuiFormKit`, `createMuiControls`, `createMuiSlots`, `muiGrid` | Create a Material UI 9 kit, or build one from its parts. |
 | `form-please/testing` | `createDefinitionTester` | Inspect resolved definitions and exercise production managed updates without rendering React. |
 
 `form-please/layout.css` and `form-please/package.json` are non-JavaScript
@@ -238,6 +238,14 @@ and a 12-column grid.
 Read [Localization](/localization#translate-the-form-kit-labels) for the keys
 of the `i18n` option.
 
+To add your own controls, build the kit from its parts.
+`createMuiControls(options)` returns the control registry, `createMuiSlots(options)`
+returns the slots, and `muiGrid` is the 12-column grid:
+
+```tsx
+// [!include ~/snippets/api-reference.tsx:mui-parts]
+```
+
 The registry contains these controls:
 
 | Value type | Control names | Props type |
@@ -375,7 +383,7 @@ of type `FormBinding<Schema, Context>` with `Context extends AppContext`.
 | Option | Requirement and effect |
 | --- | --- |
 | `defaultValues` | Required complete synchronous schema input, fixed for the hook lifetime. |
-| `context` | Required after `forContext<Context>()`; otherwise optional. |
+| `context` | Required after `forContext<Context>()`; otherwise optional. An inline object with the same top-level values keeps the binding. Memoize nested objects and arrays. |
 | `disabled` | Disables generated controls and native form submission. |
 | `readOnly` | Locks generated controls but does not disable submission. |
 | `mode` | Optional RHF validation mode. Defaults to `onSubmit`. |
@@ -474,7 +482,9 @@ gives the name of the running action, or `null`.
 `onSubmit` as `{ value }`, or `null`. The wrapper object keeps a rejection with
 `undefined` or another falsy value. Form, Please catches only this rejection. An
 error from the schema, from `validate`, or from the runtime is not caught. The
-next accepted submit and `setIssues` set `error` to `null`. The React Hook Form
+form submit handler does not await the submit, so the browser reports such an
+error as an unhandled rejection. Catch an expected error inside `validate` or
+`onSubmit`. The next accepted submit and `setIssues` set `error` to `null`. The React Hook Form
 `formState.isSubmitSuccessful` is `false` after a rejection.
 
 ### External issues
@@ -591,12 +601,14 @@ synchronous Immer recipe can mutate the draft or return a replacement, but not
 both. A no-op recipe creates no transaction. Redux middleware may replace the
 terminal return value, so `form.update` returns `unknown`.
 
-Generated controls and `form.update` publish final values with one RHF
-`setValues` call. Generated `append`, `remove`, and `move` preserve native
+Generated controls and `form.update` publish final values to RHF in one
+synchronous commit. A top-level key that contains a mounted generated array is
+written leaf by leaf, so its row IDs stay stable. Generated `append`, `remove`, and `move` preserve native
 `useFieldArray` row IDs; their dependent patches join the same final React
 render, although raw RHF subscribers can observe an intermediate array state.
 Array middleware cannot change the source array length or order beyond the
-source action. It must not change another generated array's structure.
+source action. A change to the row count of another mounted generated array
+throws a `TypeError`.
 
 Only the proposed generated array action can change generated array length or
 order. `setValues` cannot synchronize the private row IDs in `useFieldArray`.

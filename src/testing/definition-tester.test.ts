@@ -366,6 +366,40 @@ describe("createDefinitionTester", () => {
 		expect(sources).toEqual(["append", "move", "remove"])
 	})
 
+	it("does not change a field or array that the UI cannot edit", () => {
+		const tester = createDefinitionTester(definition, {
+			context: { canEdit: false, locale: "en" },
+			values: { ...initialValues, kind: "company" },
+		})
+		expect(tester.setValue("taxId", "blocked").committed).toBe(false)
+		tester.setContext({ canEdit: true, locale: "en" })
+		tester.setValue("kind", "person")
+		expect(tester.setValue("taxId", "hidden").committed).toBe(false)
+		tester.setReadOnly(true)
+		expect(tester.append("contacts").committed).toBe(false)
+		expect(tester.values.taxId).toBe("")
+		expect(tester.values.contacts).toEqual(initialValues.contacts)
+	})
+
+	it.each([
+		[
+			"move",
+			(tester: ReturnType<typeof createDefinitionTester<typeof definition>>) =>
+				tester.move("contacts", 0, 1),
+		],
+		[
+			"remove",
+			(tester: ReturnType<typeof createDefinitionTester<typeof definition>>) =>
+				tester.remove("contacts", 1),
+		],
+	] as const)("rejects a %s index outside the array", (_action, run) => {
+		const tester = createDefinitionTester(definition, {
+			context: { canEdit: true, locale: "en" },
+			values: initialValues,
+		})
+		expect(() => run(tester)).toThrow(RangeError)
+	})
+
 	it("resolves options with the production executor and exposes failures", async () => {
 		const tester = createDefinitionTester(definition, {
 			context: { canEdit: true, locale: "en" },

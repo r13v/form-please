@@ -1,7 +1,8 @@
 import type { ResolvedDefinition } from "./definition.js"
+import type { RuntimeForm } from "./form-kit-types.js"
 
 /** One opaque managed-update identity shared across diagnostic stages. */
-export type ManagedDiagnosticToken = object
+type ManagedDiagnosticToken = object
 
 /** A package-private managed-update stage published by the coordinator. */
 export type ManagedDiagnosticEvent =
@@ -124,7 +125,10 @@ export type FormDiagnosticEvent =
 export type FormDiagnosticFeature = Readonly<{
 	getDetails(): unknown
 	getSnapshot(): unknown
-	kind: "history" | "persistence"
+	/** A stable identifier; one form registers each kind once. */
+	kind: string
+	/** The heading that the Features tab shows. */
+	label: string
 	subscribe(listener: () => void): () => void
 }>
 
@@ -190,4 +194,37 @@ export function getFormDiagnosticFeatures(
 /** Reads a monotonic clock when the host provides one. */
 export function formDiagnosticNow(): number {
 	return typeof performance === "undefined" ? Date.now() : performance.now()
+}
+
+/** Package-private runtime data consumed by the optional devtools entry. */
+export type FormDiagnosticsRuntime = Readonly<
+	Pick<RuntimeForm, "diagnosticTarget" | "disabled" | "inputRefs" | "readOnly">
+> & {
+	readonly formElement: HTMLFormElement | null
+	readonly resolved?: ResolvedDefinition
+}
+
+const formDiagnosticsRuntimeKey = Symbol.for(
+	"form-please.form-diagnostics-runtime",
+)
+
+/** Reads private runtime data from an exact current Form Please binding. */
+export function getFormDiagnosticsRuntime(
+	target: object,
+): FormDiagnosticsRuntime {
+	const runtime = (target as Record<PropertyKey, unknown>)[
+		formDiagnosticsRuntimeKey
+	]
+	if (runtime === undefined) {
+		throw new TypeError("Devtools require a current Form Please form binding")
+	}
+	return runtime as FormDiagnosticsRuntime
+}
+
+/** Attaches private runtime data without extending the public form binding type. */
+export function attachFormDiagnosticsRuntime(
+	target: object,
+	runtime: RuntimeForm,
+): void {
+	Object.defineProperty(target, formDiagnosticsRuntimeKey, { value: runtime })
 }

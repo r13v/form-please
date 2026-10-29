@@ -17,16 +17,16 @@ import {
 import { createPortal } from "react-dom"
 import type { Control, FieldValues } from "react-hook-form"
 import { useFormState } from "react-hook-form"
+import { assertNever } from "../assert-never.js"
 
+import type { FormBinding } from "../create-form-kit.js"
 import {
-	type FormBinding,
-	getFormDiagnosticsRuntime,
-} from "../create-form-kit.js"
-import type {
-	ResolvedDefinition,
-	ResolvedFieldNode,
-	ResolvedNode,
+	type ResolvedDefinition,
+	type ResolvedFieldNode,
+	type ResolvedNode,
+	resolvedChildLists,
 } from "../definition.js"
+import { getFormDiagnosticsRuntime } from "../diagnostics.js"
 import { fieldErrorsToIssues } from "../standard-schema-resolver.js"
 import type { FormIssue, StandardSchema } from "../types.js"
 import {
@@ -848,46 +848,34 @@ function FeaturesView({
 }: Readonly<{ features: readonly DevtoolsFeatureState[] }>) {
 	return (
 		<div className="fp-devtools__pane">
-			{(["history", "persistence"] as const).map((kind) => {
-				const feature = features.find((candidate) => candidate.kind === kind)
-				return (
-					<section className="fp-devtools__feature" key={kind}>
-						<div className="fp-devtools__row-line">
-							<h3>{kind === "history" ? "Managed history" : "Persistence"}</h3>
-							<Pill
-								label={feature === undefined ? "not configured" : "configured"}
-								tone={feature === undefined ? undefined : "good"}
-							/>
-						</div>
-						{feature === undefined ? (
-							<p className="fp-devtools__muted">
-								This form does not configure the {kind} feature.
-							</p>
-						) : (
-							<>
-								<ValueBlock label="Current snapshot" value={feature.snapshot} />
-								<ValueBlock label="Details" value={feature.details} />
-								<div className="fp-devtools__section">
-									<h3>Recent transitions</h3>
-									{feature.transitions.map((transition) => (
-										<div
-											className="fp-devtools__stage"
-											key={objectKey(transition)}
-										>
-											<span>
-												{transition.causeId === undefined
-													? "Feature lifecycle"
-													: `Update #${transition.causeId}`}
-											</span>
-											<ValuePreview value={transition.snapshot} />
-										</div>
-									))}
-								</div>
-							</>
-						)}
-					</section>
-				)
-			})}
+			{features.length === 0 && (
+				<p className="fp-devtools__muted">
+					This form configures no optional features.
+				</p>
+			)}
+			{features.map((feature) => (
+				<section className="fp-devtools__feature" key={feature.kind}>
+					<div className="fp-devtools__row-line">
+						<h3>{feature.label}</h3>
+						<Pill label="configured" tone="good" />
+					</div>
+					<ValueBlock label="Current snapshot" value={feature.snapshot} />
+					<ValueBlock label="Details" value={feature.details} />
+					<div className="fp-devtools__section">
+						<h3>Recent transitions</h3>
+						{feature.transitions.map((transition) => (
+							<div className="fp-devtools__stage" key={objectKey(transition)}>
+								<span>
+									{transition.causeId === undefined
+										? "Feature lifecycle"
+										: `Update #${transition.causeId}`}
+								</span>
+								<ValuePreview value={transition.snapshot} />
+							</div>
+						))}
+					</div>
+				</section>
+			))}
 		</div>
 	)
 }
@@ -960,10 +948,8 @@ function flattenResolved(
 				readOnly: node.readOnly,
 				visible: node.visible,
 			}
-			if (node.kind === "section") visit(node.children, depth + 1, nextParent)
-			if (node.kind === "array")
-				for (const children of node.itemChildren)
-					visit(children, depth + 1, nextParent)
+			for (const children of resolvedChildLists(node))
+				visit(children, depth + 1, nextParent)
 		}
 	}
 	visit(resolved.ui, 0, root)
@@ -988,11 +974,17 @@ function nodePath(node: ResolvedNode): string | undefined {
 }
 
 function nodeTitle(node: ResolvedNode): string {
-	if (node.kind === "field" || node.kind === "array")
-		return typeof node.label === "string" ? node.label : node.path
-	if (node.kind === "section")
-		return typeof node.title === "string" ? node.title : node.id
-	return node.id
+	switch (node.kind) {
+		case "field":
+		case "array":
+			return typeof node.label === "string" ? node.label : node.path
+		case "section":
+			return typeof node.title === "string" ? node.title : node.id
+		case "render":
+			return node.id
+		default:
+			return assertNever(node, "Unsupported resolved node")
+	}
 }
 
 function nodeSearchText(node: ResolvedNode): string {
@@ -1113,6 +1105,8 @@ function renderTab(
 			return <OptionsView snapshot={snapshot} />
 		case "features":
 			return <FeaturesView features={snapshot.features} />
+		default:
+			return assertNever(tab, 'Unsupported devtools tab "%s"')
 	}
 }
 

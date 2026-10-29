@@ -72,6 +72,15 @@ describe("form kit grid validation", () => {
 })
 
 describe("form definition validation", () => {
+	it("rejects fragment placement options without an at path", () => {
+		const fragment = kit.defineFragment(z.object({ age: z.number() }), () => [])
+		for (const options of [{}, null, "profile"]) {
+			expect(() => fragment.fields(options as never)).toThrow(
+				"Fragment placement options must contain an at path",
+			)
+		}
+	})
+
 	it("requires a Standard Schema and a ui array", () => {
 		for (const badSchema of [undefined, null, {}, { "~standard": {} }]) {
 			expect(() =>

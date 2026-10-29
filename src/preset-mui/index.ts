@@ -3,19 +3,10 @@
 import { createFormKit } from "../create-form-kit.js"
 import { createMuiControls } from "./controls.js"
 import { createMuiSlots } from "./slots.js"
-import type { CreateMuiFormKitOptions, MuiFormKitI18n } from "./types.js"
+import type { CreateMuiFormKitOptions } from "./types.js"
 
-/** English messages used when no MUI preset translations are supplied. */
-const defaultI18n = /* @__PURE__ */ Object.freeze({
-	addItem: "Add item",
-	removeItem: (position) => `Remove item ${position}`,
-	moveItemUp: (position) => `Move item ${position} up`,
-	moveItemDown: (position) => `Move item ${position} down`,
-	chooseFile: "Choose file",
-} satisfies MuiFormKitI18n)
-
-/** The 12-column scale supported by the MUI preset. */
-const muiGrid = /* @__PURE__ */ Object.freeze([
+/** The 12-column grid scale of the MUI preset, for kits built from its parts. */
+export const muiGrid = /* @__PURE__ */ Object.freeze([
 	1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 ] as const)
 
@@ -25,21 +16,15 @@ const muiGrid = /* @__PURE__ */ Object.freeze([
  * @see https://r13v.github.io/form-please/examples/mui-yup
  */
 export function createMuiFormKit(options?: CreateMuiFormKitOptions) {
-	const i18n = Object.freeze({
-		addItem: options?.i18n?.addItem ?? defaultI18n.addItem,
-		removeItem: options?.i18n?.removeItem ?? defaultI18n.removeItem,
-		moveItemUp: options?.i18n?.moveItemUp ?? defaultI18n.moveItemUp,
-		moveItemDown: options?.i18n?.moveItemDown ?? defaultI18n.moveItemDown,
-		chooseFile: options?.i18n?.chooseFile ?? defaultI18n.chooseFile,
-	})
-
 	return createFormKit({
-		controls: createMuiControls(i18n),
+		controls: createMuiControls(options),
 		grid: muiGrid,
-		slots: createMuiSlots(i18n),
+		slots: createMuiSlots(options),
 	})
 }
 
+export { createMuiControls } from "./controls.js"
+export { createMuiSlots } from "./slots.js"
 export type {
 	CreateMuiFormKitOptions,
 	MuiArraySlotOptions,

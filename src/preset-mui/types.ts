@@ -12,6 +12,7 @@ import type {
 } from "@mui/material"
 import type { SxProps, Theme } from "@mui/material/styles"
 import type { ComponentPropsWithoutRef, ReactNode } from "react"
+import type { ArrayActionsI18n } from "../array-actions-i18n.js"
 
 import type { OptionValue } from "../types.js"
 
@@ -247,15 +248,7 @@ export type MuiArraySlotOptions = {
 }
 
 /** User-facing messages used by MUI controls and slots. */
-export type MuiFormKitI18n = {
-	/** Labels the button that appends an array item. */
-	readonly addItem: string
-	/** Labels removal of the item at a one-based position. */
-	readonly removeItem: (position: number) => string
-	/** Labels an upward move for the item at a one-based position. */
-	readonly moveItemUp: (position: number) => string
-	/** Labels a downward move for the item at a one-based position. */
-	readonly moveItemDown: (position: number) => string
+export type MuiFormKitI18n = ArrayActionsI18n & {
 	/** Labels the file-selection button. */
 	readonly chooseFile: string
 }

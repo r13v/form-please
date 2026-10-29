@@ -5,9 +5,15 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
-
+import { defineControl } from "../control-definition.js"
+import { createFormKit } from "../create-form-kit.js"
 import type { ControlProps } from "../types.js"
-import { createMuiFormKit } from "./index.js"
+import {
+	createMuiControls,
+	createMuiFormKit,
+	createMuiSlots,
+	muiGrid,
+} from "./index.js"
 import type {
 	MuiFileProps,
 	MuiRadioOption,
@@ -271,6 +277,54 @@ describe("createMuiFormKit", () => {
 				.closest('[data-fp-node="field"]')
 				?.getAttribute("data-fp-span"),
 		).toBe("7")
+	})
+
+	it("composes a kit from its parts with translated array actions and a custom control", () => {
+		type Values = { readonly rows: readonly { readonly code: string }[] }
+		const schema: StandardSchemaV1<Values> = {
+			"~standard": {
+				version: 1,
+				vendor: "mui-preset-parts",
+				validate: (value) => ({ value: value as Values }),
+			},
+		}
+		const i18n = {
+			arrayAdd: ({ label }: { readonly label?: unknown }) =>
+				`Add to ${String(label)}`,
+			arrayRemove: ({ position }: { readonly position: number }) =>
+				`Delete row ${position}`,
+		}
+		const kit = createFormKit({
+			controls: {
+				...createMuiControls({ i18n }),
+				code: defineControl<string>({
+					component: ({ input, value }) => (
+						<output id={input.id}>{value}</output>
+					),
+				}),
+			},
+			grid: muiGrid,
+			slots: createMuiSlots({ i18n }),
+		})
+		const definition = kit.defineForm(schema, (ui) => [
+			ui.array("rows", {
+				label: "Codes",
+				itemDefault: { code: "" },
+				children: (row) => [row.field("code", { control: "code" })],
+			}),
+		])
+		function Form() {
+			const form = kit.useForm(definition, {
+				defaultValues: { rows: [{ code: "A1" }] },
+			})
+			return <kit.AutoForm form={form} />
+		}
+
+		render(<Form />)
+		expect(screen.getByText("Add to Codes")).toBeDefined()
+		expect(screen.getByLabelText("Delete row 1")).toBeDefined()
+		expect(screen.getByLabelText("Move item 1 up")).toBeDefined()
+		expect(screen.getByText("A1")).toBeDefined()
 	})
 
 	it("submits selected files through the native input", async () => {

@@ -58,7 +58,7 @@ Public JavaScript entries are limited to:
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
 exports. React UI, devtools, history, and persistence entries are client modules.
-The testing entry is a server-compatible headless module. React Hook Form 7.76.1
+The testing entry is a server-compatible headless module. React Hook Form 7.81.0
 or newer within major version 7 is a required peer. Immer is a
 direct runtime dependency. React Hook Form DevTools is a direct dependency that
 is reachable only through `form-please/devtools`. Material UI and Emotion peers
@@ -72,18 +72,25 @@ remain optional because only the Material UI preset uses them.
 | `src/control-definition.ts` | Validate and freeze a typed control definition |
 | `src/definition.ts` | Materialize authoring builders, validate, normalize, and synchronously resolve UI definitions |
 | `src/standard-schema-resolver.ts` | Validate through Standard Schema once and translate all issues to and from RHF errors |
-| `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
+| `src/create-form-kit.tsx` | Create kits, bind React Hook Form, and wire `Form`, `Fields`, `Submit`, and `AutoForm` |
+| `src/form-kit-types.ts` | Public binding, kit, action, and submission types and the package-private runtime form type |
+| `src/form-context.ts` | Provide the runtime form and native form ID to generated components |
+| `src/generated-nodes.tsx` | Render resolved fields, sections, arrays, and the error summary through kit slots |
+| `src/managed-commit.ts` | Commit and restore managed value transactions in React Hook Form and schedule change validation |
+| `src/form-focus.ts` | Focus an issue field or the error summary and publish the focus diagnostic |
 | `src/form-submission.ts` | Submission runtime: action selection, submit snapshots, action validation, and external issues |
 | `src/form-issues.ts` | Store action and external issues beside schema errors and remap them with array rows |
 | `src/form-value.ts` | Clone and compare editable form values while preserving browser-owned leaf values |
 | `src/array-reconcile.ts` | Register mounted generated arrays and reconcile their rows through one managed transaction |
-| `src/diagnostics.ts` | Provide the dormant package-private observer bridge and optional-feature registry |
+| `src/diagnostics.ts` | Provide the dormant package-private observer bridge, optional-feature registry, and devtools runtime access |
 | `src/devtools/devtools.tsx` | Bind RHF DevTools and render the Form Please diagnostic drawer |
 | `src/devtools/store.ts` | Aggregate bounded form-local diagnostic snapshots for the optional UI |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |
 | `src/field-options.ts` | Execute tracked field-options resolvers for both React and headless testing |
 | `src/use-field-options.ts` | Resolve one static or reactive field-options source in React |
-| `src/generated-array.ts` | Share generated array defaults, paths, and value guards between React and headless testing |
+| `src/generated-array.ts` | Share generated array defaults, paths, value guards, and append, remove, and move actions between React and headless testing |
+| `src/managed-feature.ts` | Create the middleware, per-form claim, `handle` lookup, and listener set of one managed feature |
+| `src/assert-never.ts` | End an exhaustive branch over a closed union |
 | `src/testing/definition-tester.ts` | Inspect production definition resolution and exercise managed control, array, context, and middleware transitions |
 | `src/history/history.ts` | Retain managed input positions, navigate them through the coordinator, and import or export in-memory journals |
 | `src/history/use-history.ts` | Bind a configured history feature to React and expose its current snapshot |
@@ -272,9 +279,10 @@ middleware and does not become a form store.
 
 Core diagnostic publications are guarded by an attached-sink check. Without a
 mounted devtools component, the runtime retains no event journal and performs
-no definition timing or option dependency copying for diagnostics. History and
-persistence register small read-only adapters only when those features already
-exist.
+no definition timing or option dependency copying for diagnostics. A managed
+feature registers a small read-only adapter with a `kind` and a `label` only
+when the feature exists. The Features tab shows each registered adapter, so a
+new feature needs no devtools change.
 
 The optional store retains 100 managed or raw updates and 20 transitions for
 each configured feature. It displays local raw values and errors without JSON
@@ -307,15 +315,40 @@ After `beforeUpdate`, the coordinator applies field `whenHidden` actions. It
 compares field visibility for `previousValues` and `nextValues` with the
 transaction context. For each field that the transaction hides, it adds the
 resolved write to the same transaction and keeps its `source`. The step repeats
-until no new field becomes hidden. History and persistence restores, context
-changes, and fields inside the array of an `array` source do not apply it. See
+until no new field becomes hidden. Feature restores, context changes, and fields
+inside the array of a source that reshapes its array do not apply it. See
 [ADR 0027](adr/0027-reset-hidden-field-values-in-managed-updates.md).
 
-Generated controls and `form.update` publish final values through one RHF
-`setValues` call. RHF remains the sole state owner. Direct calls through
+Generated controls and `form.update` publish final values to RHF. A top-level
+key without a mounted generated array goes through one `setValues` call. A
+top-level key that contains a mounted generated array goes through one
+`setValue` call for each changed leaf, because RHF 7.91 regenerates the row
+IDs of each field array that `setValues` covers. RHF remains the sole state
+owner. Direct calls through
 `form.api`, initial values, and reset bypass middleware and managed update hooks
 deliberately. Removing a top-level key is rejected because `setValues`
 shallow-merges roots; assign `undefined` when the schema permits it.
+
+`sourcePolicies` in `value-middleware.ts` lists the coordinator rules for each
+source type. TypeScript requires an entry for each member of
+`ValueTransactionSource`. Today the one rule is `reshapesSourceArray`: the
+`array` source keeps every proposed patch for the structural array check, and
+`whenHidden` skips fields in that array because its rows move.
+
+A feature restore dispatches complete values through the coordinator
+capability with a `RestorePolicy`. The feature, not the core, chooses the
+policy. `keepFormState: true` keeps RHF errors, touched, and submit state and
+revalidates by the form mode, as history navigation does. `keepFormState:
+false` clears that state and does not validate, as a persistence restore does.
+The core does not branch on feature names. Another feature can read
+`isRestoring()` on the capability; history uses it to treat a restore from
+another feature as a non-undoable boundary.
+
+Every managed update that changes the number of rows of a mounted generated
+array, other than the array of its own `array` source, throws a `TypeError`,
+because `setValues` cannot update the row state of `useFieldArray`. Arrays
+inside the rows of the source array are compared with the same row after the
+action. A change of values that keeps the row count is allowed.
 
 Managed changes follow `mode` and `reValidateMode` through one public RHF
 `trigger` call after commit. `isDirty` remains a whole-value RHF comparison;
@@ -327,7 +360,8 @@ does not preserve RHF's `delayError` timing.
 `form-please/history` is an optional middleware feature. It retains complete
 independent schema-input positions only after successful managed value updates.
 Initial values, reset, direct `form.api` mutations, and application-owned field
-array operations remain outside history. If raw values diverge, the next
+array operations remain outside history. A restore from another feature, such
+as persistence, becomes a non-undoable boundary. If raw values diverge, the next
 managed update or history operation replaces previous navigation branches with
 the current values as a non-undoable boundary.
 
@@ -352,6 +386,8 @@ top-level keys synchronize correctly. The reset preserves the original default
 baseline and current ephemeral form metadata. Dirty state is recalculated;
 RHF may regenerate private array row IDs and remount rows.
 
+Undo and other history restores use `keepFormState: true`.
+
 `HistoryJournal` version 1 contains complete input entries and a numeric index.
 It is an in-memory navigation artifact rather than an event log or persistence
 protocol. Import validates the protocol and retention boundary, but editable
@@ -372,7 +408,7 @@ The restore enters hooks and middleware with a `persistence` source and
 `restore` action. Middleware can cancel or transform the input. A successful
 commit resets complete RHF values, preserves the original default baseline,
 recalculates dirty state, clears interaction and submission metadata, and does
-not trigger validation. Editable drafts do not need to pass Standard Schema
+not trigger validation (`keepFormState: false`). Editable drafts do not need to pass Standard Schema
 validation. If live input changes while load is pending, persistence reports a
 conflict without applying stored input.
 
@@ -476,7 +512,9 @@ delegate to native `append`, `remove`, and `move` to preserve row IDs.
 Remove and move also remap schema issue paths and stored external issues, so
 each issue stays with its row.
 Middleware cannot change the source array length or order beyond the proposed
-action. The transaction must not change another generated array's structure
+action. An index outside the array throws a `RangeError` in the React runtime
+and in the headless tester, because both use one `applyArrayAction`. The
+transaction must not change the row count of another mounted generated array
 because `setValues` cannot synchronize its private row IDs. Dependent values
 join the same final React render, although raw RHF subscribers may see the
 native array operation before the final value commit. Item defaults are cloned
@@ -493,8 +531,8 @@ structure. Keys must be unique strings or numbers. The array must be mounted:
 generated array rendering registers its native operations, and `reconcile`
 throws when no generated array at that path is mounted.
 
-History and persistence restore are deliberate exceptions to the normal
-generated-array commit path. They reset the complete RHF value tree so every
+Feature restores are deliberate exceptions to the normal generated-array
+commit path. They reset the complete RHF value tree so every
 restored array structure synchronizes. The array values are exact, but RHF can
 generate new private row IDs.
 

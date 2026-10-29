@@ -97,6 +97,23 @@ _Avoid_: React Hook Form subscription, UI resolver, global middleware
 definition's fixed middleware list to coordinate durable form drafts.
 _Avoid_: Persistence hook, `useForm` persistence option
 
+**Managed feature**: An optional middleware, such as history or persistence,
+that keeps per-form state and exposes it through `feature.handle(form)`. Each
+form accepts one feature of a kind.
+_Avoid_: Plugin, extension, global middleware
+
+**Feature restore**: A managed value update in which a managed feature replaces
+the complete schema input, such as a history or persistence restore.
+_Avoid_: Raw reset, replay
+
+**Restore policy**: The rule that a managed feature chooses for its feature
+restore: keep or clear React Hook Form errors, touched, and submit state.
+_Avoid_: Reset options, restore mode
+
+**Source policy**: The fixed rule that the managed-update coordinator applies to
+every value transaction of one source type.
+_Avoid_: Source handler, source plugin
+
 **Persisted form draft**: A durable representation of the current editable
 schema input for later restoration. It excludes managed history and React Hook
 Form metadata.

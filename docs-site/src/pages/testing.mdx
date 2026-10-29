@@ -56,7 +56,9 @@ and `afterUpdate` through the production coordinator.
 
 A managed result includes:
 
-- `committed`, which is false for a no-op or cancelled proposal;
+- `committed`, which is false for a no-op or cancelled proposal, and for an
+  edit of a disabled, read-only, or hidden field or array that the UI cannot
+  make;
 - the final committed `transaction`, including effective patches and values;
 - the middleware `result`;
 - the definition `before`, `after`, and exact `changes`.
@@ -81,8 +83,9 @@ definition callbacks receive the new context on the next managed proposal.
 
 `append`, `remove`, and `move` use the current generated array, its real
 `itemDefault`, an `array` transaction source, and the production structural
-patch constraints. Disabled or read-only generated arrays do not commit an
-action. Invalid paths and indexes fail with a precise error.
+patch constraints. Disabled, read-only, or hidden generated arrays do not
+commit an action. An invalid path fails with a precise error. An index outside
+the array throws a `RangeError`, as it does in a mounted form.
 
 ## Resolve field options
 
@@ -102,6 +105,10 @@ reimplement React Hook Form (RHF) validation, dirty or touched state, submission
 focus, or DOM accessibility. Use component tests for those behaviors. This
 keeps definition tests fast without creating a second form runtime that can
 drift from production.
+
+The tester does not mount generated arrays. A mounted form rejects a managed
+update that changes the row count of another mounted generated array, but the
+tester accepts it. Use a component test for that rule.
 
 ## Next steps
 

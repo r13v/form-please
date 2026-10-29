@@ -744,8 +744,8 @@ describe("form kit", () => {
 		}
 
 		render(<Form />)
-		await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(1))
-		expect(screen.getByRole("option", { name: "first" })).not.toBeNull()
+		expect(await screen.findByRole("option", { name: "first" })).not.toBeNull()
+		expect(loadOptions).toHaveBeenCalledTimes(1)
 
 		fireEvent.change(screen.getByLabelText("Unrelated value"), {
 			target: { value: "b" },
@@ -755,10 +755,8 @@ describe("form kit", () => {
 		fireEvent.change(screen.getByLabelText("Option query"), {
 			target: { value: "second" },
 		})
-		await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(2))
-		await waitFor(() =>
-			expect(screen.getByRole("option", { name: "second" })).not.toBeNull(),
-		)
+		expect(await screen.findByRole("option", { name: "second" })).not.toBeNull()
+		expect(loadOptions).toHaveBeenCalledTimes(2)
 		expect(readChoice()).toBe("first")
 	})
 
@@ -1765,26 +1763,6 @@ describe("form kit", () => {
 		)
 	})
 
-	it("rejects a submit binding that does not match the surrounding form", () => {
-		function View() {
-			const mounted = kit.useForm(definition, {
-				defaultValues: { name: "Ada" },
-			})
-			const other = kit.useForm(definition, {
-				defaultValues: { name: "Grace" },
-			})
-			return (
-				<kit.Form form={mounted}>
-					<kit.Submit binding={other}>{() => null}</kit.Submit>
-				</kit.Form>
-			)
-		}
-
-		expect(() => render(<View />)).toThrow(
-			"Submit binding must match the surrounding Form",
-		)
-	})
-
 	it("parses once and keeps raw handleSubmit independent from the wrapper", async () => {
 		let validations = 0
 		const oneParseSchema: StandardSchema<
@@ -2090,5 +2068,29 @@ describe("form kit", () => {
 		expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
 			"Reset",
 		)
+	})
+	it("keeps the binding for an inline context with the same entries", () => {
+		const bindings: unknown[] = []
+		function View({ label }: { readonly label: string }) {
+			const form = kit.useForm(definition, {
+				context: { label },
+				defaultValues: { name: "Ada" },
+			})
+			bindings.push(form)
+			return <kit.AutoForm form={form} />
+		}
+		const view = render(<View label="first" />)
+		view.rerender(<View label="first" />)
+		view.rerender(<View label="second" />)
+		const [first, same, changed] = [
+			bindings[0],
+			bindings.at(-2),
+			bindings.at(-1),
+		]
+		expect(same).toBe(first)
+		expect(changed).not.toBe(first)
+		expect((changed as { context: unknown }).context).toEqual({
+			label: "second",
+		})
 	})
 })

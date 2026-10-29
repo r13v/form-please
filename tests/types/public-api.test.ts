@@ -466,7 +466,7 @@ kit.defineForm(schema, (ui) => [
 kit.defineForm(schema, (ui) => [
 	ui.field("name", {
 		control: "text",
-		// @ts-expect-error Builder options reject removed node properties.
+		// @ts-expect-error Builder field options have no valuePolicy.
 		valuePolicy: "preserve",
 	}),
 ])
@@ -619,7 +619,7 @@ kit.defineForm(schema, {
 			kind: "field",
 			path: "name",
 			control: "text",
-			// @ts-expect-error valuePolicy was removed; hidden fields preserve values.
+			// @ts-expect-error Field nodes have no valuePolicy; hidden fields preserve values.
 			valuePolicy: "preserve",
 		},
 	],

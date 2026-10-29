@@ -44,6 +44,33 @@ jobs:
       - name: Dry-run package
         run: npm pack --dry-run
 
+  react-hook-form-range:
+    name: Unit tests (React Hook Form ${{ matrix.bound }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bound: [minimum, maximum]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install the React Hook Form bound of the peer range
+        run: npm run rhf:${{ matrix.bound }}
+
+      - name: Run unit tests
+        run: npm test
+
   docs-site:
     name: Docs site
     runs-on: ubuntu-latest

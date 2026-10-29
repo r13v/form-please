@@ -201,43 +201,99 @@ describe("persistence React Hook Form integration", () => {
 		expect(storage.saveCalls).toHaveLength(0)
 	})
 
-	it("autosaves edits made directly by React Hook Form controls", async () => {
+	it("saves edits made while no persistence hook was mounted", async () => {
+		vi.useFakeTimers()
+		try {
+			const storage = createMemoryAdapter()
+			const feature = createPersistenceMiddleware({
+				adapter: storage.adapter,
+				key: "profile",
+				saveDelay: 50,
+				version: 1,
+			})
+			const definition = kit.defineForm(schema, definitionSource, {
+				middleware: [feature],
+			})
+			let form!: FormBinding<typeof schema>
+			let persistence!: UsePersistenceResult
+
+			function Status() {
+				persistence = usePersistence(form, feature)
+				return null
+			}
+			function View({ status }: { readonly status: boolean }) {
+				form = kit.useForm(definition, {
+					defaultValues: { items: [], name: "Ada" },
+				})
+				return <kit.AutoForm form={form}>{status && <Status />}</kit.AutoForm>
+			}
+
+			const view = render(<View status />)
+			await act(async () => persistence.restore())
+			view.rerender(<View status={false} />)
+			act(() => form.api.setValue("name", "Edited while unmounted"))
+			view.rerender(<View status />)
+			await act(async () => vi.advanceTimersByTimeAsync(50))
+
+			expect(storage.saveCalls).toHaveLength(1)
+			expect(
+				(
+					await decodePersistenceEnvelope(storage.value as JsonValue, {
+						codecs: [],
+						version: 1,
+					})
+				).value,
+			).toEqual({ items: [], name: "Edited while unmounted" })
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	it("reports a conflict for edits made after the last hook unmounts during restore", async () => {
 		const storage = createMemoryAdapter()
+		storage.value = await encodePersistenceEnvelope(
+			{ items: [], name: "Persisted" },
+			{ codecs: [], version: 1 },
+		)
+		let releaseLoad!: () => void
+		const loaded = new Promise<void>((resolve) => {
+			releaseLoad = resolve
+		})
 		const feature = createPersistenceMiddleware({
-			adapter: storage.adapter,
+			adapter: {
+				...storage.adapter,
+				load: async (key) => {
+					await loaded
+					return storage.adapter.load(key)
+				},
+			},
 			key: "profile",
-			saveDelay: 10_000,
 			version: 1,
 		})
 		const definition = kit.defineForm(schema, definitionSource, {
 			middleware: [feature],
 		})
-		let persistence!: PersistenceHandle
+		let form!: FormBinding<typeof schema>
 
-		function View() {
-			const form = kit.useForm(definition, {
+		function Status() {
+			usePersistence(form, feature)
+			return null
+		}
+		function View({ status }: { readonly status: boolean }) {
+			form = kit.useForm(definition, {
 				defaultValues: { items: [], name: "Ada" },
 			})
-			persistence = feature.handle(form)
-			return <kit.AutoForm form={form} />
+			return <kit.AutoForm form={form}>{status && <Status />}</kit.AutoForm>
 		}
 
-		render(<View />)
-		act(() => persistence.start())
-		fireEvent.change(screen.getByLabelText("Name"), {
-			target: { value: "Grace" },
-		})
-		await act(async () => persistence.flush())
+		const view = render(<View status />)
+		const restore = feature.handle(form).restore()
+		view.rerender(<View status={false} />)
+		act(() => form.api.setValue("name", "Live edit"))
+		releaseLoad()
 
-		expect(storage.saveCalls).toHaveLength(1)
-		expect(
-			(
-				await decodePersistenceEnvelope(storage.value as JsonValue, {
-					codecs: [],
-					version: 1,
-				})
-			).value,
-		).toEqual({ items: [], name: "Grace" })
+		await expect(restore).resolves.toBe("conflict")
+		expect(form.api.getValues().name).toBe("Live edit")
 	})
 
 	it("releases RHF observation on unmount without discarding a scheduled save", async () => {

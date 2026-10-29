@@ -210,8 +210,66 @@ describe("whenHidden", () => {
 				draft.hidden = "from history"
 			},
 			{ type: "history", action: "undo" },
+			{ keepFormState: true },
 		)
 
 		expect(values.hidden).toBe("from history")
+	})
+})
+
+describe("whenHidden with reordered array rows", () => {
+	type Row = { readonly enabled: string; readonly detail: string }
+	type RowValues = { readonly rows: readonly Row[] }
+	const rowSchema: StandardSchemaV1<RowValues> = {
+		"~standard": {
+			version: 1,
+			vendor: "when-hidden-rows",
+			validate: (value) => ({ value: value as RowValues }),
+		},
+	}
+	const rowItemSchema: StandardSchemaV1<Row> = {
+		"~standard": {
+			version: 1,
+			vendor: "when-hidden-row",
+			validate: (value) => ({ value: value as Row }),
+		},
+	}
+	const rowKit = createFormKit({
+		controls: createNativeControls(),
+		slots: createDefaultSlots(),
+	})
+
+	it("does not reset a row field when an update only reorders the rows", () => {
+		const rowFragment = rowKit.defineFragment(rowItemSchema, (ui) => [
+			ui.field("enabled", { control: "text" }),
+			ui.field("detail", {
+				control: "text",
+				visible: (row) => row.enabled === "yes",
+				whenHidden: "reset",
+			}),
+		])
+		const definition = rowKit.defineForm(rowSchema, (ui) => [
+			ui.array("rows", {
+				itemDefault: { enabled: "yes", detail: "" },
+				children: () => [rowFragment.fields()],
+			}),
+		])
+		const tester = createDefinitionTester(definition, {
+			values: {
+				rows: [
+					{ enabled: "no", detail: "kept while hidden" },
+					{ enabled: "yes", detail: "visible" },
+				],
+			},
+		})
+
+		tester.update((draft) => {
+			draft.rows.reverse()
+		})
+
+		expect(tester.values.rows).toEqual([
+			{ enabled: "yes", detail: "visible" },
+			{ enabled: "no", detail: "kept while hidden" },
+		])
 	})
 })

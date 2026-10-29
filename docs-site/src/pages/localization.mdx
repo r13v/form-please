@@ -68,22 +68,22 @@ when a schema method runs, so a schema created earlier keeps the old message.
 
 ## Translate the form kit labels
 
-The default slots and the Material UI preset use different `i18n` key names
-for the same actions. Their callbacks also get different arguments.
+The default slots and the Material UI preset use the same `i18n` keys for the
+array actions. Use one translation object for both kits.
 
-| Label | `createDefaultSlots` key | `createMuiFormKit` key | English default |
+| Label | Key | Kits | English default |
 | --- | --- | --- | --- |
-| Append an array item | `arrayAdd` | `addItem` | Add item |
-| Remove an array item | `arrayRemove` | `removeItem` | Remove item 1 |
-| Move an array item up | `arrayMoveUp` | `moveItemUp` | Move item 1 up |
-| Move an array item down | `arrayMoveDown` | `moveItemDown` | Move item 1 down |
-| Choose a file | — | `chooseFile` | Choose file |
+| Append an array item | `arrayAdd` | `createDefaultSlots`, `createMuiFormKit` | Add item |
+| Remove an array item | `arrayRemove` | `createDefaultSlots`, `createMuiFormKit` | Remove item 1 |
+| Move an array item up | `arrayMoveUp` | `createDefaultSlots`, `createMuiFormKit` | Move item 1 up |
+| Move an array item down | `arrayMoveDown` | `createDefaultSlots`, `createMuiFormKit` | Move item 1 down |
+| Choose a file | `chooseFile` | `createMuiFormKit` | Choose file |
 
-- A `createDefaultSlots` value is a string or a callback. The `arrayAdd`
-  callback gets the array `label`. The item callbacks get the zero-based
-  `index` and the one-based `position`.
-- A `createMuiFormKit` value for an item action is a callback that gets the
-  one-based position as a number. `addItem` and `chooseFile` are strings.
+- An array action value is a string or a callback. The `arrayAdd` callback
+  gets the array `label`. The item callbacks get the zero-based `index` and
+  the one-based `position`. The `ArrayActionsI18n` type from `form-please`
+  describes these keys.
+- `chooseFile` is a string.
 - All keys are optional. A missing key keeps the English default.
 
 ### Default slots

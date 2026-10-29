@@ -79,7 +79,8 @@ type DevtoolsFeatureTransition = Readonly<{
 /** Current diagnostic state for one configured optional feature. */
 export type DevtoolsFeatureState = Readonly<{
 	details: unknown
-	kind: "history" | "persistence"
+	kind: string
+	label: string
 	snapshot: unknown
 	transitions: readonly DevtoolsFeatureTransition[]
 }>
@@ -137,7 +138,8 @@ type MutableOptions = {
 type MutableFeature = {
 	adapter: FormDiagnosticFeature
 	details: unknown
-	kind: FormDiagnosticFeature["kind"]
+	kind: string
+	label: string
 	snapshot: unknown
 	transitions: DevtoolsFeatureTransition[]
 }
@@ -490,6 +492,7 @@ export class FormPleaseDevtoolsStore implements FormDiagnosticSink {
 					adapter,
 					details: adapter.getDetails(),
 					kind: adapter.kind,
+					label: adapter.label,
 					snapshot,
 					transitions: [{ snapshot, time: formDiagnosticNow() }],
 				})
@@ -547,6 +550,7 @@ export class FormPleaseDevtoolsStore implements FormDiagnosticSink {
 					Object.freeze({
 						details: feature.details,
 						kind: feature.kind,
+						label: feature.label,
 						snapshot: feature.snapshot,
 						transitions: Object.freeze([...feature.transitions]),
 					}),

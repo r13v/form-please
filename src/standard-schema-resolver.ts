@@ -359,7 +359,6 @@ function standardPath(
 		.join(".")
 }
 
-/** Counts the segments in a dot path. */
 function pathDepth(path: string | undefined): number {
 	return path === undefined ? 0 : path.split(".").length
 }
@@ -379,7 +378,6 @@ function uniqueIssues(issues: readonly FormIssue[]): readonly FormIssue[] {
 	})
 }
 
-/** Tests whether a value is a non-null object record. */
 export function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object"
 }

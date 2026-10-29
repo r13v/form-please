@@ -20,7 +20,12 @@ import {
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
-import { createMuiFormKit } from "form-please/preset-mui"
+import {
+	createMuiControls,
+	createMuiFormKit,
+	createMuiSlots,
+	muiGrid,
+} from "form-please/preset-mui"
 import { nativeFormKit } from "form-please/preset-native"
 import { useId } from "react"
 import { useController, useFormState, useWatch } from "react-hook-form"
@@ -203,14 +208,35 @@ const preferencesDefinition = nativeFormKit.defineForm(
 // [!region mui-preset]
 const muiKit = createMuiFormKit({
 	i18n: {
-		addItem: "Add item",
-		removeItem: (position) => `Remove item ${position}`,
-		moveItemUp: (position) => `Move item ${position} up`,
-		moveItemDown: (position) => `Move item ${position} down`,
+		arrayAdd: "Add item",
+		arrayRemove: ({ position }) => `Remove item ${position}`,
+		arrayMoveUp: ({ position }) => `Move item ${position} up`,
+		arrayMoveDown: ({ position }) => `Move item ${position} down`,
 		chooseFile: "Choose file",
 	},
 })
 // [!endregion mui-preset]
+
+// [!region mui-parts]
+const ratingControl = defineControl<number>({
+	component: ({ input, value, setValue }) => (
+		<input
+			{...input}
+			max={5}
+			min={1}
+			onChange={(event) => setValue(event.currentTarget.valueAsNumber)}
+			type="range"
+			value={value}
+		/>
+	),
+})
+
+const extendedMuiKit = createFormKit({
+	controls: { ...createMuiControls(), rating: ratingControl },
+	grid: muiGrid,
+	slots: createMuiSlots(),
+})
+// [!endregion mui-parts]
 
 // [!region mui-fields]
 const muiSettingsSchema = z.object({

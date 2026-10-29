@@ -122,8 +122,11 @@
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
 		"typecheck": "tsc --project tsconfig.json",
+		"typecheck:budget": "node scripts/check-type-budget.mjs",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"rhf:minimum": "node scripts/install-rhf.mjs minimum",
+		"rhf:maximum": "node scripts/install-rhf.mjs maximum",
 		"test:types": "npm run build && tsc --project tsconfig.json",
 		"test:browser": "playwright test",
 		"test:package": "npm run build && vitest run --config vitest.package.config.ts",
@@ -140,7 +143,7 @@
 		"package:check": "npm run build && npm run package:lint",
 		"package:lint": "publint --strict && attw --pack . --profile node16 --entrypoints . ./default-slots ./devtools ./history ./native-controls ./persistence ./preset-native ./preset-mui ./testing",
 		"knip": "knip --workspace . --workspace docs-site",
-		"verify": "npm run check && npm run test && npm run build && npm run typecheck && npm run test:browser && vitest run --config vitest.package.config.ts && npm run test:registry && npm run test:smoke && npm run package:lint && npm run knip"
+		"verify": "npm run check && npm run test && npm run build && npm run typecheck:budget && npm run test:browser && vitest run --config vitest.package.config.ts && npm run test:registry && npm run test:smoke && npm run package:lint && npm run knip"
 	},
 	"repository": {
 		"type": "git",
@@ -156,7 +159,7 @@
 		"@mui/material": "^9.0.0",
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0",
-		"react-hook-form": "^7.76.1"
+		"react-hook-form": "^7.81.0"
 	},
 	"peerDependenciesMeta": {
 		"@emotion/react": {

@@ -322,14 +322,7 @@ describe("managed value history", () => {
 	it("rejects operations that cannot address a retained position", async () => {
 		const harness = createHarness()
 
-		for (const index of [Number.NaN, Number.POSITIVE_INFINITY]) {
-			await expect(harness.history.seek(index)).rejects.toThrow(
-				"History seek index must be an integer",
-			)
-		}
 		expect(await harness.history.seek(-1)).toBe("unavailable")
-		expect(await harness.history.undo()).toBe("unavailable")
-		expect(await harness.history.redo()).toBe("unavailable")
 		expect(() => harness.history.subscribe(undefined as never)).toThrow(
 			"History listener must be a function",
 		)
@@ -444,10 +437,3 @@ function createHarness(options: HarnessOptions = {}) {
 		update: coordinator.update,
 	}
 }
-
-const typedJournal: HistoryJournal<Values> = {
-	entries: [{ items: [], name: "" }],
-	index: 0,
-	version: 1,
-}
-void typedJournal

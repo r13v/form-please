@@ -1,7 +1,13 @@
 "use client"
 
-import type { ReactNode } from "react"
-
+import {
+	type ArrayActionsI18n,
+	type ArrayAddI18nData,
+	type ArrayItemI18nData,
+	type I18nMessage,
+	resolveI18nMessage,
+	withArrayActionDefaults,
+} from "../array-actions-i18n.js"
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -13,43 +19,13 @@ import type {
 } from "../types.js"
 
 /** A fixed message or a formatter that uses slot-specific data. */
-export type DefaultSlotI18nValue<Data> =
-	| string
-	| ((data: Readonly<Data>) => string)
-
+export type DefaultSlotI18nValue<Data> = I18nMessage<Data>
 /** Data supplied to the default array-add message formatter. */
-export type DefaultArrayAddI18nData = {
-	/** The resolved array label, when the definition supplies one. */
-	readonly label?: ReactNode
-}
-
+export type DefaultArrayAddI18nData = ArrayAddI18nData
 /** Data supplied to default array-item action message formatters. */
-export type DefaultArrayItemI18nData = {
-	/** The zero-based item index. */
-	readonly index: number
-	/** The one-based item position for user-facing text. */
-	readonly position: number
-}
-
+export type DefaultArrayItemI18nData = ArrayItemI18nData
 /** Messages used by the default array action controls. */
-export type DefaultSlotsI18n = {
-	/** Labels the button that appends an array item. */
-	readonly arrayAdd: DefaultSlotI18nValue<DefaultArrayAddI18nData>
-	/** Labels the button that removes an array item. */
-	readonly arrayRemove: DefaultSlotI18nValue<DefaultArrayItemI18nData>
-	/** Labels the button that moves an array item toward the start. */
-	readonly arrayMoveUp: DefaultSlotI18nValue<DefaultArrayItemI18nData>
-	/** Labels the button that moves an array item toward the end. */
-	readonly arrayMoveDown: DefaultSlotI18nValue<DefaultArrayItemI18nData>
-}
-
-/** English messages used when no default-slot translations are supplied. */
-const englishDefaultSlotsI18n = /* @__PURE__ */ Object.freeze({
-	arrayAdd: "Add item",
-	arrayRemove: ({ position }) => `Remove item ${position}`,
-	arrayMoveUp: ({ position }) => `Move item ${position} up`,
-	arrayMoveDown: ({ position }) => `Move item ${position} down`,
-} satisfies DefaultSlotsI18n)
+export type DefaultSlotsI18n = ArrayActionsI18n
 
 /**
  * Creates semantic, unstyled structural slots with optional translated actions.
@@ -67,15 +43,7 @@ export function createDefaultSlots(options?: {
 	/** Overrides one or more English array action messages. */
 	readonly i18n?: Partial<DefaultSlotsI18n>
 }): FormKitSlots {
-	const i18n = Object.freeze({
-		arrayAdd: options?.i18n?.arrayAdd ?? englishDefaultSlotsI18n.arrayAdd,
-		arrayRemove:
-			options?.i18n?.arrayRemove ?? englishDefaultSlotsI18n.arrayRemove,
-		arrayMoveUp:
-			options?.i18n?.arrayMoveUp ?? englishDefaultSlotsI18n.arrayMoveUp,
-		arrayMoveDown:
-			options?.i18n?.arrayMoveDown ?? englishDefaultSlotsI18n.arrayMoveDown,
-	})
+	const i18n = withArrayActionDefaults(options?.i18n)
 
 	/** Renders the default array wrapper and append action. */
 	function DefaultArraySlot({
@@ -103,7 +71,7 @@ export function createDefaultSlots(options?: {
 					type="button"
 					onClick={add}
 				>
-					{resolveMessage(
+					{resolveI18nMessage(
 						i18n.arrayAdd,
 						Object.freeze({
 							label,
@@ -130,9 +98,9 @@ export function createDefaultSlots(options?: {
 			index,
 			position: index + 1,
 		})
-		const moveUpLabel = resolveMessage(i18n.arrayMoveUp, actionData)
-		const moveDownLabel = resolveMessage(i18n.arrayMoveDown, actionData)
-		const removeLabel = resolveMessage(i18n.arrayRemove, actionData)
+		const moveUpLabel = resolveI18nMessage(i18n.arrayMoveUp, actionData)
+		const moveDownLabel = resolveI18nMessage(i18n.arrayMoveDown, actionData)
+		const removeLabel = resolveI18nMessage(i18n.arrayRemove, actionData)
 
 		return (
 			<div {...rootProps}>
@@ -244,12 +212,4 @@ function DefaultErrorMessageSlot({ rootProps, issue }: ErrorMessageSlotProps) {
 /** Renders the default native submit button. */
 function DefaultSubmitSlot({ buttonProps }: SubmitSlotProps) {
 	return <button {...buttonProps} />
-}
-
-/** Resolves a fixed or data-driven localization message. */
-function resolveMessage<Data>(
-	message: DefaultSlotI18nValue<Data>,
-	data: Readonly<Data>,
-): string {
-	return typeof message === "function" ? message(data) : message
 }

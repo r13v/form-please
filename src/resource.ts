@@ -31,13 +31,7 @@ type ResourceStatus = AnyResourceState["status"]
 type ResourceBranch<
 	Resource extends AnyResourceState,
 	Status extends ResourceStatus,
-> = Extract<
-	Resource,
-	{
-		/** The resource branch discriminator to select. */
-		readonly status: Status
-	}
->
+> = Extract<Resource, { readonly status: Status }>
 /** Handlers that map each resource branch to an application value. */
 type ResourceCases<
 	Resource extends AnyResourceState,
@@ -156,13 +150,9 @@ function matchResourceWithArguments<
 		case "error":
 			return cases.error(resource as ResourceBranch<Resource, "error">, ...args)
 		default: {
-			/** A runtime value with a status outside the typed resource union. */
-			const unsupported = resource as {
-				/** The unsupported runtime discriminator. */
-				readonly status?: unknown
-			}
+			const unsupported: never = resource
 			throw new TypeError(
-				`Unsupported resource status "${String(unsupported.status)}"`,
+				`Unsupported resource status "${String((unsupported as { readonly status?: unknown }).status)}"`,
 			)
 		}
 	}

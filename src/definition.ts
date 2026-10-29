@@ -1,5 +1,7 @@
 import type { FieldValues } from "react-hook-form"
 
+import { assertNever } from "./assert-never.js"
+import { areFormValuesEqual } from "./form-value.js"
 import type {
 	ControlDefinitionRegistry,
 	ErrorDisplay,
@@ -12,17 +14,39 @@ import type {
 } from "./types.js"
 import {
 	type HiddenFieldWrite,
+	isPromiseLike,
 	readPatchTarget,
+	sourcePolicies,
 	type ValueTransaction,
 } from "./value-middleware.js"
 
 /** A supported UI node discriminator. */
 type NodeKind = "array" | "field" | "render" | "section"
+
+/**
+ * Structural traits of each node kind. A new kind must be listed here, and
+ * normalization reads these traits instead of comparing kind names.
+ */
+const nodeKindTraits = {
+	array: { label: "Array", pathBound: true, container: true },
+	field: { label: "Field", pathBound: true, container: false },
+	render: { label: "Render", pathBound: false, container: false },
+	section: { label: "Section", pathBound: false, container: true },
+} as const satisfies Record<
+	NodeKind,
+	{
+		/** The node name used in error messages. */
+		readonly label: string
+		/** Whether the node selects a schema input path. */
+		readonly pathBound: boolean
+		/** Whether the node requires a children list. */
+		readonly container: boolean
+	}
+>
 /** A normalized node used by the definition resolver. */
 type RuntimeNode = NormalizedNode & {
 	/** Preserves normalized node properties without widening their contracts. */
 	readonly [key: string]: unknown
-	/** The node category used by resolution. */
 	readonly kind: NodeKind
 	/** Normalized child templates for sections and arrays. */
 	readonly children?: readonly RuntimeNode[]
@@ -181,6 +205,27 @@ export type ResolvedNode =
 	| ResolvedFieldNode
 	| ResolvedRenderNode
 	| ResolvedSectionNode
+
+function isNodeKind(value: unknown): value is NodeKind {
+	return typeof value === "string" && Object.hasOwn(nodeKindTraits, value)
+}
+
+/** Lists the child node lists of a resolved node: one per array item. */
+export function resolvedChildLists(
+	node: ResolvedNode,
+): readonly (readonly ResolvedNode[])[] {
+	switch (node.kind) {
+		case "section":
+			return [node.children]
+		case "array":
+			return node.itemChildren
+		case "field":
+		case "render":
+			return []
+		default:
+			return assertNever(node, "Unsupported resolved node")
+	}
+}
 
 /** The root UI tree and flat index produced by definition resolution. */
 export type ResolvedDefinition = {
@@ -456,20 +501,15 @@ function normalizeNodes(
 			continue
 		}
 
-		const kind = candidate.kind
-		if (
-			kind !== "array" &&
-			kind !== "field" &&
-			kind !== "render" &&
-			kind !== "section"
-		) {
-			throw new TypeError(`Unknown UI node kind "${String(kind)}"`)
+		if (!isNodeKind(candidate.kind)) {
+			throw new TypeError(`Unknown UI node kind "${String(candidate.kind)}"`)
 		}
+		const kind = candidate.kind
+		const traits = nodeKindTraits[kind]
 
-		const path =
-			kind === "field" || kind === "array"
-				? joinPath(options.pathPrefix, normalizePath(candidate.path))
-				: undefined
+		const path = traits.pathBound
+			? joinPath(options.pathPrefix, normalizePath(candidate.path))
+			: undefined
 		if (kind === "field") {
 			if (
 				typeof candidate.control !== "string" ||
@@ -487,14 +527,8 @@ function normalizeNodes(
 		if (kind === "array" && !("itemDefault" in candidate)) {
 			throw new TypeError(`Array "${path}" requires itemDefault`)
 		}
-		if (
-			(kind === "field" || kind === "array") &&
-			typeof candidate.errorDisplay !== "function"
-		) {
-			readErrorDisplay(
-				candidate.errorDisplay,
-				`${kind === "field" ? "Field" : "Array"} "${path}"`,
-			)
+		if (traits.pathBound && typeof candidate.errorDisplay !== "function") {
+			readErrorDisplay(candidate.errorDisplay, `${traits.label} "${path}"`)
 		}
 
 		const fallbackId =
@@ -509,10 +543,7 @@ function normalizeNodes(
 		state.ids.add(scopedId)
 
 		const rawChildren = candidate.children
-		if (
-			(kind === "array" || kind === "section") &&
-			!Array.isArray(rawChildren)
-		) {
+		if (traits.container && !Array.isArray(rawChildren)) {
 			throw new TypeError(`${kind} node "${id}" requires children`)
 		}
 		validateStaticLayout(candidate, kind, state.grid)
@@ -624,11 +655,8 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 		pathPrefix: string,
 		idPrefix: string,
 		parent: {
-			/** Whether the parent is visible. */
 			readonly visible: boolean
-			/** Whether the parent is disabled. */
 			readonly disabled: boolean
-			/** Whether the parent is read-only. */
 			readonly readOnly: boolean
 			/** The parent grid column count, when it defines a grid. */
 			readonly columns?: number
@@ -870,9 +898,21 @@ export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
 	)
 	const writes: HiddenFieldWrite[] = []
 	for (const [path, field] of next) {
-		if (field.visible || previous.get(path)?.visible !== true) continue
+		if (field.visible) continue
+		const previousPath = previousRowPath(
+			path,
+			transaction.previousValues,
+			transaction.nextValues,
+		)
+		if (previous.get(previousPath)?.visible !== true) continue
 		// Array paths use item positions, and a structural change moves items.
-		if (source.type === "array" && path.startsWith(`${source.path}.`)) continue
+		if (
+			sourcePolicies[source.type].reshapesSourceArray &&
+			"path" in source &&
+			path.startsWith(`${source.path}.`)
+		) {
+			continue
+		}
 
 		const action = readWhenHidden(
 			resolveOptional(field.node.whenHidden, field.resolverValues, context),
@@ -894,6 +934,46 @@ export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
 	return writes
 }
 
+/**
+ * Maps a field path in the next values to the same row in the previous values.
+ * A moved row keeps its value, so an equal previous row identifies it. Equal
+ * rows have equal visibility, so any equal match is correct. An edited row
+ * keeps its index.
+ */
+function previousRowPath(
+	path: string,
+	previousValues: unknown,
+	nextValues: unknown,
+): string {
+	let previous = previousValues
+	let next = nextValues
+	return path
+		.split(".")
+		.map((segment) => {
+			let previousSegment = segment
+			if (Array.isArray(previous) && Array.isArray(next)) {
+				const row: unknown = next[Number(segment)]
+				if (!areFormValuesEqual(previous[Number(segment)], row)) {
+					const index = previous.findIndex((candidate) =>
+						areFormValuesEqual(candidate, row),
+					)
+					if (index !== -1) previousSegment = String(index)
+				}
+			}
+			previous = readChild(previous, previousSegment)
+			next = readChild(next, segment)
+			return previousSegment
+		})
+		.join(".")
+}
+
+/** Reads one property of an object value; other values have no properties. */
+function readChild(value: unknown, segment: string): unknown {
+	return value !== null && typeof value === "object"
+		? (value as Record<string, unknown>)[segment]
+		: undefined
+}
+
 /** Resolves the visibility of every field that declares `whenHidden`. */
 function collectWhenHiddenFields(
 	definition: FormDefinition,
@@ -911,22 +991,32 @@ function collectWhenHiddenFields(
 			const visible =
 				parentVisible &&
 				resolveValue(node.visible, true, resolverValues, context)
-			if (node.kind === "field" && node.whenHidden !== undefined) {
-				fields.set(joinPath(pathPrefix, String(node.path)), {
-					node,
-					visible,
-					resolverValues,
-					pathPrefix,
-				})
-			} else if (node.kind === "section") {
-				visit(node.children ?? [], pathPrefix, visible)
-			} else if (node.kind === "array") {
-				const path = joinPath(pathPrefix, String(node.path))
-				const items = getPathValue(values, path)
-				if (!Array.isArray(items)) continue
-				for (let index = 0; index < items.length; index++) {
-					visit(node.children ?? [], `${path}.${index}`, visible)
+			switch (node.kind) {
+				case "field":
+					if (node.whenHidden === undefined) break
+					fields.set(joinPath(pathPrefix, String(node.path)), {
+						node,
+						visible,
+						resolverValues,
+						pathPrefix,
+					})
+					break
+				case "section":
+					visit(node.children ?? [], pathPrefix, visible)
+					break
+				case "array": {
+					const path = joinPath(pathPrefix, String(node.path))
+					const items = getPathValue(values, path)
+					if (!Array.isArray(items)) break
+					for (let index = 0; index < items.length; index++) {
+						visit(node.children ?? [], `${path}.${index}`, visible)
+					}
+					break
 				}
+				case "render":
+					break
+				default:
+					assertNever(node.kind, 'Unsupported UI node kind "%s"')
 			}
 		}
 	}
@@ -985,7 +1075,10 @@ function hasEqualResolvedProperties(
 }
 
 /** Compares opaque resolved values without traversing nested configuration. */
-function hasEqualResolvedValue(previous: unknown, next: unknown): boolean {
+export function hasEqualResolvedValue(
+	previous: unknown,
+	next: unknown,
+): boolean {
 	if (Object.is(previous, next)) return true
 	if (previous === null || next === null) return false
 	if (typeof previous !== "object" || typeof next !== "object") return false
@@ -1059,17 +1152,11 @@ function resolveOptional<Value = unknown, Context = unknown>(
 		value as (
 			resolverValues: unknown,
 			details: {
-				/** The readonly runtime context for the resolver. */
 				readonly context: Readonly<Context>
 			},
 		) => unknown
 	)(values, { context })
-	if (
-		result !== null &&
-		(typeof result === "object" || typeof result === "function") &&
-		"then" in result &&
-		typeof result.then === "function"
-	) {
+	if (isPromiseLike(result)) {
 		throw new TypeError("UI resolvers must be synchronous")
 	}
 	return result as Value
@@ -1077,17 +1164,8 @@ function resolveOptional<Value = unknown, Context = unknown>(
 
 /** Reads a value from an object by a validated dot path. */
 function getPathValue(value: unknown, path: string): unknown {
-	if (path.length === 0) {
-		return value
-	}
-	let current = value
-	for (const segment of path.split(".")) {
-		if (current === null || typeof current !== "object") {
-			return undefined
-		}
-		current = (current as Record<string, unknown>)[segment]
-	}
-	return current
+	if (path.length === 0) return value
+	return path.split(".").reduce(readChild, value)
 }
 
 /** Validates a relative field or array path. */

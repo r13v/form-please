@@ -195,6 +195,7 @@ describe("FormPleaseDevtoolsStore", () => {
 			getDetails: () => ({ limit: 100 }),
 			getSnapshot: () => snapshot,
 			kind: "history",
+			label: "Managed history",
 			subscribe: (next) => {
 				listener = next
 				return vi.fn()
@@ -205,6 +206,7 @@ describe("FormPleaseDevtoolsStore", () => {
 		expect(harness.store.getSnapshot().features[0]).toMatchObject({
 			details: { limit: 100 },
 			kind: "history",
+			label: "Managed history",
 			snapshot: { canUndo: false },
 		})
 

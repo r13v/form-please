@@ -13,6 +13,11 @@ import {
 } from "@mui/material"
 import type { ReactElement } from "react"
 
+import {
+	resolveI18nMessage,
+	withArrayActionDefaults,
+} from "../array-actions-i18n.js"
+
 import type {
 	ArrayItemSlotProps,
 	ArraySlotProps,
@@ -24,21 +29,26 @@ import type {
 	SubmitSlotProps,
 } from "../types.js"
 import type {
+	CreateMuiFormKitOptions,
 	MuiArraySlotOptions,
 	MuiFieldSlotOptions,
-	MuiFormKitI18n,
 	MuiSectionSlotOptions,
 } from "./types.js"
 import { mergeSx } from "./utils.js"
 
-/** Creates the structural slot registry used by the Material UI preset. */
+/**
+ * Creates the structural slots of the Material UI preset. Missing messages use
+ * the English defaults.
+ */
 export function createMuiSlots(
-	i18n: MuiFormKitI18n,
+	options?: CreateMuiFormKitOptions,
 ): FormKitSlots<
 	MuiFieldSlotOptions,
 	MuiSectionSlotOptions,
 	MuiArraySlotOptions
 > {
+	const i18n = withArrayActionDefaults(options?.i18n)
+
 	/** Renders a MUI array wrapper, item grid, and append action. */
 	function MuiArraySlot({
 		rootProps,
@@ -83,7 +93,7 @@ export function createMuiSlots(
 							variant="outlined"
 							onClick={add}
 						>
-							{i18n.addItem}
+							{resolveI18nMessage(i18n.arrayAdd, { label })}
 						</Button>
 					</Box>
 				</Stack>
@@ -104,6 +114,10 @@ export function createMuiSlots(
 		children,
 	}: ArrayItemSlotProps): ReactElement {
 		const position = index + 1
+		const actionData = { index, position }
+		const moveUpLabel = resolveI18nMessage(i18n.arrayMoveUp, actionData)
+		const moveDownLabel = resolveI18nMessage(i18n.arrayMoveDown, actionData)
+		const removeLabel = resolveI18nMessage(i18n.arrayRemove, actionData)
 		return (
 			<Grid {...rootProps} size={1}>
 				<Paper variant="outlined">
@@ -124,34 +138,34 @@ export function createMuiSlots(
 								#{position}
 							</Typography>
 							<Button
-								aria-label={i18n.moveItemUp(position)}
+								aria-label={moveUpLabel}
 								data-fp-array-action="move-up"
 								disabled={disabled || readOnly || !canMoveUp}
 								size="small"
-								title={i18n.moveItemUp(position)}
+								title={moveUpLabel}
 								type="button"
 								onClick={() => move(index - 1)}
 							>
 								<span aria-hidden="true">↑</span>
 							</Button>
 							<Button
-								aria-label={i18n.moveItemDown(position)}
+								aria-label={moveDownLabel}
 								data-fp-array-action="move-down"
 								disabled={disabled || readOnly || !canMoveDown}
 								size="small"
-								title={i18n.moveItemDown(position)}
+								title={moveDownLabel}
 								type="button"
 								onClick={() => move(index + 1)}
 							>
 								<span aria-hidden="true">↓</span>
 							</Button>
 							<Button
-								aria-label={i18n.removeItem(position)}
+								aria-label={removeLabel}
 								color="error"
 								data-fp-array-action="remove"
 								disabled={disabled || readOnly}
 								size="small"
-								title={i18n.removeItem(position)}
+								title={removeLabel}
 								type="button"
 								onClick={remove}
 							>

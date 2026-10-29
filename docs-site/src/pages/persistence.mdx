@@ -142,6 +142,13 @@ multiple tabs or forms, save on page unload, retain RHF metadata, or persist
 managed history. The adapter can add cross-client coordination when the product
 requires it.
 
+One feature can serve several forms, but all of them use its one `key`. Create
+a separate feature with its own `key` for each form that is mounted at the same
+time. Otherwise the forms overwrite the same stored draft.
+
+A restore from persistence is a boundary for managed history. Undo does not go
+back past the restored draft.
+
 ## Next steps
 
 - [Add undo and redo](/history)

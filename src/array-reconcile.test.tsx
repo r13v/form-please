@@ -91,6 +91,26 @@ function mount(
 	return binding
 }
 
+/** Returns an error that the action throws or that React reports from an event handler. */
+function captureError(run: () => unknown): unknown {
+	let reported: unknown
+	const listener = (event: ErrorEvent) => {
+		reported = event.error
+		event.preventDefault()
+	}
+	window.addEventListener("error", listener)
+	try {
+		act(() => {
+			run()
+		})
+	} catch (error) {
+		return error
+	} finally {
+		window.removeEventListener("error", listener)
+	}
+	return reported
+}
+
 /** Finds a row action button of the top-level rows array, not of nested children. */
 function rowAction(index: number, name: string): HTMLElement {
 	const row = document.querySelector(
@@ -214,6 +234,45 @@ describe("managed array reconciliation", () => {
 		).toEqual([{ message: "Array issue", path: "rows" }])
 		expect(form.api.getFieldState("rows.1.name").error).toBeUndefined()
 	})
+
+	it.each([
+		["remove", () => fireEvent.click(rowAction(0, "Remove item 1")), ["sam"]],
+		[
+			"move",
+			() => fireEvent.click(rowAction(1, "Move item 2 up")),
+			["sam", "alex"],
+		],
+	] as const)(
+		"keeps row issues after a generated %s when the schema reports the array issue first",
+		async (_action, act_, ids) => {
+			const validationSchema = schema.superRefine((_values, context) => {
+				context.addIssue({
+					code: "custom",
+					path: ["rows"],
+					message: "Array issue",
+				})
+				context.addIssue({
+					code: "custom",
+					path: ["rows", 1, "name"],
+					message: "Sam issue",
+				})
+			})
+			const form = mount({}, true, validationSchema)
+			await act(() => form.api.trigger())
+			act_()
+			expect(form.api.getValues().rows.map((row) => row.id)).toEqual(ids)
+			expect(
+				fieldErrorToIssues(
+					form.api.getFieldState("rows.0.name").error,
+					"rows.0.name",
+				),
+			).toEqual([{ message: "Sam issue", path: "rows.0.name" }])
+			expect(
+				fieldErrorToIssues(form.api.getFieldState("rows").error, "rows"),
+			).toEqual([{ message: "Array issue", path: "rows" }])
+			expect(form.api.getFieldState("rows.1.name").error).toBeUndefined()
+		},
+	)
 
 	it("moves external issues with the selected person", () => {
 		const form = mount()
@@ -393,11 +452,11 @@ describe("managed array reconciliation", () => {
 	it("rejects structural edits to another generated array before changing either array", () => {
 		const form = mount({
 			beforeUpdate: (draft) => {
-				draft.otherRows.reverse()
+				draft.otherRows.pop()
 			},
 		})
 		expect(() => form.array("rows").reconcile(["sam"], options)).toThrow(
-			"another generated array structure",
+			'cannot change the number of rows of the mounted generated array "otherRows"',
 		)
 		expect(form.api.getValues()).toEqual(initial)
 	})
@@ -410,6 +469,122 @@ describe("managed array reconciliation", () => {
 		})
 		act(() => form.array("rows").reconcile(["sam"], options))
 		expect(form.api.getValues().otherRows[0]?.name).toBe("Adjusted")
+	})
+
+	it.each([
+		[
+			"form.update",
+			{},
+			(form: FormBinding<typeof schema>) =>
+				form.update((draft) => {
+					draft.otherRows.push({ id: "three", name: "Third" })
+				}),
+		],
+		[
+			"a control update",
+			{
+				beforeUpdate: (draft: {
+					otherRows: { id: string; name: string }[]
+				}) => {
+					draft.otherRows.pop()
+				},
+			},
+			() =>
+				fireEvent.change(screen.getAllByLabelText("Name")[0] as HTMLElement, {
+					target: { value: "Changed" },
+				}),
+		],
+		[
+			"a generated append",
+			{
+				beforeUpdate: (draft: {
+					otherRows: { id: string; name: string }[]
+				}) => {
+					draft.otherRows.push({ id: "three", name: "Third" })
+				},
+			},
+			() =>
+				fireEvent.click(
+					document.querySelector(
+						'[data-fp-node="array"][data-fp-path="rows"] > [data-fp-array-action="add"]',
+					) as HTMLElement,
+				),
+		],
+	] as const)(
+		"rejects a mounted generated array structure change from %s",
+		(_source, policy, run) => {
+			const form = mount(policy as Parameters<typeof mount>[0])
+			expect(captureError(() => run(form))).toEqual(
+				expect.objectContaining({
+					message: expect.stringContaining(
+						'cannot change the number of rows of the mounted generated array "otherRows"',
+					),
+				}),
+			)
+			expect(form.api.getValues()).toEqual(initial)
+		},
+	)
+
+	it.each([
+		[
+			"a replaced row",
+			(draft: { otherRows: { id: string; name: string }[] }) => {
+				draft.otherRows[0] = { id: "one", name: "Replaced" }
+			},
+		],
+		[
+			"a mapped array",
+			(draft: { otherRows: { id: string; name: string }[] }) => {
+				draft.otherRows = draft.otherRows.map((row) => ({
+					...row,
+					name: `${row.name}!`,
+				}))
+			},
+		],
+	] as const)(
+		"allows %s that keeps the row count of a mounted array",
+		(_name, recipe) => {
+			const form = mount()
+			act(() => {
+				form.update(recipe as never)
+			})
+			expect(form.api.getValues().otherRows).toHaveLength(2)
+		},
+	)
+
+	it("rejects a generated append that also adds a row to a nested array of an existing row", () => {
+		const form = mount({
+			beforeUpdate: (draft, transaction) => {
+				if (transaction.source.type !== "array") return
+				draft.rows[0]?.children.push({ title: "Extra" })
+			},
+		})
+		expect(
+			captureError(() =>
+				fireEvent.click(
+					document.querySelector(
+						'[data-fp-node="array"][data-fp-path="rows"] > [data-fp-array-action="add"]',
+					) as HTMLElement,
+				),
+			),
+		).toEqual(
+			expect.objectContaining({
+				message: expect.stringContaining(
+					'mounted generated array "rows.0.children"',
+				),
+			}),
+		)
+		expect(form.api.getValues()).toEqual(initial)
+	})
+
+	it("allows a structure change to a generated array that is not mounted", () => {
+		const form = mount({}, false)
+		act(() => {
+			form.update((draft) => {
+				draft.otherRows.push({ id: "three", name: "Third" })
+			})
+		})
+		expect(form.api.getValues().otherRows).toHaveLength(3)
 	})
 
 	it("supports a mounted nested array path without changing its parent selection", () => {
