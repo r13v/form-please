@@ -501,12 +501,6 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 		action: ArrayAction,
 		item?: unknown,
 	): ManagedDefinitionTransition<Definition> => {
-		applyArrayAction(
-			[...getMutableArrayValue(state.values, path)],
-			path,
-			action,
-			item,
-		)
 		if (isBlocked(state.inspection.array(path))) return blockedTransition()
 		const arrayPath = fieldPathSegments(state.values, path)
 		return runManaged(() =>
