@@ -124,42 +124,51 @@ test("lists each library i18n key in the localization table", async () => {
 	const defaultColumn = header.findIndex((cell) => cell.includes("English"))
 	assert.notEqual(defaultColumn, -1, "the table has no English default column")
 
-	for (const [path, objectName, factory] of [
-		[
-			"src/default-slots/default-slots.tsx",
-			"englishDefaultSlotsI18n",
-			"createDefaultSlots",
-		],
-		["src/preset-mui/index.ts", "defaultI18n", "createMuiFormKit"],
-	]) {
+	const readDefaults = async (path, objectName) => {
 		const source = await readFile(new URL(path, repositoryRoot), "utf8")
 		const body = source.match(
 			new RegExp(`const ${objectName} = [^{]*\\{\\n([\\s\\S]*?)\\n\\}`),
 		)?.[1]
 		assert.ok(body, `${path} has no ${objectName} object`)
-		const defaults = new Map(
-			body
-				.split("\n")
-				.filter((line) => line.trim() !== "")
-				.map((line) => {
-					const entry = line.match(/^\t(\w+): (?:"([^"]*)"|.*`([^`]*)`)/)
-					assert.ok(entry, `${path} has an unreadable i18n entry: ${line}`)
-					const [, key, text, template] = entry
-					return [key, text ?? template.replace(/\$\{[^}]+\}/g, "1")]
-				}),
-		)
-		const column = header.findIndex((cell) => cell.includes(factory))
-		assert.notEqual(column, -1, `the table has no ${factory} column`)
+		return body
+			.split("\n")
+			.filter((line) => line.trim() !== "")
+			.map((line) => {
+				const entry = line.match(/^\t(\w+): (?:"([^"]*)"|.*`([^`]*)`)/)
+				assert.ok(entry, `${path} has an unreadable i18n entry: ${line}`)
+				const [, key, text, template] = entry
+				return [key, text ?? template.replace(/\$\{[^}]+\}/g, "1")]
+			})
+	}
+	const arrayActions = await readDefaults(
+		"src/array-actions-i18n.ts",
+		"englishArrayActionsI18n",
+	)
+	const muiControls = await readDefaults(
+		"src/preset-mui/controls.tsx",
+		"englishMuiI18n",
+	)
+	const keyColumn = header.indexOf("Key")
+	const kitColumn = header.indexOf("Kits")
+	assert.notEqual(keyColumn, -1, "the table has no Key column")
+	assert.notEqual(kitColumn, -1, "the table has no Kits column")
+
+	for (const [factory, defaults] of [
+		["createDefaultSlots", new Map(arrayActions)],
+		["createMuiFormKit", new Map([...arrayActions, ...muiControls])],
+	]) {
 		const listed = new Map(
 			rows
-				.filter((row) => row[column] !== "—")
-				.map((row) => [row[column].replace(/^`|`$/g, ""), row[defaultColumn]]),
+				.filter((row) => row[kitColumn].includes(`\`${factory}\``))
+				.map((row) => [
+					row[keyColumn].replace(/^`|`$/g, ""),
+					row[defaultColumn],
+				]),
 		)
-
 		assert.deepEqual(
 			[...listed.keys()].sort(),
 			[...defaults.keys()].sort(),
-			`the ${factory} column must list the keys of ${path}`,
+			`the ${factory} rows must list its i18n keys`,
 		)
 		for (const [key, text] of defaults) {
 			assert.equal(listed.get(key), text, `wrong English default for ${key}`)

@@ -22,6 +22,7 @@ import { type ReactElement, useEffect, useRef, useState } from "react"
 import { defineControl } from "../control-definition.js"
 import type { ControlProps, OptionValue } from "../types.js"
 import type {
+	CreateMuiFormKitOptions,
 	MuiAutocompleteMultipleProps,
 	MuiAutocompleteProps,
 	MuiCheckboxProps,
@@ -56,8 +57,19 @@ const visuallyHiddenInputStyle = {
 	width: 1,
 } as const
 
-/** Creates the complete control registry used by the Material UI preset. */
-export function createMuiControls(i18n: MuiFormKitI18n) {
+/** English messages of the MUI controls when no translation is supplied. */
+const englishMuiI18n = /* @__PURE__ */ Object.freeze({
+	chooseFile: "Choose file",
+})
+
+/**
+ * Creates the control registry of the Material UI preset. A missing
+ * `chooseFile` message uses the English default.
+ */
+export function createMuiControls(options?: CreateMuiFormKitOptions) {
+	const i18n = Object.freeze({
+		chooseFile: options?.i18n?.chooseFile ?? englishMuiI18n.chooseFile,
+	})
 	const text = defineControl<string | undefined, MuiTextFieldProps>({
 		component: createMuiTextControl("text"),
 	})
@@ -969,7 +981,7 @@ function MuiRangeSliderControl({
 function MuiFileControl(
 	props: ControlProps<File | undefined, MuiFileProps> & {
 		/** User-facing messages for the file control. */
-		readonly i18n: MuiFormKitI18n
+		readonly i18n: Pick<MuiFormKitI18n, "chooseFile">
 	},
 ): ReactElement {
 	const inputElement = useRef<HTMLInputElement | null>(null)
@@ -1002,7 +1014,7 @@ function MuiFileControl(
 function MuiFilesControl(
 	props: ControlProps<readonly File[], MuiFileProps> & {
 		/** User-facing messages for the file control. */
-		readonly i18n: MuiFormKitI18n
+		readonly i18n: Pick<MuiFormKitI18n, "chooseFile">
 	},
 ): ReactElement {
 	const inputElement = useRef<HTMLInputElement | null>(null)
@@ -1051,7 +1063,7 @@ function MuiFileButton<Value extends File | undefined | readonly File[]>({
 	onFiles,
 }: ControlProps<Value, MuiFileProps> & {
 	/** User-facing messages for the file control. */
-	readonly i18n: MuiFormKitI18n
+	readonly i18n: Pick<MuiFormKitI18n, "chooseFile">
 	/** Whether the native input still owns the current field files. */
 	readonly hasNativeValue: boolean
 	/** Mutable reference to the hidden native file input. */

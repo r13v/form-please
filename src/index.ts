@@ -1,4 +1,10 @@
 "use client"
+export type {
+	ArrayActionsI18n,
+	ArrayAddI18nData,
+	ArrayItemI18nData,
+	I18nMessage,
+} from "./array-actions-i18n.js"
 
 export type { DefineControlInput } from "./control-definition.js"
 export { defineControl } from "./control-definition.js"

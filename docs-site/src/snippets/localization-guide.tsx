@@ -105,10 +105,10 @@ const frenchNativeKit = createFormKit({
 // [!region mui-i18n]
 const frenchMuiKit = createMuiFormKit({
 	i18n: {
-		addItem: "Ajouter un élément",
-		removeItem: (position) => `Supprimer l'élément ${position}`,
-		moveItemUp: (position) => `Monter l'élément ${position}`,
-		moveItemDown: (position) => `Descendre l'élément ${position}`,
+		arrayAdd: "Ajouter un élément",
+		arrayRemove: ({ position }) => `Supprimer l'élément ${position}`,
+		arrayMoveUp: ({ position }) => `Monter l'élément ${position}`,
+		arrayMoveDown: ({ position }) => `Descendre l'élément ${position}`,
 		chooseFile: "Choisir un fichier",
 	},
 })
