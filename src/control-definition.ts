@@ -2,18 +2,14 @@
 
 import type { ComponentType } from "react"
 
-import type { ControlDefinition, ControlProps } from "./types.js"
+import type {
+	ControlDefinition,
+	ControlProps,
+	IsAny,
+	IsNever,
+	IsUnknown,
+} from "./types.js"
 
-/** Detects the TypeScript `any` type. */
-type IsAny<Value> = 0 extends 1 & Value ? true : false
-/** Detects the TypeScript `never` type. */
-type IsNever<Value> = [Value] extends [never] ? true : false
-/** Detects the TypeScript `unknown` type. */
-type IsUnknown<Value> = unknown extends Value
-	? [Value] extends [unknown]
-		? true
-		: false
-	: false
 /** Rejects value types that cannot provide safe field inference. */
 type IsValidValue<Value> =
 	IsNever<Value> extends true
