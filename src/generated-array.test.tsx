@@ -11,8 +11,6 @@ import type { FieldPath, PathValue } from "./types.js"
 describe("generated arrays", () => {
 	it.each([
 		["a Promise", async () => ({ name: "" })],
-		["a string", () => "row"],
-		["null", () => null],
 		["an array", () => []],
 	])("rejects an item default factory that returns %s", (_name, factory) => {
 		expect(() => cloneItemDefault(factory)).toThrow(

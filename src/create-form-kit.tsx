@@ -893,7 +893,7 @@ function assembleKit(
 		apiRef.current = api
 		const contextRef = useRef(options.context)
 		contextRef.current = options.context
-		const submittedRef = useRef(api.formState.isSubmitted)
+		const submittedRef = useRef(false)
 		const validation: ManagedValidationOptions = {
 			isSubmitted: () => submittedRef.current,
 			mode: options.mode ?? "onSubmit",

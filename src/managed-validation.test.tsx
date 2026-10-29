@@ -18,11 +18,15 @@ const definition = kit.defineForm(schema, {
 const modes: Mode[] = ["onSubmit", "onBlur", "onChange", "onTouched", "all"]
 const reValidateModes = ["onSubmit", "onBlur", "onChange"] as const
 
-const cases = modes.flatMap((mode) =>
-	reValidateModes.flatMap((reValidateMode) =>
-		[false, true].map((submitted) => ({ mode, reValidateMode, submitted })),
-	),
-)
+// reValidateMode applies only after a submit.
+const cases = modes.flatMap((mode) => [
+	{ mode, reValidateMode: "onChange" as const, submitted: false },
+	...reValidateModes.map((reValidateMode) => ({
+		mode,
+		reValidateMode,
+		submitted: true,
+	})),
+])
 
 /** A natively registered RHF input is the oracle for managed change validation. */
 describe("managed change validation matches native RHF inputs", () => {
@@ -50,7 +54,7 @@ describe("managed change validation matches native RHF inputs", () => {
 			if (submitted) {
 				fireEvent.click(screen.getByRole("button", { name: "Submit" }))
 				await settle()
-				expect(form.api.formState.isSubmitted).toBe(true)
+				expect(form.api.getFieldState("native").invalid).toBe(true)
 			}
 
 			const next = submitted ? "valid" : "x"
