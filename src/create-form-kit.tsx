@@ -83,6 +83,7 @@ import {
 	createValueCoordinator,
 	getValueCoordinatorCapability,
 	type ValueCoordinator,
+	type ValueRestoreCommit,
 	type ValueTransactionCommit,
 } from "./value-middleware.js"
 
@@ -297,11 +298,16 @@ function assembleKit(
 			}
 		}
 		const restoreRef = useRef<
-			ValueTransactionCommit<FormValues<Schema>, unknown> | undefined
+			ValueRestoreCommit<FormValues<Schema>, unknown> | undefined
 		>(undefined)
 		if (restoreRef.current === undefined) {
-			restoreRef.current = (transaction) => {
-				commitManagedRestore(apiRef.current, transaction, validationRef.current)
+			restoreRef.current = (transaction, policy) => {
+				commitManagedRestore(
+					apiRef.current,
+					transaction,
+					validationRef.current,
+					policy,
+				)
 			}
 		}
 		const coordinatorRef = useRef<

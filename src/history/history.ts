@@ -7,16 +7,14 @@ import {
 	cloneFormValue,
 	isFormValueObject,
 } from "../form-value.js"
+import { createListenerSet, defineManagedFeature } from "../managed-feature.js"
 import type { FormInput, StandardSchema } from "../types.js"
-import {
-	claimFeature,
-	type FormMiddlewareApi,
-	type FormMiddlewareNext,
-	getValueCoordinatorCapability,
-	readFeatureClaim,
-	type ValueCoordinatorCapability,
-	type ValueTransaction,
-	type ValueTransactionSource,
+import type {
+	FormMiddlewareApi,
+	FormMiddlewareNext,
+	ValueCoordinatorCapability,
+	ValueTransaction,
+	ValueTransactionSource,
 } from "../value-middleware.js"
 
 /** Navigation state for one managed value history. */
@@ -99,55 +97,16 @@ type ActiveGroup = {
 	lastUpdate: number
 }
 
-const historyFeatureClaimKey = Symbol.for("form-please.history-feature-claim")
-
 /** Creates one optional managed-value history feature. */
 export function createHistoryMiddleware(
 	options: CreateHistoryOptions = {},
 ): HistoryFeature {
 	const limit = normalizeLimit(options.limit)
 	const groupWindow = normalizeGroupWindow(options.groupWindow)
-	const states = new WeakMap<object, HistoryState<FieldValues, unknown>>()
-	let feature: HistoryFeature
-
-	feature = (<Input extends FieldValues, Context = unknown>(
-		api: FormMiddlewareApi<Input>,
-	) => {
-		const capability = getValueCoordinatorCapability<Input, Context>(api)
-		claimFeature(
-			capability,
-			historyFeatureClaimKey,
-			feature,
-			"A form can configure only one history feature",
-		)
-		const state = new HistoryState(capability, limit, groupWindow)
-		states.set(
-			capability,
-			state as unknown as HistoryState<FieldValues, unknown>,
-		)
-		return (next: FormMiddlewareNext) =>
-			(transaction: ValueTransaction<Input, Context>) =>
-				state.forward(next, transaction)
-	}) as HistoryFeature
-
-	Object.defineProperty(feature, "handle", {
-		enumerable: true,
-		value(form: object) {
-			const capability = getValueCoordinatorCapability(form)
-			const state = states.get(capability)
-			if (
-				state === undefined ||
-				readFeatureClaim(capability, historyFeatureClaimKey) !== feature
-			) {
-				throw new TypeError(
-					"This history feature is not configured for the supplied form",
-				)
-			}
-			return state.handle
-		},
-	})
-
-	return Object.freeze(feature)
+	return defineManagedFeature(
+		"history",
+		(capability) => new HistoryState(capability, limit, groupWindow),
+	) as unknown as HistoryFeature
 }
 
 class HistoryState<Input extends FieldValues, Context> {
@@ -155,7 +114,7 @@ class HistoryState<Input extends FieldValues, Context> {
 	readonly #capability: ValueCoordinatorCapability<Input, Context>
 	readonly #groupWindow: number
 	readonly #limit: number
-	readonly #listeners = new Set<() => void>()
+	readonly #listeners = createListenerSet("History")
 	#entries: Input[]
 	#cursor = 0
 	#snapshot = createHistorySnapshot(0, 0)
@@ -174,7 +133,7 @@ class HistoryState<Input extends FieldValues, Context> {
 		this.#entries = [cloneFormValue(capability.getValues() as Input)]
 		this.handle = Object.freeze({
 			getSnapshot: () => this.#snapshot,
-			subscribe: (listener) => this.#subscribe(listener),
+			subscribe: (listener) => this.#listeners.subscribe(listener),
 			undo: () => this.#navigate(-1, "undo"),
 			redo: () => this.#navigate(1, "redo"),
 			seek: (index) => this.#seek(index),
@@ -186,7 +145,8 @@ class HistoryState<Input extends FieldValues, Context> {
 			getDetails: () => this.#diagnosticDetails(),
 			getSnapshot: () => this.#snapshot,
 			kind: "history",
-			subscribe: (listener) => this.#subscribe(listener),
+			label: "Managed history",
+			subscribe: (listener) => this.#listeners.subscribe(listener),
 		})
 	}
 
@@ -206,43 +166,15 @@ class HistoryState<Input extends FieldValues, Context> {
 		})
 	}
 
-	forward(
-		next: FormMiddlewareNext,
-		transaction: ValueTransaction<Input, Context>,
-	): unknown {
-		let result: unknown
-		try {
-			result = next(transaction.patches)
-		} catch (error) {
-			this.#observeCommit()
-			throw error
-		}
-		this.#observeCommit()
-		return result
-	}
-
-	#subscribe(listener: () => void): () => void {
-		if (typeof listener !== "function") {
-			throw new TypeError("History listener must be a function")
-		}
-		this.#listeners.add(listener)
-		let subscribed = true
-		return () => {
-			if (!subscribed) return
-			subscribed = false
-			this.#listeners.delete(listener)
-		}
-	}
-
-	#observeCommit(): void {
+	observeCommit(): void {
 		const transaction = this.#capability.getCommittedTransaction()
 		if (transaction === undefined) return
 		if (transaction.source.type === "history") {
 			this.#finishRestore(transaction)
 			return
 		}
-		// A restored draft acts like initial values, so undo cannot pass it.
-		if (transaction.source.type === "persistence") {
+		// Another feature's restore acts like initial values, so undo cannot pass it.
+		if (this.#capability.isRestoring()) {
 			this.#adoptBoundary(transaction.nextValues as Input)
 			return
 		}
@@ -331,10 +263,11 @@ class HistoryState<Input extends FieldValues, Context> {
 
 		let dispatchResult: unknown
 		try {
-			dispatchResult = this.#capability.restore(() => cloneFormValue(target), {
-				action,
-				type: "history",
-			})
+			dispatchResult = this.#capability.restore(
+				() => cloneFormValue(target),
+				{ action, type: "history" },
+				{ keepFormState: true },
+			)
 		} catch (error) {
 			this.#pendingRestore = undefined
 			this.#operationInFlight = false
@@ -448,7 +381,7 @@ class HistoryState<Input extends FieldValues, Context> {
 			return
 		}
 		this.#snapshot = next
-		for (const listener of [...this.#listeners]) listener()
+		this.#listeners.notify()
 	}
 }
 

@@ -60,7 +60,7 @@ describe("FormPleaseDevtools", () => {
 		for (const [tab, emptyState] of [
 			["Updates", "No recorded value updates."],
 			["Options", "No selectable fields are resolved."],
-			["Features", "This form does not configure the history feature."],
+			["Features", "This form configures no optional features."],
 		] as const) {
 			fireEvent.click(within(drawer).getByRole("tab", { name: tab }))
 			expect(within(drawer).getByText(emptyState)).toBeDefined()

@@ -569,6 +569,7 @@ describe("value middleware coordinator", () => {
 		const result = capability.restore(
 			() => ({ items: [], quantity: 4, total: 0 }),
 			{ action: "undo", type: "history" },
+			{ keepFormState: true },
 		) as ValueTransaction<Values>
 
 		expect(result.source).toEqual({ action: "undo", type: "history" })

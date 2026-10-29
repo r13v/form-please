@@ -125,7 +125,10 @@ export type FormDiagnosticEvent =
 export type FormDiagnosticFeature = Readonly<{
 	getDetails(): unknown
 	getSnapshot(): unknown
-	kind: "history" | "persistence"
+	/** A stable identifier; one form registers each kind once. */
+	kind: string
+	/** The heading that the Features tab shows. */
+	label: string
 	subscribe(listener: () => void): () => void
 }>
 

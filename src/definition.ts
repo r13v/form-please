@@ -1,5 +1,6 @@
 import type { FieldValues } from "react-hook-form"
 
+import { assertNever } from "./assert-never.js"
 import { areFormValuesEqual } from "./form-value.js"
 import type {
 	ControlDefinitionRegistry,
@@ -15,11 +16,33 @@ import {
 	type HiddenFieldWrite,
 	isPromiseLike,
 	readPatchTarget,
+	sourcePolicies,
 	type ValueTransaction,
 } from "./value-middleware.js"
 
 /** A supported UI node discriminator. */
 type NodeKind = "array" | "field" | "render" | "section"
+
+/**
+ * Structural traits of each node kind. A new kind must be listed here, and
+ * normalization reads these traits instead of comparing kind names.
+ */
+const nodeKindTraits = {
+	array: { label: "Array", pathBound: true, container: true },
+	field: { label: "Field", pathBound: true, container: false },
+	render: { label: "Render", pathBound: false, container: false },
+	section: { label: "Section", pathBound: false, container: true },
+} as const satisfies Record<
+	NodeKind,
+	{
+		/** The node name used in error messages. */
+		readonly label: string
+		/** Whether the node selects a schema input path. */
+		readonly pathBound: boolean
+		/** Whether the node requires a children list. */
+		readonly container: boolean
+	}
+>
 /** A normalized node used by the definition resolver. */
 type RuntimeNode = NormalizedNode & {
 	/** Preserves normalized node properties without widening their contracts. */
@@ -183,6 +206,27 @@ export type ResolvedNode =
 	| ResolvedFieldNode
 	| ResolvedRenderNode
 	| ResolvedSectionNode
+
+function isNodeKind(value: unknown): value is NodeKind {
+	return typeof value === "string" && Object.hasOwn(nodeKindTraits, value)
+}
+
+/** Lists the child node lists of a resolved node: one per array item. */
+export function resolvedChildLists(
+	node: ResolvedNode,
+): readonly (readonly ResolvedNode[])[] {
+	switch (node.kind) {
+		case "section":
+			return [node.children]
+		case "array":
+			return node.itemChildren
+		case "field":
+		case "render":
+			return []
+		default:
+			return assertNever(node, "Unsupported resolved node")
+	}
+}
 
 /** The root UI tree and flat index produced by definition resolution. */
 export type ResolvedDefinition = {
@@ -458,20 +502,15 @@ function normalizeNodes(
 			continue
 		}
 
-		const kind = candidate.kind
-		if (
-			kind !== "array" &&
-			kind !== "field" &&
-			kind !== "render" &&
-			kind !== "section"
-		) {
-			throw new TypeError(`Unknown UI node kind "${String(kind)}"`)
+		if (!isNodeKind(candidate.kind)) {
+			throw new TypeError(`Unknown UI node kind "${String(candidate.kind)}"`)
 		}
+		const kind = candidate.kind
+		const traits = nodeKindTraits[kind]
 
-		const path =
-			kind === "field" || kind === "array"
-				? joinPath(options.pathPrefix, normalizePath(candidate.path))
-				: undefined
+		const path = traits.pathBound
+			? joinPath(options.pathPrefix, normalizePath(candidate.path))
+			: undefined
 		if (kind === "field") {
 			if (
 				typeof candidate.control !== "string" ||
@@ -489,14 +528,8 @@ function normalizeNodes(
 		if (kind === "array" && !("itemDefault" in candidate)) {
 			throw new TypeError(`Array "${path}" requires itemDefault`)
 		}
-		if (
-			(kind === "field" || kind === "array") &&
-			typeof candidate.errorDisplay !== "function"
-		) {
-			readErrorDisplay(
-				candidate.errorDisplay,
-				`${kind === "field" ? "Field" : "Array"} "${path}"`,
-			)
+		if (traits.pathBound && typeof candidate.errorDisplay !== "function") {
+			readErrorDisplay(candidate.errorDisplay, `${traits.label} "${path}"`)
 		}
 
 		const fallbackId =
@@ -511,10 +544,7 @@ function normalizeNodes(
 		state.ids.add(scopedId)
 
 		const rawChildren = candidate.children
-		if (
-			(kind === "array" || kind === "section") &&
-			!Array.isArray(rawChildren)
-		) {
+		if (traits.container && !Array.isArray(rawChildren)) {
 			throw new TypeError(`${kind} node "${id}" requires children`)
 		}
 		validateStaticLayout(candidate, kind, state.grid)
@@ -880,7 +910,13 @@ export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
 		)
 		if (previous.get(previousPath)?.visible !== true) continue
 		// Array paths use item positions, and a structural change moves items.
-		if (source.type === "array" && path.startsWith(`${source.path}.`)) continue
+		if (
+			sourcePolicies[source.type].reshapesSourceArray &&
+			"path" in source &&
+			path.startsWith(`${source.path}.`)
+		) {
+			continue
+		}
 
 		const action = readWhenHidden(
 			resolveOptional(field.node.whenHidden, field.resolverValues, context),
@@ -959,22 +995,32 @@ function collectWhenHiddenFields(
 			const visible =
 				parentVisible &&
 				resolveValue(node.visible, true, resolverValues, context)
-			if (node.kind === "field" && node.whenHidden !== undefined) {
-				fields.set(joinPath(pathPrefix, String(node.path)), {
-					node,
-					visible,
-					resolverValues,
-					pathPrefix,
-				})
-			} else if (node.kind === "section") {
-				visit(node.children ?? [], pathPrefix, visible)
-			} else if (node.kind === "array") {
-				const path = joinPath(pathPrefix, String(node.path))
-				const items = getPathValue(values, path)
-				if (!Array.isArray(items)) continue
-				for (let index = 0; index < items.length; index++) {
-					visit(node.children ?? [], `${path}.${index}`, visible)
+			switch (node.kind) {
+				case "field":
+					if (node.whenHidden === undefined) break
+					fields.set(joinPath(pathPrefix, String(node.path)), {
+						node,
+						visible,
+						resolverValues,
+						pathPrefix,
+					})
+					break
+				case "section":
+					visit(node.children ?? [], pathPrefix, visible)
+					break
+				case "array": {
+					const path = joinPath(pathPrefix, String(node.path))
+					const items = getPathValue(values, path)
+					if (!Array.isArray(items)) break
+					for (let index = 0; index < items.length; index++) {
+						visit(node.children ?? [], `${path}.${index}`, visible)
+					}
+					break
 				}
+				case "render":
+					break
+				default:
+					assertNever(node.kind, 'Unsupported UI node kind "%s"')
 			}
 		}
 	}

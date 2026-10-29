@@ -146,6 +146,44 @@ export type ValueTransactionCommit<Input extends FieldValues, Context> = (
 	transaction: ValueTransaction<Input, Context>,
 ) => void
 
+/** How a feature restore commits complete values. The feature chooses it. */
+export type RestorePolicy = {
+	/**
+	 * `true` keeps RHF errors, touched, and submit state and revalidates by
+	 * the form mode, as history navigation does. `false` clears that state
+	 * and does not validate, as loading a stored draft does.
+	 */
+	readonly keepFormState: boolean
+}
+
+/** Commits a feature restore with the policy that the feature chose. */
+export type ValueRestoreCommit<Input extends FieldValues, Context> = (
+	transaction: ValueTransaction<Input, Context>,
+	policy: RestorePolicy,
+) => void
+
+/** Coordinator rules for one transaction source type. */
+type SourcePolicy = {
+	/**
+	 * The source changes the structure of the array at its path. Its patches
+	 * are kept as proposed so the structural array check sees them, and
+	 * `whenHidden` skips fields in that array because rows move.
+	 */
+	readonly reshapesSourceArray: boolean
+}
+
+/** The rules for each source type. A new source type must be listed here. */
+export const sourcePolicies = {
+	array: { reshapesSourceArray: true },
+	control: { reshapesSourceArray: false },
+	history: { reshapesSourceArray: false },
+	persistence: { reshapesSourceArray: false },
+	update: { reshapesSourceArray: false },
+} as const satisfies Record<
+	ValueTransactionSource<FieldValues>["type"],
+	SourcePolicy
+>
+
 type CoordinatorOptions<Input extends FieldValues, Context> = {
 	readonly middleware: readonly FormMiddleware<Input, Context>[]
 	readonly getValues: () => Input
@@ -154,12 +192,14 @@ type CoordinatorOptions<Input extends FieldValues, Context> = {
 	readonly afterUpdate?: AfterUpdate<Input, Context>
 	readonly resolveHiddenFieldWrites?: HiddenFieldWriteResolver<Input, Context>
 	readonly commit: ValueTransactionCommit<Input, Context>
-	readonly restore?: ValueTransactionCommit<Input, Context>
+	readonly restore?: ValueRestoreCommit<Input, Context>
 }
 
 type ManagedDispatchOptions<Input extends FieldValues, Context> = {
 	readonly allowTopLevelRemoval?: boolean
 	readonly commit?: ValueTransactionCommit<Input, Context>
+	/** Marks a feature restore: complete values that skip `whenHidden`. */
+	readonly restore?: RestorePolicy
 	readonly arrayPath?: readonly (string | number)[]
 }
 
@@ -181,6 +221,8 @@ export type ValueCoordinatorCapability<Input extends FieldValues, Context> = {
 	getValues(): DeepReadonly<Input>
 	/** Reads the terminal commit while a middleware frame is active. */
 	getCommittedTransaction(): ValueTransaction<Input, Context> | undefined
+	/** Reports whether the active transaction is a feature restore. */
+	isRestoring(): boolean
 	/** Dispatches a complete feature restore through the managed pipeline. */
 	restore(
 		recipe: FormUpdateRecipe<Input>,
@@ -188,6 +230,7 @@ export type ValueCoordinatorCapability<Input extends FieldValues, Context> = {
 			ValueTransactionSource<Input>,
 			{ type: "history" | "persistence" }
 		>,
+		policy: RestorePolicy,
 	): unknown
 }
 
@@ -250,6 +293,7 @@ type ActiveDispatch<Input extends FieldValues, Context> = {
 	readonly allowTopLevelRemoval: boolean
 	readonly commit: ValueTransactionCommit<Input, Context>
 	committed?: ValueTransaction<Input, Context>
+	readonly restoring: boolean
 	/** Present only while a diagnostic sink is attached. */
 	readonly trace?: ManagedTrace
 	readonly arrayStructure?: {
@@ -276,13 +320,16 @@ export function createValueCoordinator<
 	const capability: ValueCoordinatorCapability<Input, Context> = {
 		getCommittedTransaction: () => activeDispatch?.committed,
 		getValues: api.getValues,
-		restore: (recipe, source) => {
-			if (options.restore === undefined) {
+		isRestoring: () => activeDispatch?.restoring === true,
+		restore: (recipe, source, policy) => {
+			const commitRestore = options.restore
+			if (commitRestore === undefined) {
 				throw new TypeError("This form binding does not support value restore")
 			}
 			return dispatch(recipe, source, {
 				allowTopLevelRemoval: true,
-				commit: options.restore,
+				commit: (transaction) => commitRestore(transaction, policy),
+				restore: policy,
 			})
 		},
 	}
@@ -424,6 +471,7 @@ export function createValueCoordinator<
 		activeDispatch = {
 			allowTopLevelRemoval: dispatchOptions.allowTopLevelRemoval === true,
 			commit: dispatchOptions.commit ?? options.commit,
+			restoring: dispatchOptions.restore !== undefined,
 			...(hasFormDiagnosticSink(capability)
 				? { trace: new ManagedTrace(capability) }
 				: {}),
@@ -439,7 +487,8 @@ export function createValueCoordinator<
 					options.beforeUpdate,
 					activeDispatch.allowTopLevelRemoval,
 				)
-				if (effectiveTransaction !== undefined) {
+				// A restore brings back complete values, so hidden fields keep theirs.
+				if (effectiveTransaction !== undefined && !activeDispatch.restoring) {
 					effectiveTransaction = applyHiddenFieldWrites(
 						effectiveTransaction,
 						options.resolveHiddenFieldWrites,
@@ -658,9 +707,9 @@ function applyBeforeUpdate<Input extends FieldValues, Context>(
 }
 
 /**
- * Appends patches to a transaction. Array sources keep every patch so that
- * the structural array check sees them; other sources keep only the patches
- * that still change a value. Returns `undefined` when nothing changes.
+ * Appends patches to a transaction. A source that reshapes its array keeps
+ * every patch; other sources keep only the patches that still change a value.
+ * Returns `undefined` when nothing changes.
  */
 function extendTransaction<Input extends FieldValues, Context>(
 	transaction: ValueTransaction<Input, Context>,
@@ -669,14 +718,13 @@ function extendTransaction<Input extends FieldValues, Context>(
 	allowTopLevelRemoval: boolean,
 ): ValueTransaction<Input, Context> | undefined {
 	const combinedPatches = [...transaction.patches, ...extraPatches]
-	const patches =
-		transaction.source.type === "array"
-			? combinedPatches
-			: effectivePatches(
-					transaction.previousValues as Input,
-					nextValues,
-					combinedPatches,
-				)
+	const patches = sourcePolicies[transaction.source.type].reshapesSourceArray
+		? combinedPatches
+		: effectivePatches(
+				transaction.previousValues as Input,
+				nextValues,
+				combinedPatches,
+			)
 	if (patches.length === 0) return undefined
 	return createTransaction(
 		transaction.previousValues as Input,
@@ -693,14 +741,7 @@ function applyHiddenFieldWrites<Input extends FieldValues, Context>(
 	resolveWrites: HiddenFieldWriteResolver<Input, Context> | undefined,
 	allowTopLevelRemoval: boolean,
 ): ValueTransaction<Input, Context> | undefined {
-	const { source } = transaction
-	if (
-		resolveWrites === undefined ||
-		source.type === "history" ||
-		source.type === "persistence"
-	) {
-		return transaction
-	}
+	if (resolveWrites === undefined) return transaction
 
 	// Each field receives at most one write, so the loop ends.
 	const written = new Set<string>()

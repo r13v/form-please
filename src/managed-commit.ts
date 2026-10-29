@@ -1,7 +1,11 @@
 import type { FieldValues, UseFormReturn } from "react-hook-form"
 import type { ManagedValidationOptions } from "./form-kit-types.js"
 import { cloneFormValue } from "./form-value.js"
-import type { ValuePatch, ValueTransaction } from "./value-middleware.js"
+import type {
+	RestorePolicy,
+	ValuePatch,
+	ValueTransaction,
+} from "./value-middleware.js"
 
 /** Publishes one managed value transaction and schedules change validation. */
 export function commitManagedTransaction<
@@ -33,8 +37,9 @@ export function commitManagedRestore<
 	api: UseFormReturn<Input, Context, Output>,
 	transaction: ValueTransaction<Input, Context>,
 	validation: ManagedValidationOptions,
+	policy: RestorePolicy,
 ): void {
-	if (transaction.source.type === "persistence") {
+	if (!policy.keepFormState) {
 		api.reset(cloneFormValue(transaction.nextValues) as Input, {
 			keepDefaultValues: true,
 		})
@@ -90,10 +95,8 @@ function shouldValidateManagedTransaction<
 	if (paths === undefined && hasTouchedField(api.formState.touchedFields)) {
 		return true
 	}
-	const sourcePath =
-		transaction.source.type === "control" || transaction.source.type === "array"
-			? String(transaction.source.path)
-			: undefined
+	const { source } = transaction
+	const sourcePath = "path" in source ? String(source.path) : undefined
 	const touchedPaths = new Set(paths ?? [])
 	if (sourcePath !== undefined) touchedPaths.add(sourcePath)
 	return [...touchedPaths].some(

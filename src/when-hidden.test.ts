@@ -210,6 +210,7 @@ describe("whenHidden", () => {
 				draft.hidden = "from history"
 			},
 			{ type: "history", action: "undo" },
+			{ keepFormState: true },
 		)
 
 		expect(values.hidden).toBe("from history")

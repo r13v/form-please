@@ -7,16 +7,14 @@ import {
 	cloneFormValue,
 	isFormValueObject,
 } from "../form-value.js"
+import { createListenerSet, defineManagedFeature } from "../managed-feature.js"
 import type { StandardSchema } from "../types.js"
-import {
-	claimFeature,
-	type FormMiddlewareApi,
-	type FormMiddlewareNext,
-	getValueCoordinatorCapability,
-	readFeatureClaim,
-	type ValueCoordinatorCapability,
-	type ValueTransaction,
-	type ValueTransactionSource,
+import type {
+	FormMiddlewareApi,
+	FormMiddlewareNext,
+	ValueCoordinatorCapability,
+	ValueTransaction,
+	ValueTransactionSource,
 } from "../value-middleware.js"
 import {
 	decodePersistenceEnvelope,
@@ -134,9 +132,6 @@ type NormalizedOptions = Readonly<{
 }>
 
 const idleSave = Object.freeze({ status: "idle" as const })
-const persistenceFeatureClaimKey = Symbol.for(
-	"form-please.persistence-feature-claim",
-)
 const hookRetainers = new WeakMap<PersistenceHandle, () => () => void>()
 
 /** Retains RHF observation for one mounted usePersistence hook. */
@@ -155,55 +150,17 @@ export function createPersistenceMiddleware(
 	options: CreatePersistenceOptions,
 ): PersistenceFeature {
 	const normalized = normalizeOptions(options)
-	const states = new WeakMap<object, PersistenceState<FieldValues, unknown>>()
-	let feature: PersistenceFeature
-
-	feature = (<Input extends FieldValues, Context = unknown>(
-		api: FormMiddlewareApi<Input>,
-	) => {
-		const capability = getValueCoordinatorCapability<Input, Context>(api)
-		claimFeature(
-			capability,
-			persistenceFeatureClaimKey,
-			feature,
-			"A form can configure only one persistence feature",
-		)
-		const state = new PersistenceState(capability, normalized)
-		states.set(
-			capability,
-			state as unknown as PersistenceState<FieldValues, unknown>,
-		)
-		return (next: FormMiddlewareNext) =>
-			(transaction: ValueTransaction<Input, Context>) =>
-				state.forward(next, transaction)
-	}) as PersistenceFeature
-
-	Object.defineProperty(feature, "handle", {
-		enumerable: true,
-		value(form: FormBinding) {
-			const capability = getValueCoordinatorCapability(form)
-			const state = states.get(capability)
-			if (
-				state === undefined ||
-				readFeatureClaim(capability, persistenceFeatureClaimKey) !== feature
-			) {
-				throw new TypeError(
-					"This persistence feature is not configured for the supplied form",
-				)
-			}
-			state.attach(form)
-			return state.handle
-		},
-	})
-
-	return Object.freeze(feature)
+	return defineManagedFeature(
+		"persistence",
+		(capability) => new PersistenceState(capability, normalized),
+	) as unknown as PersistenceFeature
 }
 
 class PersistenceState<Input extends FieldValues, Context> {
 	readonly handle: PersistenceHandle
 	readonly #capability: ValueCoordinatorCapability<Input, Context>
 	readonly #options: NormalizedOptions
-	readonly #listeners = new Set<() => void>()
+	readonly #listeners = createListenerSet("Persistence")
 	#snapshot: PersistenceSnapshot = Object.freeze({
 		phase: "idle",
 		save: idleSave,
@@ -239,14 +196,15 @@ class PersistenceState<Input extends FieldValues, Context> {
 			getSnapshot: () => this.#snapshot,
 			restore: () => this.#restore(),
 			start: () => this.#start(),
-			subscribe: (listener) => this.#subscribe(listener),
+			subscribe: (listener) => this.#listeners.subscribe(listener),
 		})
 		hookRetainers.set(this.handle, () => this.#retainHook())
 		registerFormDiagnosticFeature(capability, {
 			getDetails: () => this.#diagnosticDetails(),
 			getSnapshot: () => this.#snapshot,
 			kind: "persistence",
-			subscribe: (listener) => this.#subscribe(listener),
+			label: "Persistence",
+			subscribe: (listener) => this.#listeners.subscribe(listener),
 		})
 	}
 
@@ -267,34 +225,6 @@ class PersistenceState<Input extends FieldValues, Context> {
 
 	attach(form: FormBinding): void {
 		this.#api ??= form.api as unknown as SubscribableFormApi<Input>
-	}
-
-	forward(
-		next: FormMiddlewareNext,
-		transaction: ValueTransaction<Input, Context>,
-	): unknown {
-		let result: unknown
-		try {
-			result = next(transaction.patches)
-		} catch (error) {
-			this.#observeCommit()
-			throw error
-		}
-		this.#observeCommit()
-		return result
-	}
-
-	#subscribe(listener: () => void): () => void {
-		if (typeof listener !== "function") {
-			throw new TypeError("Persistence listener must be a function")
-		}
-		this.#listeners.add(listener)
-		let subscribed = true
-		return () => {
-			if (!subscribed) return
-			subscribed = false
-			this.#listeners.delete(listener)
-		}
 	}
 
 	#ensureSubscribed(): void {
@@ -347,7 +277,7 @@ class PersistenceState<Input extends FieldValues, Context> {
 		if (this.#snapshot.phase === "active") this.#schedule()
 	}
 
-	#observeCommit(): void {
+	observeCommit(): void {
 		const transaction = this.#capability.getCommittedTransaction()
 		const pending = this.#pendingRestore
 		if (
@@ -436,10 +366,14 @@ class PersistenceState<Input extends FieldValues, Context> {
 		let dispatchError: unknown
 		let dispatchFailed = false
 		try {
-			dispatchResult = this.#capability.restore(() => cloneFormValue(target), {
-				action: "restore",
-				type: "persistence",
-			} satisfies PersistenceSource<Input>)
+			dispatchResult = this.#capability.restore(
+				() => cloneFormValue(target),
+				{
+					action: "restore",
+					type: "persistence",
+				} satisfies PersistenceSource<Input>,
+				{ keepFormState: false },
+			)
 		} catch (error) {
 			dispatchError = error
 			dispatchFailed = true
@@ -680,7 +614,7 @@ class PersistenceState<Input extends FieldValues, Context> {
 
 	#setSnapshot(snapshot: PersistenceSnapshot): void {
 		this.#snapshot = snapshot
-		for (const listener of [...this.#listeners]) listener()
+		this.#listeners.notify()
 	}
 }
 
