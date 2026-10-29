@@ -1,0 +1,26 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  conventional-title:
+    name: Conventional PR title
+    runs-on: ubuntu-latest
+
+    steps:
+      # A squash merge uses the PR title as the commit subject, and
+      # release-please reads only that subject to select the next version.
+      - name: Check the PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|perf|refactor|docs|test|build|ci|chore|style|revert)(\([a-z0-9-]+\))?!?: .+'
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "The PR title must be a conventional commit header, such as \"fix: keep row issues\" or \"feat!: ...\"." >&2
+            echo "Got: $PR_TITLE" >&2
+            exit 1
+          fi

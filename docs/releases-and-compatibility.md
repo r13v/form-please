@@ -7,6 +7,7 @@ This document owns the version policy, the supported React Hook Form (RHF) range
 - The version policy and the supported React and RHF versions for users: `docs-site/src/pages/get-started.mdx`.
 - release-please owns the package version and `CHANGELOG.md` (`.github/workflows/publish.yml`). Do not set the version by hand and do not edit `CHANGELOG.md`. `tests/package/package-metadata.test.ts` makes sure that `package.json` has no `version` script.
 - Mark a breaking change with `!` after the commit type and a `BREAKING CHANGE:` footer. release-please reads them to select the next major version.
+- Squash-merge a PR with a conventional PR title. GitHub uses the title as the subject of the squash commit, and release-please parses only that subject and its footers, not the messages of the branch commits. `.github/workflows/pr-title.yml` rejects a title that is not a conventional commit header. When a merged PR needs other release notes or several entries, add a `BEGIN_COMMIT_OVERRIDE` … `END_COMMIT_OVERRIDE` block to its description and rerun the latest Publish run on `main`; release-please reads the block in place of the subject.
 - A breaking change also adds an entry to `docs-site/src/pages/upgrade-to-v2.mdx` while the 2.x line is current. The owner of this rule is `documentation-rules.md` § Docs site coupling.
 
 ## React Hook Form range

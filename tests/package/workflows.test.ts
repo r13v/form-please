@@ -11,9 +11,26 @@ import {
 } from "./workflow-contract.js"
 
 const pagesWorkflow = await readWorkflow("pages.yml")
+const prTitleWorkflow = await readWorkflow("pr-title.yml")
+const prTitle = parse(prTitleWorkflow) as Record<string, unknown>
 const publishWorkflow = await readWorkflow("publish.yml")
 const pages = parse(pagesWorkflow) as Record<string, unknown>
 const publish = parse(publishWorkflow) as Record<string, unknown>
+
+describe("PR title workflow", () => {
+	it("checks the title of each pull request without permissions", () => {
+		expect(record(record(prTitle.on).pull_request).types).toContain("edited")
+		expect(record(prTitle.on).pull_request_target).toBeUndefined()
+		expect(prTitle.permissions).toEqual({})
+		// The title is untrusted input, so the script reads it from an env variable.
+		const [step] = workflowSteps(job(prTitle, "conventional-title"))
+		expect(step?.run).not.toContain("${{")
+		expect(record(step?.env).PR_TITLE).toBe(
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expression syntax.
+			"${{ github.event.pull_request.title }}",
+		)
+	})
+})
 
 describe("GitHub Pages workflow", () => {
 	it("deploys to production only from main", () => {
