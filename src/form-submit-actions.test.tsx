@@ -445,6 +445,25 @@ describe("submit actions and external issues", () => {
 		})
 	})
 
+	it("clears the submission error on a native form reset", async () => {
+		const onSubmit = vi.fn<() => Promise<void>>(() => Promise.reject(0))
+		const { form, submit } = renderRejectingForm({ onSubmit })
+		submit()
+		await waitFor(() =>
+			expect(form.current?.submission.getSnapshot().error).toEqual({
+				value: 0,
+			}),
+		)
+		const element = screen.getByRole("button", { name: "Save" }).closest("form")
+		act(() => {
+			fireEvent.reset(element as HTMLFormElement)
+		})
+		expect(form.current?.submission.getSnapshot()).toEqual({
+			action: null,
+			error: null,
+		})
+	})
+
 	it("does not capture validate failures or schema issues as submission errors", async () => {
 		const failure = new Error("Validator crashed")
 		const unhandled = captureUnhandledRejections()

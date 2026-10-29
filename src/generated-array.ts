@@ -1,10 +1,13 @@
 import { get } from "react-hook-form"
 
-import { cloneFormValue } from "./form-value.js"
+import { cloneFormValue, isFormValueObject } from "./form-value.js"
 
 /** Creates one independent item from a generated array's configured default. */
 export function cloneItemDefault(value: unknown): unknown {
 	const candidate = typeof value === "function" ? value() : value
+	if (!isFormValueObject(candidate)) {
+		throw new TypeError("Generated array item defaults must be plain objects")
+	}
 	return cloneFormValue(candidate)
 }
 

@@ -241,6 +241,11 @@ class HistoryState<Input extends FieldValues, Context> {
 			this.#finishRestore(transaction)
 			return
 		}
+		// A restored draft acts like initial values, so undo cannot pass it.
+		if (transaction.source.type === "persistence") {
+			this.#adoptBoundary(transaction.nextValues as Input)
+			return
+		}
 		this.#recordManagedUpdate(transaction)
 	}
 

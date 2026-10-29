@@ -31,6 +31,7 @@ import {
 	useWatch,
 } from "react-hook-form"
 import {
+	commitRowOperation,
 	type FormArray,
 	reconcileGeneratedArray,
 	registerGeneratedArray,
@@ -72,7 +73,6 @@ import {
 	fieldErrorsToIssues,
 	fieldErrorToIssues,
 	hasFieldError,
-	remapArraySchemaIssues,
 } from "./standard-schema-resolver.js"
 import type {
 	ArrayFieldPath,
@@ -393,6 +393,8 @@ type RuntimeForm = {
 	readonly issues: FormIssueStore
 	/** The live submission state. */
 	readonly submission: FormSubmission
+	/** Forgets stored issues and the last submission error after a native reset. */
+	readonly resetSubmission: () => void
 	/** The action that `kit.Submit` without an action runs, when one exists. */
 	readonly defaultAction: string | undefined
 	/** The action that Enter in a single-line field runs, when one exists. */
@@ -441,7 +443,8 @@ function attachFormDiagnosticsRuntime(
 }
 /** Validation policy used after one managed value commit. */
 type ManagedValidationOptions = {
-	readonly isSubmitted: boolean
+	/** Reads the live RHF submitted flag, which a render-time read can leave stale. */
+	readonly isSubmitted: () => boolean
 	readonly mode: Mode
 	readonly reValidateMode: Exclude<Mode, "all" | "onTouched">
 }
@@ -890,8 +893,9 @@ function assembleKit(
 		apiRef.current = api
 		const contextRef = useRef(options.context)
 		contextRef.current = options.context
+		const submittedRef = useRef(api.formState.isSubmitted)
 		const validation: ManagedValidationOptions = {
-			isSubmitted: api.formState.isSubmitted,
+			isSubmitted: () => submittedRef.current,
 			mode: options.mode ?? "onSubmit",
 			reValidateMode: options.reValidateMode ?? "onChange",
 		}
@@ -976,6 +980,16 @@ function assembleKit(
 		useLayoutEffect(
 			() =>
 				api.subscribe({
+					formState: { isSubmitted: true },
+					callback: ({ isSubmitted }) => {
+						submittedRef.current = isSubmitted === true
+					},
+				}),
+			[api],
+		)
+		useLayoutEffect(
+			() =>
+				api.subscribe({
 					formState: { values: true },
 					callback: () => {
 						submission.issues.clearChanged(apiRef.current.getValues())
@@ -1028,6 +1042,7 @@ function assembleKit(
 				inputRefs: inputRefs.current,
 				issues: submission.issues,
 				readOnly: options.readOnly === true,
+				resetSubmission: submission.reset,
 				submission: submission.store,
 				submitAction: submission.submitAction,
 			} as unknown as RuntimeForm
@@ -1100,7 +1115,7 @@ function assembleKit(
 							}}
 							onReset={(event) => {
 								event.preventDefault()
-								runtimeForm.issues.forget()
+								runtimeForm.resetSubmission()
 								form.api.reset()
 							}}
 							onSubmit={(event) => {
@@ -1849,17 +1864,16 @@ function dispatchArrayAction(
 	commitArray: (transaction: ValueTransaction<FieldValues, unknown>) => void,
 ): unknown {
 	const arrayPath = fieldPathSegments(form.api.getValues(), path)
-	const commit = (transaction: ValueTransaction<FieldValues, unknown>) => {
-		commitArray(transaction)
-		form.commit(transaction)
-	}
 	return form.dispatch(
 		(draft) => recipe(getMutableArrayValue(draft, path)),
 		source,
 		{
 			arrayPath,
 			commit: (transaction) => {
-				if (source.action === "append") return commit(transaction)
+				if (source.action === "append") {
+					commitArray(transaction)
+					return form.commit(transaction)
+				}
 				// The recipe applied to old row indexes maps each kept row to its new index.
 				const rows = getMutableArrayValue(form.api.getValues(), path).map(
 					(_, index) => index,
@@ -1868,13 +1882,9 @@ function dispatchArrayAction(
 				const indexes = new Map(
 					rows.map((oldIndex, newIndex) => [oldIndex, newIndex]),
 				)
-				// Issue paths must follow their rows before RHF moves error branches.
-				remapArraySchemaIssues(
-					form.api.getFieldState(path).error,
-					path,
-					indexes,
+				commitRowOperation(form, path, indexes, transaction, () =>
+					commitArray(transaction),
 				)
-				form.issues.remapArray(path, indexes, () => commit(transaction))
 			},
 		},
 	)
@@ -1948,10 +1958,12 @@ function shouldValidateManagedTransaction<
 	transaction: ValueTransaction<Input, Context>,
 	validation: ManagedValidationOptions,
 ): boolean {
-	if (validation.isSubmitted) {
+	// RHF validates every change in `all` mode, before it applies reValidateMode.
+	if (validation.mode === "all") return true
+	if (validation.isSubmitted()) {
 		return validation.reValidateMode === "onChange"
 	}
-	if (validation.mode === "all" || validation.mode === "onChange") return true
+	if (validation.mode === "onChange") return true
 	if (validation.mode !== "onTouched") return false
 	const paths = patchedFieldPaths(transaction.patches)
 	if (paths === undefined && hasTouchedField(api.formState.touchedFields)) {

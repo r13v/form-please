@@ -451,8 +451,15 @@ export function createValueCoordinator<
 		const previousValues = options.getValues()
 		const [, producedPatches] = valueImmer.produceWithPatches(
 			previousValues,
-			// biome-ignore lint/suspicious/noConfusingVoidType: The public mutating recipe intentionally returns void.
-			(draft) => recipe(draft) as Draft<Input> | undefined | void,
+			(draft) => {
+				const result = recipe(draft)
+				if (isPromiseLike(result)) {
+					// The synchronous error reports the cause; later draft writes fail on a revoked proxy.
+					result.then(undefined, () => {})
+					throw new TypeError("Managed update recipes must be synchronous")
+				}
+				return result as Draft<Input> | undefined
+			},
 		)
 		if (producedPatches.length === 0) return undefined
 

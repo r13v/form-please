@@ -163,27 +163,7 @@ export function reconcileGeneratedArray(
 						)
 					}
 				}
-				const arrayError = form.api.getFieldState(path).error
-				let rootError: FieldError | undefined = (
-					arrayError as
-						| (FieldError & { readonly root?: FieldError })
-						| undefined
-				)?.root
-				if (rootError === undefined && arrayError?.type !== undefined) {
-					rootError = {
-						type: arrayError.type,
-						message: arrayError.message,
-						types: arrayError.types,
-					}
-				}
-				let objectRowErrors: [string, unknown][] = []
-				if (!Array.isArray(arrayError)) {
-					objectRowErrors = Object.entries(arrayError ?? {}).filter(([index]) =>
-						/^(0|[1-9]\d*)$/.test(index),
-					)
-				}
-				remapArraySchemaIssues(arrayError, path, indexes)
-				form.issues.remapArray(path, indexes, () => {
+				commitRowOperation(form, path, indexes, transaction, () => {
 					const workingKeys = [...currentKeys]
 					for (let index = workingKeys.length - 1; index >= 0; index--) {
 						if (!selected.has(workingKeys[index] as string | number)) {
@@ -206,23 +186,68 @@ export function reconcileGeneratedArray(
 							workingKeys.splice(index, 0, moved as string | number)
 						}
 					}
-					// A schema can report the array error before indexed errors, producing an object branch.
-					// RHF native operations only remap array-shaped error branches.
-					if (objectRowErrors.length > 0) {
-						form.api.clearErrors(path)
-						for (const [oldIndex, error] of objectRowErrors) {
-							const newIndex = indexes.get(Number(oldIndex))
-							if (newIndex !== undefined)
-								form.api.setError(`${path}.${newIndex}`, error as FieldError)
-						}
-					}
-					if (rootError !== undefined)
-						form.api.setError(`${path}.root`, rootError)
-					form.commit(transaction)
 				})
 			},
 		},
 	)
+}
+
+/** The runtime form parts that a native row operation needs. */
+type RowOperationForm = {
+	readonly api: {
+		getFieldState(path: string): { readonly error?: FieldError }
+		setError(path: string, error: FieldError): void
+		clearErrors(path: string): void
+	}
+	readonly commit: ValueTransactionCommit<FieldValues, unknown>
+	readonly issues: Pick<FormIssueStore, "remapArray">
+}
+
+/**
+ * Applies native row operations and commits the transaction so that schema and
+ * stored issues stay with their rows. `indexes` maps each kept old row index to its new index.
+ */
+export function commitRowOperation(
+	form: RowOperationForm,
+	path: string,
+	indexes: ReadonlyMap<number, number>,
+	transaction: Parameters<ValueTransactionCommit<FieldValues, unknown>>[0],
+	applyNative: () => void,
+): void {
+	const arrayError = form.api.getFieldState(path).error
+	let rootError: FieldError | undefined = (
+		arrayError as (FieldError & { readonly root?: FieldError }) | undefined
+	)?.root
+	if (rootError === undefined && arrayError?.type !== undefined) {
+		rootError = {
+			type: arrayError.type,
+			message: arrayError.message,
+			types: arrayError.types,
+		}
+	}
+	let objectRowErrors: [string, unknown][] = []
+	if (!Array.isArray(arrayError)) {
+		objectRowErrors = Object.entries(arrayError ?? {}).filter(([index]) =>
+			/^(0|[1-9]\d*)$/.test(index),
+		)
+	}
+	// Issue paths must follow their rows before RHF moves error branches.
+	remapArraySchemaIssues(arrayError, path, indexes)
+	form.issues.remapArray(path, indexes, () => {
+		applyNative()
+		// A schema can report the array error before indexed errors, producing an object branch.
+		// RHF native operations only remap array-shaped error branches.
+		if (objectRowErrors.length > 0) {
+			form.api.clearErrors(path)
+			for (const [oldIndex, error] of objectRowErrors) {
+				const newIndex = indexes.get(Number(oldIndex))
+				if (newIndex !== undefined)
+					form.api.setError(`${path}.${newIndex}`, error as FieldError)
+			}
+		}
+		if (rootError !== undefined) form.api.setError(`${path}.root`, rootError)
+		form.commit(transaction)
+	})
 }
 
 /** Rejects middleware changes to nested arrays of reconciled rows. */

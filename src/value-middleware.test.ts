@@ -22,6 +22,34 @@ type Values = {
 }
 
 describe("value middleware coordinator", () => {
+	it.each([
+		[
+			"before its first await",
+			async (draft: Draft<Values>) => {
+				draft.quantity = 2
+				await Promise.resolve()
+			},
+		],
+		[
+			"after its first await",
+			async (draft: Draft<Values>) => {
+				await Promise.resolve()
+				draft.quantity = 2
+			},
+		],
+	])(
+		"rejects an asynchronous update recipe that mutates %s",
+		(_name, recipe) => {
+			const harness = createHarness([])
+			expect(() =>
+				harness.coordinator.update(
+					recipe as unknown as (draft: Draft<Values>) => void,
+				),
+			).toThrow("Managed update recipes must be synchronous")
+			expect(harness.commit).not.toHaveBeenCalled()
+		},
+	)
+
 	it("publishes the managed pipeline without changing its asynchronous result", async () => {
 		const release = deferred<void>()
 		const events: FormDiagnosticEvent[] = []

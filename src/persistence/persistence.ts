@@ -304,11 +304,12 @@ class PersistenceState<Input extends FieldValues, Context> {
 				"Persistence operations require a current Form Please form handle",
 			)
 		}
-		this.#observedValues = this.#currentValues()
 		this.#unsubscribe = this.#api.subscribe({
 			callback: ({ values }) => this.#observeValues(values),
 			formState: { values: true },
 		})
+		// Edits made while no subscription existed count as one new revision.
+		this.#observeValues(this.#currentValues())
 	}
 
 	#retainHook(): () => void {
@@ -319,11 +320,22 @@ class PersistenceState<Input extends FieldValues, Context> {
 			if (!retained) return
 			retained = false
 			this.#retainedHooks--
-			if (this.#retainedHooks > 0) return
-			this.#unsubscribe?.()
-			this.#unsubscribe = undefined
-			// A scheduled or in-flight save intentionally keeps the last observed edit.
+			this.#releaseSubscription()
 		}
+	}
+
+	#releaseSubscription(): void {
+		if (this.#retainedHooks > 0) return
+		// A pending restore needs live edits to detect a conflict.
+		const restore = this.#restorePromise
+		if (restore !== undefined) {
+			const release = () => this.#releaseSubscription()
+			restore.then(release, release)
+			return
+		}
+		this.#unsubscribe?.()
+		this.#unsubscribe = undefined
+		// A scheduled or in-flight save intentionally keeps the last observed edit.
 	}
 
 	#observeValues(values: Input): void {

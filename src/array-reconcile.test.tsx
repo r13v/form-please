@@ -215,6 +215,45 @@ describe("managed array reconciliation", () => {
 		expect(form.api.getFieldState("rows.1.name").error).toBeUndefined()
 	})
 
+	it.each([
+		["remove", () => fireEvent.click(rowAction(0, "Remove item 1")), ["sam"]],
+		[
+			"move",
+			() => fireEvent.click(rowAction(1, "Move item 2 up")),
+			["sam", "alex"],
+		],
+	] as const)(
+		"keeps row issues after a generated %s when the schema reports the array issue first",
+		async (_action, act_, ids) => {
+			const validationSchema = schema.superRefine((_values, context) => {
+				context.addIssue({
+					code: "custom",
+					path: ["rows"],
+					message: "Array issue",
+				})
+				context.addIssue({
+					code: "custom",
+					path: ["rows", 1, "name"],
+					message: "Sam issue",
+				})
+			})
+			const form = mount({}, true, validationSchema)
+			await act(() => form.api.trigger())
+			act_()
+			expect(form.api.getValues().rows.map((row) => row.id)).toEqual(ids)
+			expect(
+				fieldErrorToIssues(
+					form.api.getFieldState("rows.0.name").error,
+					"rows.0.name",
+				),
+			).toEqual([{ message: "Sam issue", path: "rows.0.name" }])
+			expect(
+				fieldErrorToIssues(form.api.getFieldState("rows").error, "rows"),
+			).toEqual([{ message: "Array issue", path: "rows" }])
+			expect(form.api.getFieldState("rows.1.name").error).toBeUndefined()
+		},
+	)
+
 	it("moves external issues with the selected person", () => {
 		const form = mount()
 		act(() =>

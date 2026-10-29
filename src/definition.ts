@@ -1,5 +1,6 @@
 import type { FieldValues } from "react-hook-form"
 
+import { areFormValuesEqual } from "./form-value.js"
 import type {
 	ControlDefinitionRegistry,
 	ErrorDisplay,
@@ -870,7 +871,13 @@ export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
 	)
 	const writes: HiddenFieldWrite[] = []
 	for (const [path, field] of next) {
-		if (field.visible || previous.get(path)?.visible !== true) continue
+		if (field.visible) continue
+		const previousPath = previousRowPath(
+			path,
+			transaction.previousValues,
+			transaction.nextValues,
+		)
+		if (previous.get(previousPath)?.visible !== true) continue
 		// Array paths use item positions, and a structural change moves items.
 		if (source.type === "array" && path.startsWith(`${source.path}.`)) continue
 
@@ -892,6 +899,45 @@ export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
 		writes.push({ path, value: initial.value })
 	}
 	return writes
+}
+
+/**
+ * Maps a field path in the next values to the same row in the previous values.
+ * A moved row keeps its value, so an equal previous row identifies it. Equal
+ * rows have equal visibility, so any equal match is correct. An edited row
+ * keeps its index.
+ */
+function previousRowPath(
+	path: string,
+	previousValues: unknown,
+	nextValues: unknown,
+): string {
+	let previous = previousValues
+	let next = nextValues
+	return path
+		.split(".")
+		.map((segment) => {
+			let previousSegment = segment
+			if (Array.isArray(previous) && Array.isArray(next)) {
+				const row: unknown = next[Number(segment)]
+				if (!areFormValuesEqual(previous[Number(segment)], row)) {
+					const index = previous.findIndex((candidate) =>
+						areFormValuesEqual(candidate, row),
+					)
+					if (index !== -1) previousSegment = String(index)
+				}
+			}
+			previous = readChild(previous, previousSegment)
+			next = readChild(next, segment)
+			return previousSegment
+		})
+		.join(".")
+}
+
+function readChild(value: unknown, segment: string): unknown {
+	return value !== null && typeof value === "object"
+		? (value as Record<string, unknown>)[segment]
+		: undefined
 }
 
 /** Resolves the visibility of every field that declares `whenHidden`. */

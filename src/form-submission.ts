@@ -50,6 +50,8 @@ export type FormSubmissionRuntime = {
 	readonly issues: FormIssueStore
 	readonly store: FormSubmission
 	readonly setIssues: FormBinding["setIssues"]
+	/** Forgets stored issues and the last submission error after a form reset. */
+	readonly reset: () => void
 	readonly submitAction: (
 		name: string,
 		submitter: FormSubmitDetails<AnyFormSchema>["submitter"],
@@ -132,6 +134,10 @@ export function createFormSubmissionRuntime({
 		implicitAction: implicitNames[0],
 		issues,
 		store,
+		reset() {
+			issues.forget()
+			if (snapshot.error !== null) publish({ error: null })
+		},
 		setIssues(nextIssues, setOptions) {
 			issues.replace("external", nextIssues as readonly FormIssue[])
 			if (snapshot.error !== null) publish({ error: null })
