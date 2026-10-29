@@ -40,7 +40,7 @@ describe("package metadata", () => {
 			peerDependencies: {
 				react: "^18.0.0 || ^19.0.0",
 				"react-dom": "^18.0.0 || ^19.0.0",
-				"react-hook-form": "^7.76.1",
+				"react-hook-form": "^7.81.0",
 			},
 			sideEffects: ["**/*.css"],
 			type: "module",

@@ -242,7 +242,7 @@ test("keeps form kits, API, and production guidance executable", async () => {
 	]) {
 		assert.match(recipes, new RegExp(`<${preview} />`))
 	}
-	for (const version of ["7.77.0", "7.76.1"]) {
+	for (const version of ["7.77.0", "7.81.0"]) {
 		assert.match(recipes, new RegExp(`React Hook Form ${version}`))
 	}
 	assert.doesNotMatch(recipes, /parses once for validation and\s+again/)

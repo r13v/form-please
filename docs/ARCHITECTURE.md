@@ -58,7 +58,7 @@ Public JavaScript entries are limited to:
 
 `form-please/layout.css` and `form-please/package.json` are explicit non-code
 exports. React UI, devtools, history, and persistence entries are client modules.
-The testing entry is a server-compatible headless module. React Hook Form 7.76.1
+The testing entry is a server-compatible headless module. React Hook Form 7.81.0
 or newer within major version 7 is a required peer. Immer is a
 direct runtime dependency. React Hook Form DevTools is a direct dependency that
 is reachable only through `form-please/devtools`. Material UI and Emotion peers
