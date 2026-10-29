@@ -34,6 +34,8 @@ development build:
 ```
 
 The `form` prop is the connection and identity. Do not create a separate ID.
+The component throws a `TypeError` when `form` is not a current Form, Please
+form binding.
 Use the optional `name` when a page has several forms or when a readable label
 helps. Without `name`, the component assigns `Form 1`, `Form 2`, and so on.
 
@@ -57,13 +59,18 @@ pause the form.
 
 ## Know the data boundary
 
-Devtools is read-only. It keeps at most 100 updates and 20 transitions for each
-configured feature. The journal exists only while the optional component is
-mounted.
+Devtools is read-only. It cannot edit values, submit the form, seek history, or
+run persistence operations. It keeps at most 100 updates and 20 transitions for
+each configured feature. The journal exists only while the optional component
+is mounted. A form without a mounted component records no diagnostic data.
+
+The root entry, the presets, history, and persistence do not import the
+devtools. Only an import of `form-please/devtools` adds the drawer to a bundle.
 
 The drawer shows raw local values, context, patches, errors, and feature details.
 This data can be sensitive. Do not mount devtools in an untrusted or production
-environment. The first release does not export or send diagnostic data.
+environment. Devtools does not sanitize, export, or send diagnostic data, and it
+is not a production monitoring tool.
 
 ## Next steps
 

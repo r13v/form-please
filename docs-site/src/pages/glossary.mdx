@@ -12,8 +12,8 @@ section that explains the term.
 ## Managed update
 
 A managed update is a value change that goes through the managed update hooks and value middleware.
-Generated controls, generated array actions, `form.update`, history, and
-persistence restore make managed updates. Direct `form.api` calls and resets do
+Generated controls, generated array actions, `form.array(path).reconcile`,
+`form.update`, history, and persistence restore make managed updates. Direct `form.api` calls and resets do
 not. Read
 [Know which changes enter middleware](/middleware#changes-that-run-the-rules).
 

@@ -1,41 +1,14 @@
 # Managed updates
 
-A managed value update is a value change that Form, Please processes before it reaches React Hook Form (RHF). Generated control changes, generated array actions, `form.update(recipe)`, `form.array(path).reconcile` and feature restores are managed updates. Every managed update goes through the form-local coordinator, also when the form has no middleware. The coordinator does not keep live values; RHF stays the only owner of form state. The coordinator is `createValueCoordinator` in `src/value-middleware.ts`; the RHF commit is in `src/managed-commit.ts`.
+Every managed update goes through the form-local coordinator, also when the form has no middleware. The coordinator does not keep live values; RHF stays the only owner of form state. The coordinator is `createValueCoordinator` in `src/value-middleware.ts`; the RHF commit is in `src/managed-commit.ts`. The guarantees for users (sources, lifecycle order, `next` rules, errors, validation timing): `docs-site/src/pages/middleware.mdx`.
 
 ADRs: `docs/adr/0016-coordinate-managed-value-updates-before-react-hook-form.md` (coordinator before RHF), `docs/adr/0017-add-managed-update-hooks-around-middleware.md` (hooks), `docs/adr/0025-move-managed-update-policy-to-form-definitions.md` (policy in the definition), `docs/adr/0027-reset-hidden-field-values-in-managed-updates.md` (`whenHidden`).
 
-## Lifecycle order
+## Coordinator rules
 
-One managed update runs these steps in this order:
-
-1. The Immer recipe produces patches. An empty patch list produces no transaction and no other step runs.
-2. `beforeUpdate` receives an Immer draft of the proposed values. It can adjust the proposal or cancel it with `false`.
-3. `whenHidden` actions add writes for the fields that the transaction hides. See `managed-updates.md` § whenHidden.
-4. The middleware chain runs in definition order. Each middleware forwards patches with `next`.
-5. The terminal `next` commits the transaction to RHF.
-6. After the synchronous middleware unwind, `afterUpdate` receives the final committed transaction. It does not run when the update was cancelled.
-
-The policy (middleware, `beforeUpdate`, `afterUpdate`) belongs to the form definition and is fixed for the binding lifetime. Each binding initializes an independent middleware chain. A callback reads binding-specific data from `transaction.context`, not from a React closure.
-
-## Rules for next
-
-- `next` commits before it returns. Code after `next` is post-commit work.
-- A middleware calls `next` at most once. A second call is a `TypeError`.
-- A middleware that returns without a call to `next` cancels the transaction.
-- A middleware can append patches or replace them. The coordinator derives `nextValues` from the forwarded patches; middleware cannot supply values that the patches do not produce.
-- A middleware controls the dispatch return value, so `form.update` returns `unknown`.
-- An error after the commit does not roll back the values. When middleware and `afterUpdate` both fail, the caller receives an `AggregateError`.
-
-## Synchronous rules
-
-- The recipe, `beforeUpdate` and `afterUpdate` are synchronous. A Promise result is a `TypeError`.
-- `next` must be called synchronously. A call after the middleware frame returns is a `TypeError`.
-- A managed update cannot start while another managed update is active. A nested `update` call is a `TypeError`.
-- A middleware can return a Promise after a synchronous commit. An update that starts after that asynchronous work is an independent transaction.
-
-## What bypasses the coordinator
-
-Direct calls through `form.api`, initial values and reset do not go through middleware, `beforeUpdate`, `afterUpdate` or `whenHidden`. This is deliberate: `form.api` is the unchanged RHF API, and an application uses it when it wants raw RHF behaviour. Managed value history does not record these changes.
+- The policy (middleware, `beforeUpdate`, `afterUpdate`) is fixed with the definition, and each binding initializes its own middleware chain. Callbacks therefore read binding data from `transaction.context`, never from a React closure.
+- The coordinator derives `nextValues` from the forwarded patches, so middleware cannot commit values that the patches do not produce.
+- `form.api`, initial values and reset bypass the coordinator on purpose: `form.api` is the unchanged RHF API, for the cases in which an application wants raw RHF behaviour.
 
 ## Commit to RHF
 
@@ -44,11 +17,11 @@ The commit writes each changed top-level key of the input:
 - A top-level key that does not contain a mounted generated array goes through one `setValues` call.
 - A top-level key that contains a mounted generated array goes through one `setValue` call for each changed leaf. RHF 7.91 regenerates the row IDs of each field array that `setValues` covers, also an unchanged one. `src/rhf-contract.test.tsx` pins that a leaf `setValue` keeps the row IDs.
 
-A managed update cannot remove a top-level key, because `setValues` shallow-merges top-level keys (pinned in `src/rhf-contract.test.tsx`). Assign `undefined` when the schema permits it. Feature restores are exempt, because they reset the complete value tree.
+`setValues` shallow-merges top-level keys (pinned in `src/rhf-contract.test.tsx`), so the coordinator rejects the removal of a top-level key. Feature restores pass `allowTopLevelRemoval`, because they reset the complete value tree.
 
 ## Revalidation
 
-After the commit, one RHF `trigger` call validates the patched paths when RHF would validate the same change: by `mode` before the first submit and by `reValidateMode` after it. `src/rhf-contract.test.tsx` pins the `isSubmitted` subscription that this check reads. Managed validation does not keep the `delayError` timing of RHF. `isDirty` is the RHF comparison of the complete value; `dirtyFields` is correct only for mounted patched paths.
+After the commit, one RHF `trigger` call validates the patched paths. `shouldValidateManagedTransaction` in `src/managed-commit.ts` mirrors the RHF decision by `mode` and `reValidateMode`; `src/rhf-contract.test.tsx` pins the `isSubmitted` subscription that it reads. The guarantee for users: `docs-site/src/pages/middleware.mdx`.
 
 ## Source policies
 
@@ -61,27 +34,18 @@ The rule `reshapesSourceArray` exists because an `array` source changes the rows
 
 ## whenHidden
 
-After `beforeUpdate`, the coordinator applies the field `whenHidden` actions. It resolves field visibility for `previousValues` and `nextValues` with the transaction context. For each field that the transaction hides, it adds the resolved write to the same transaction, which keeps its source. The step repeats until no other field becomes hidden; each field receives at most one write. The writes are visible to middleware, `afterUpdate` and managed value history as part of the transaction.
-
-`whenHidden` does not apply in these cases:
-
-- A feature restore. It brings back complete values, and a hidden field keeps its restored value.
-- A context change. A context change is not a managed update.
-- A field in the array of a source that reshapes its array. See `managed-updates.md` § Source policies.
-
-Without a `whenHidden` action, a hidden field keeps its value, because the binding sets `shouldUnregister: false`. The resolver is `resolveHiddenFieldWrites` in `src/definition.ts`.
+`applyHiddenFieldWrites` in `src/value-middleware.ts` runs after `beforeUpdate` and before middleware. `resolveHiddenFieldWrites` in `src/definition.ts` resolves field visibility for `previousValues` and `nextValues` with the transaction context. The writes extend the same transaction and keep its source. The loop ends because each field receives at most one write. The coordinator skips the step for a restore and, through `reshapesSourceArray`, for the source array; see `managed-updates.md` § Source policies. A definition without a `whenHidden` action gets no resolver, so the step costs nothing. The guarantee for users: `docs-site/src/pages/conditional-fields.mdx`.
 
 ## Restores
 
-A feature restore is a managed update in which a managed feature replaces the complete schema input. The feature dispatches it through the package-private coordinator capability with a `RestorePolicy` (`src/value-middleware.ts`). The feature chooses the policy; the core does not branch on feature names:
+A feature restore is a managed update in which a managed feature replaces the complete schema input. The feature dispatches it through the package-private coordinator capability with a `RestorePolicy` (`src/value-middleware.ts`). The feature chooses the policy; the core does not branch on feature names. `keepFormState: true` keeps RHF metadata and revalidates (history); `keepFormState: false` clears it and does not validate (persistence).
 
-- `keepFormState: true` keeps RHF errors, touched and submit state, and revalidates by the form mode. History navigation uses it.
-- `keepFormState: false` clears that state and does not validate. A persistence restore uses it.
-
-A restore resets the complete RHF value tree with `keepDefaultValues`, so the default-value baseline stays (pinned in `src/rhf-contract.test.tsx`). The reset synchronizes every restored array structure. The array values are exact, but RHF can generate new row IDs. A restore skips `whenHidden` and the row-count guard.
+A restore resets the complete RHF value tree with `keepDefaultValues`, so the default-value baseline stays (pinned in `src/rhf-contract.test.tsx`). The reset synchronizes every restored array structure, so a restore skips the row-count guard; RHF can generate new row IDs. A restore also skips `whenHidden`, because it brings back complete values.
 
 Another feature reads `isRestoring()` on the capability during the transaction. History uses it to treat a restore from another feature as a boundary that undo cannot pass.
 
+The guarantees for users: `docs-site/src/pages/history.mdx` and `docs-site/src/pages/persistence.mdx`.
+
 ## Row-count guard
 
-A managed update must not change the number of rows of a mounted generated array, because `setValues` and leaf `setValue` cannot update the row state of `useFieldArray`. The only exception is the array of the transaction's own `array` source; its native operation changes the rows. An array inside a row of the source array is compared with the same row after the action. A value change that keeps the row count is allowed. A violation is a `TypeError` that names the array path. The guard is `assertMountedArrayStructures` in `src/array-reconcile.ts`. To change rows, use the generated array actions or `form.array(path).reconcile`; see `generated-arrays.md`.
+`setValues` and leaf `setValue` cannot update the row state of `useFieldArray`, so `assertMountedArrayStructures` in `src/array-reconcile.ts` rejects a managed update that changes the row count of a mounted generated array. The array of the transaction's own `array` source is exempt, because its native operation changes the rows. The guard maps an array inside a kept row of the source array to the new index of that row. The guarantee for users: `docs-site/src/pages/middleware.mdx`. Row operations: `generated-arrays.md`.

@@ -9,6 +9,8 @@ Form, Please is a React integration over React Hook Form (RHF). This document ow
 - Form, Please owns the typed UI definitions, definition resolution, generated fields, the coordination of managed value updates, controls, slots and accessibility wiring.
 - The application owns the product workflow, requests, caches, authorization, storage, server transport and visual design.
 
+The ownership rule for users: `docs-site/src/pages/how-it-works.mdx`.
+
 ## No separate store
 
 Form, Please has no form store, reducer, command model, server protocol or validation cache of its own. RHF is the only owner of live values.
@@ -30,7 +32,7 @@ Default slots, native controls and presets use the core modules. They do not def
 
 `tests/package/build-output.test.ts` checks these rules on the built output. Read it for the exact assertions.
 
-- The root entry reaches RHF and Immer. It must not reach devtools code, `@hookform/devtools`, `@uiw/react-json-view`, Material UI, history code or persistence code. An application that imports only the root does not pay for an optional feature.
+- The root entry reaches RHF and Immer. It must not reach devtools code, `@hookform/devtools`, `@uiw/react-json-view`, Material UI, history code or persistence code. The bundle guarantee for users: `docs-site/src/pages/api.mdx`.
 - Only `form-please/devtools` reaches the RHF DevTools and the JSON viewer. These packages are direct dependencies, so the rule above is what keeps them out of an application that does not use devtools.
 - Only `form-please/preset-mui` reaches Material UI. Material UI and Emotion are optional peers for this reason; `docs/adr/0013-ship-material-ui-as-an-opt-in-preset.md` gives the decision.
 - `form-please/history` and `form-please/persistence` reach React and the coordinator. They do not import RHF directly; they change values only through the coordinator.
@@ -38,4 +40,4 @@ Default slots, native controls and presets use the core modules. They do not def
 
 ## Client and server modules
 
-Every React entry starts with a `"use client"` directive. `form-please/testing` is a headless, server-compatible entry: it has no `"use client"` directive and does not import React or React DOM. It uses the same definition resolver and coordinator as the React runtime, so a headless test exercises production code. Do not add a React import to the graph of the testing entry.
+Every React entry starts with a `"use client"` directive. `form-please/testing` has no `"use client"` directive and does not import React or React DOM. The client and server guarantee for users: `docs-site/src/pages/api.mdx`. It uses the same definition resolver and coordinator as the React runtime, so a headless test exercises production code. Do not add a React import to the graph of the testing entry.

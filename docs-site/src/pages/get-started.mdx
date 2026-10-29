@@ -44,7 +44,12 @@ bun add form-please react-hook-form zod
 :::
 
 React 18 and React 19 are supported peer dependencies. Form, Please requires
-RHF 7.81.0 or newer.
+RHF 7.81.0 or newer. The package contains ES module and CommonJS builds, each
+with type declarations.
+
+A breaking change to the public API or to observable runtime behavior ships
+only in a new major version. Read [Upgrade to 2.0](/upgrade-to-v2) for the
+changes of the current major version.
 
 :::steps
 
@@ -89,8 +94,8 @@ The `onSubmit` callback keeps `value` in React state, and the `<pre>` element
 shows it. Use the `input` callback property when you also need the schema
 input.
 
-All JavaScript package entries are React client modules. In a Next.js App
-Router project, put `"use client"` at the start of the component file.
+All JavaScript package entries except `form-please/testing` are React client
+modules. In a Next.js App Router project, put `"use client"` at the start of the component file.
 
 :::
 

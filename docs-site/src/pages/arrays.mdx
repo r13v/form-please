@@ -130,9 +130,10 @@ source operation still uses native `useFieldArray` methods so row IDs survive.
 
 Middleware cannot change the source array length or order beyond the proposed
 generated action. A change to the row count of another mounted generated array
-throws a `TypeError`. A move to an index outside the array throws a
-`RangeError`. Schema issues and issues from `form.setIssues` stay with their
-rows after a move or a removal.
+throws a `TypeError`. An add, move, or removal at an index outside the array
+throws a `RangeError`. Schema issues, action issues, and issues from
+`form.setIssues` stay with their rows after a move or a removal. The issues of a
+removed row are removed with it.
 Dependent changes join the same final React render, but raw RHF subscriptions
 can observe the native array operation before those changes. Use each array's
 generated action for a managed structural change because `setValues` cannot
@@ -185,9 +186,12 @@ RHF supplies a stable `field.id` for each rendered row key. A move or removal
 still changes indexed public paths. For example, `contacts.2` can become
 `contacts.1`.
 
-Put a durable ID in each item when identity must survive reordering. Generate
-the ID in an `itemDefault` function. Do not store identity-sensitive external
-state under a generated row path.
+RHF row IDs exist only in one form instance. A history or persistence restore
+replaces the complete value, so RHF can generate new row IDs.
+
+Put a durable ID in each item when identity must survive reordering, a saved
+draft, or a new form instance. Generate the ID in an `itemDefault` function. Do
+not store identity-sensitive external state under a generated row path.
 
 ## Check common mistakes
 

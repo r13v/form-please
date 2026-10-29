@@ -243,6 +243,9 @@ patches, append patches, or replace the patch list. Form, Please reapplies the
 supplied patches to `previousValues`. This operation creates the transaction
 for the next middleware.
 
+Return without a call to `next` to cancel the transaction. No value commits,
+and `afterUpdate` does not run.
+
 The chain makes one ordered pass. It does not rerun middleware when a later
 middleware adds a patch. It does not calculate a dependency fixed point.
 
@@ -265,7 +268,11 @@ applies to generated controls, `form.update`, `beforeUpdate`, and middleware
 patches. RHF `setValues` cannot synchronize the rows that `useFieldArray` owns.
 Use the actions of that array or `form.array(path).reconcile`. A change of
 values that keeps the row count is allowed. History and persistence restores
-do not use this rule.
+do not use this rule. The error message names the path of the array.
+
+An array inside a row of the source array follows its row. The check compares
+it with the same row after the action. The arrays in a removed row are not
+checked.
 
 Generated array actions promise one final React render with dependent values.
 They do not promise one raw RHF publication. A raw RHF subscriber can observe
@@ -274,8 +281,10 @@ the native array operation before the dependent value commit.
 ### Form state and validation
 
 The value commit completes before `next` returns. Validation can finish later.
-Managed validation follows `mode` and `reValidateMode` through one RHF
-`trigger` call. This trigger does not preserve `delayError` timing.
+Managed validation uses one RHF `trigger` call for the patched paths. Before
+the first submit, `mode` decides if the change validates. After the first
+submit, `reValidateMode` decides. In `all` mode, every change validates. This
+trigger does not preserve `delayError` timing.
 
 RHF calculates `isDirty` from the complete current value and default values.
 `dirtyFields` is guaranteed only for mounted patched paths. A control becomes
@@ -296,7 +305,8 @@ touched only after a real blur event.
 
 Assign `undefined` instead of removing a top-level key when the schema permits
 it. Nested removal is supported because Form, Please commits the complete
-affected root.
+affected root. History and persistence restores replace the complete value, so
+they can remove a top-level key.
 
 See the [API reference](/api#managed-value-middleware) for the exported types.
 

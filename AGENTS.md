@@ -22,6 +22,8 @@ Use the Node.js version from `package.json#engines` and local dependencies (`npm
 
 ## Documentation
 
+The docs site is the source of truth for library users, and `docs/` is for maintainers; `documentation-rules.md` § The site and docs/ draws the line. A change that a library user can observe updates the site in the same change.
+
 Always run `find docs -name '*.md' | sort` at the beginning to get an overview of durable documents; the file names say what each one owns. Before you change code, read the owner document of each topic that the change touches, and `code-style-and-folders.md` before you write or review code. Before you change documentation, read `documentation-rules.md`; it also says which library changes must update the docs site. `docs/adr/` records the reasons behind the decisions. Defer ideas outside the task to `docs/backlog/` with the `backlog` skill.
 
 Outside `docs/`:

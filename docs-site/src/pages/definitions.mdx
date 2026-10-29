@@ -191,10 +191,15 @@ properties are allowed, while optional or incompatible objects are rejected.
 Call `fragment.fields()` without `at` when the current scope itself satisfies
 the fragment input, such as an array whose items are addresses.
 
+When you set `at`, Form, Please adds `at` as a prefix to each explicit ID in the
+fragment. A section `address` at `billing` gets the ID `billing.address`. You
+can therefore place one fragment at more than one path.
+
 Use `kit.forContext<FragmentContext>()` before `defineFragment` to declare the
 minimum context required by the fragment. A host context may provide additional
 properties. Resolvers inside the fragment receive the local deeply readonly
-fragment input and its required context. Put conditions that need the complete
+fragment input and its required context. Inside an array of the fragment, the
+local input is still the value at the fragment placement. Put conditions that need the complete
 host input on a section or another ordinary node around the placement.
 
 ## Arrays
@@ -287,11 +292,14 @@ authored by a reusable fragment receive that fragment's local input instead.
 The second argument contains the deeply readonly runtime `context` from
 `kit.useForm`.
 
+The readonly types apply to TypeScript only. Form, Please does not clone,
+freeze, or proxy the resolver input at runtime. Do not write to it.
+
 ### Async options
 
 The `options` collection is the one property that may load asynchronously. Its
 function receives one object, and the runtime tracks the `values` and `context`
-properties it reads:
+properties it reads, also after `await`:
 
 ```tsx
 ui.field("city", {
@@ -308,7 +316,8 @@ ui.field("city", {
 ```
 
 Changing `values.country` or `context.locale` aborts the previous request and
-runs the function again. Unrelated changes do not. The rendered list is empty
+runs the function again. Unrelated changes do not. Form, Please ignores the
+result of a previous run. The rendered list is empty
 during loading and after an uncaught error; catch inside the function when you
 want another fallback. The field value is preserved even when it is absent
 from the current list. A successfully resolved value must be an array; any other
@@ -317,8 +326,8 @@ value is a resolver contract error surfaced through React.
 Use an application resource or a custom control when you need loading or error
 UI, caching, retries, remote search, or pagination.
 
-Resolvers must return immediately. A resolver that returns a promise causes a
-runtime error. Keep requests and cache state in the application. Pass their
+Resolvers must return immediately. A resolver that returns a promise throws a
+`TypeError`. Keep requests and cache state in the application. Pass their
 current result through context.
 
 Form, Please resolves the complete UI tree after each form value change. It

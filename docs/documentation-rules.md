@@ -1,6 +1,22 @@
 # Documentation rules
 
-These rules apply to the files in `docs/`, `AGENTS.md`, `CONTEXT.md` and code comments. The site in `docs-site/` is user documentation; `docs-site/AGENTS.md` owns its rules.
+These rules apply to the files in `docs/`, `AGENTS.md`, `CONTEXT.md` and code comments. `docs-site/AGENTS.md` owns the rules for writing the site pages.
+
+## The site and docs/
+
+Form, Please has two readers, and each one has one source of truth.
+
+- **The site (`docs-site/src/pages`) is the source of truth for the library user**: an application developer who installs the package. It owns everything that the user can observe or rely on: the public API, options and defaults, types, runtime behaviour, error types and messages, ordering and lifecycle guarantees, limits, compatibility, and how-to guidance.
+- **`docs/` is for the maintainer** of this repository. It owns what a user cannot observe: invariants between internal modules, package-private capabilities, how a public guarantee is implemented and enforced, the reasons for a design and the alternatives it rules out, assumptions about dependency behaviour (React Hook Form (RHF), Immer), bundle and entry boundaries, release and compatibility mechanics, and the test strategy.
+
+Rules:
+
+- A change that a library user can observe updates the site in the same change. It does not need a `docs/` change unless an internal contract also changes.
+- `docs/` does not describe user-facing behaviour. When an internal contract exists to keep a public guarantee, state the internal contract and name the site page that states the guarantee: "The row count guarantee for users: `docs-site/src/pages/arrays.mdx`."
+- Test a `docs/` sentence: if an application developer could observe it through the public API, it belongs on the site. Move it there if the site does not state it, then delete it from `docs/`.
+- `CONTEXT.md` keeps domain terms for both readers; the site glossary `docs-site/src/pages/glossary.mdx` uses the same terms.
+
+## General
 
 - Document only what would surprise an experienced engineer who knows TypeScript, React, React Hook Form (RHF), Standard Schema, Immer, Vitest and how a published npm library is built. Contracts and reasons, not a retelling of the code.
 - When you update `docs/` or comments, bring them in sync with the project: remove stale and obvious text, update the surprises.
@@ -16,7 +32,7 @@ These rules apply to the files in `docs/`, `AGENTS.md`, `CONTEXT.md` and code co
 
 A document keeps what the code cannot show. Keep:
 
-- Contracts and invariants between parts: what RHF owns and what Form, Please owns, the order of the managed update lifecycle, what a restore keeps, which updates may change array rows, what stays out of the root bundle.
+- Contracts and invariants between internal parts: who may write RHF state and through which call, which module enforces a public guarantee, how optional entries reach the core, what stays out of the root bundle.
 - The reason for a choice that an experienced engineer would not expect, and the alternative it rules out.
 - Behaviour that spans several files and that no single file shows.
 - An assumption about RHF behaviour, with the contract test that pins it.
@@ -27,13 +43,13 @@ Remove:
 - A step-by-step narration of what a function does.
 - Lists of fields, option names, union members, constants, defaults, limits and caps. Point to the symbol instead: "limits: `maxUpdates` in `src/devtools/store.ts`".
 - Directory listings, module tables, test inventories and lists of files that `find` or `ls` shows.
-- A retelling of a docs-site page. The site owns user guidance; a document names the page.
+- User-facing behaviour, options, errors and guidance. The site owns them; a document names the page.
 
 Test a sentence: if a change of the code would make it false without a change of a contract, it retells the code. A paragraph of more than about six sentences usually retells the code; split it into the contract and a pointer. When in doubt whether a sentence is a contract, keep it short rather than delete it.
 
 ## Docs site coupling
 
-A library change updates the site in the same change. The site gates in `docs-site/tests/content.test.mjs` read the library source; run `npm run site:test` to check them.
+A library change that a user can observe updates the site in the same change. The site gates in `docs-site/tests/content.test.mjs` read the library source; run `npm run site:test` to check them.
 
 - A new public export of an entry in `package.json#exports` is named in inline code in `docs-site/src/pages/api.mdx` or `types.mdx`.
 - A new or changed `i18n` key in `src/array-actions-i18n.ts` or `src/preset-mui/controls.tsx` updates the table in `docs-site/src/pages/localization.mdx`.

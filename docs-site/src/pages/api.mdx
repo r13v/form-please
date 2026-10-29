@@ -48,6 +48,10 @@ import "form-please/layout.css"
 exports. React UI, devtools, history, and persistence entries are client modules.
 The testing entry is a server-compatible headless module.
 
+The root entry does not load the code of the devtools, history, persistence, or
+Material UI entries. An application that does not import an optional entry does
+not include its code in the bundle.
+
 Mount `FormPleaseDevtools` only in development. See the [Devtools guide](/devtools)
 for its one-component integration and raw-data boundary.
 
@@ -230,6 +234,9 @@ Install Material UI 9 and Emotion before you import the preset:
 ```sh
 npm install @mui/material @emotion/react @emotion/styled
 ```
+
+Material UI and Emotion are optional peer dependencies. Only
+`form-please/preset-mui` imports them.
 
 `createMuiFormKit()` returns a new frozen kit with Material UI controls, slots,
 and a 12-column grid.
@@ -456,6 +463,8 @@ A submit attempt runs these steps:
 4. If the schema passes, it runs `validate({ input, value })` of the selected action.
 5. If `validate` returns no issues, it runs `onSubmit({ value, input, form, submitter })`.
 
+A submit attempt while an action runs does nothing.
+
 Because `validate` runs only after the schema passes, the user can see schema
 issues and action issues in two submit attempts. Action issues focus the first
 invalid field. An edit of a path clears the action issues for that path.
@@ -487,7 +496,8 @@ gives the name of the running action, or `null`.
 error from the schema, from `validate`, or from the runtime is not caught. The
 form submit handler does not await the submit, so the browser reports such an
 error as an unhandled rejection. Catch an expected error inside `validate` or
-`onSubmit`. The next accepted submit and `setIssues` set `error` to `null`. The React Hook Form
+`onSubmit`. The next accepted submit, `setIssues`, and a `kit.Form` reset set
+`error` to `null`. The React Hook Form
 `formState.isSubmitSuccessful` is `false` after a rejection.
 
 ### External issues

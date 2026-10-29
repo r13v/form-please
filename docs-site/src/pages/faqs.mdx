@@ -143,7 +143,9 @@ baseline](/recipes#load-an-edit-form-baseline) for both operations.
 ### Can a definition use a different form kit?
 
 No. A definition belongs to the exact kit that created it. Pass it back to
-`useForm` on that kit.
+`useForm` on that kit. Another kit rejects the definition with an error, also
+when both kits have the same controls, slots, and grid. The same rule applies
+to a fragment placement and to a form binding.
 
 `kit.forContext<Context>()` is a type-only view of the same runtime kit. Use it
 to type resolver context and require a context value in `kit.useForm`.

@@ -216,8 +216,12 @@ A resolver that returns `undefined` keeps the value. Do not repeat the
 becomes hidden.
 
 The form applies `whenHidden` in the same managed update as the edit. Value
-middleware, history, and persistence receive one transaction. One undo
-restores the edit and the reset value.
+middleware, history, and persistence receive one transaction with the source of
+the edit. One undo restores the edit and the reset value.
+
+A `whenHidden` write can hide another field. The form then applies the
+`whenHidden` value of that field in the same transaction. Each field receives
+at most one write in a transaction.
 
 The form does not apply `whenHidden` in these cases:
 
