@@ -6,7 +6,6 @@ const manifest = JSON.parse(
 	readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 )
 
-/** Returns each published JavaScript entry with its dist name and source module. */
 export function packageEntries() {
 	return Object.entries(manifest.exports)
 		.filter(([, target]) => typeof target === "object")
