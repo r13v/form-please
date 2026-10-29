@@ -34,6 +34,14 @@ export type ArrayOperations = {
 
 const mountedArrays = new WeakMap<object, Map<string, ArrayOperations>>()
 
+/** Lists the top-level input keys that contain a mounted generated array. */
+export function mountedArrayRoots(control: object): ReadonlySet<string> {
+	const arrays = mountedArrays.get(control)
+	return new Set(
+		[...(arrays?.keys() ?? [])].map((path) => path.split(".")[0] as string),
+	)
+}
+
 /** Registers only mounted generated arrays; no separate live values are retained. */
 export function registerGeneratedArray(
 	control: object,

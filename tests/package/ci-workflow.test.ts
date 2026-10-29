@@ -32,12 +32,16 @@ describe("release-equivalent CI workflow", () => {
 		])
 	})
 
-	it("runs unit tests against the minimum supported React Hook Form", () => {
-		expectRunOrder(jobRuns(ci, "minimum-react-hook-form"), [
+	it("runs unit tests against both ends of the React Hook Form peer range", () => {
+		expectRunOrder(jobRuns(ci, "react-hook-form-range"), [
 			"npm ci",
-			"npm run rhf:minimum",
+			// biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expression syntax.
+			"npm run rhf:${{ matrix.bound }}",
 			"npm test",
 		])
+		expect(
+			record(record(record(ci.jobs)["react-hook-form-range"]).strategy).matrix,
+		).toEqual({ bound: ["minimum", "maximum"] })
 	})
 
 	it("does not publish, mutate source, or require credentials", () => {

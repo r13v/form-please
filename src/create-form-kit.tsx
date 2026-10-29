@@ -20,6 +20,7 @@ import {
 } from "react-hook-form"
 import {
 	assertMountedArrayStructures,
+	mountedArrayRoots,
 	reconcileGeneratedArray,
 } from "./array-reconcile.js"
 import {
@@ -299,6 +300,7 @@ function assembleKit(
 					apiRef.current,
 					transaction,
 					validationRef.current,
+					mountedArrayRoots(apiRef.current.control),
 				)
 			}
 		}

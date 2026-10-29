@@ -1,6 +1,10 @@
-import type { FieldValues, UseFormReturn } from "react-hook-form"
+import { type FieldValues, get, type UseFormReturn } from "react-hook-form"
 import type { ManagedValidationOptions } from "./form-kit-types.js"
-import { cloneFormValue } from "./form-value.js"
+import {
+	areFormValuesEqual,
+	cloneFormValue,
+	isFormValueObject,
+} from "./form-value.js"
 import type {
 	RestorePolicy,
 	ValuePatch,
@@ -16,9 +20,28 @@ export function commitManagedTransaction<
 	api: UseFormReturn<Input, Context, Output>,
 	transaction: ValueTransaction<Input, Context>,
 	validation: ManagedValidationOptions,
+	arrayRoots: ReadonlySet<string>,
 ): void {
 	if (transaction.patches.length === 0) return
-	api.setValues(topLevelUpdates(transaction), { shouldDirty: true })
+	const updates = topLevelUpdates(transaction) as FieldValues
+	const current = api.getValues() as FieldValues
+	const leafPaths: string[] = []
+	for (const root of Object.keys(updates)) {
+		if (!arrayRoots.has(root)) continue
+		// RHF 7.91 resets useFieldArray row IDs when setValues covers an array, even an unchanged one.
+		collectChangedLeafPaths(current[root], updates[root], root, leafPaths)
+		delete updates[root]
+	}
+	if (Object.keys(updates).length > 0) {
+		api.setValues(updates as Partial<Input>, { shouldDirty: true })
+	}
+	for (const path of leafPaths) {
+		api.setValue(
+			path as Parameters<typeof api.setValue>[0],
+			get(transaction.nextValues, path),
+			{ shouldDirty: true },
+		)
+	}
 	if (!shouldValidateManagedTransaction(api, transaction, validation)) return
 	const paths = patchedFieldPaths(transaction.patches)
 	void api.trigger(
@@ -56,6 +79,40 @@ export function commitManagedRestore<
 	})
 	if (!shouldValidateManagedTransaction(api, transaction, validation)) return
 	void api.trigger()
+}
+
+/**
+ * Collects the deepest paths where `next` differs from `current`. Arrays of
+ * equal length and plain objects are compared by entry, so a path never names
+ * an array whose rows only changed values.
+ */
+function collectChangedLeafPaths(
+	current: unknown,
+	next: unknown,
+	path: string,
+	paths: string[],
+): void {
+	if (areFormValuesEqual(current, next)) return
+	if (
+		Array.isArray(current) &&
+		Array.isArray(next) &&
+		current.length === next.length
+	) {
+		for (const [index, item] of next.entries()) {
+			collectChangedLeafPaths(current[index], item, `${path}.${index}`, paths)
+		}
+		return
+	}
+	if (isFormValueObject(current) && isFormValueObject(next)) {
+		for (const key of new Set([
+			...Object.keys(current),
+			...Object.keys(next),
+		])) {
+			collectChangedLeafPaths(current[key], next[key], `${path}.${key}`, paths)
+		}
+		return
+	}
+	paths.push(path)
 }
 
 /** Selects complete changed roots because RHF `setValues` shallow-merges them. */

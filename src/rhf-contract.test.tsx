@@ -19,13 +19,14 @@ describe("React Hook Form contract", () => {
 		return { form, rows }
 	}
 
-	it("setValues does not update useFieldArray rows (structure guard)", () => {
+	it("setValue of a row leaf keeps useFieldArray row IDs (managed commit of array roots)", () => {
 		const { result } = renderHook(useRows)
+		const ids = result.current.rows.fields.map((field) => field.id)
 		act(() => {
-			result.current.form.setValues({ rows: [{ name: "a" }] })
+			result.current.form.setValue("rows.1.name", "B")
 		})
-		expect(result.current.form.getValues().rows).toHaveLength(1)
-		expect(result.current.rows.fields).toHaveLength(2)
+		expect(result.current.rows.fields.map((field) => field.id)).toEqual(ids)
+		expect(result.current.form.getValues().rows[1]?.name).toBe("B")
 	})
 
 	it("setValues shallow-merges top-level keys (topLevelUpdates)", () => {

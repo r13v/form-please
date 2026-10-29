@@ -550,11 +550,12 @@ export function ErrorSummary({
 }) {
 	const form = useRuntimeForm()
 	const formId = useFormId()
-	const state = useFormState({ control: form.api.control })
+	// Read errors before the early return: the RHF proxy subscribes only to read keys.
+	const { errors, submitCount } = useFormState({ control: form.api.control })
 	const Slot = slots.ErrorMessage
-	if (state.submitCount === 0 && form.issues.list().length === 0) return null
+	if (submitCount === 0 && form.issues.list().length === 0) return null
 
-	const summaryIssues = fieldErrorsToIssues(state.errors).filter((issue) => {
+	const summaryIssues = fieldErrorsToIssues(errors).filter((issue) => {
 		if (issue.path === "root" || issue.path?.startsWith("root.")) return true
 		const input =
 			issue.path === undefined ? undefined : form.inputRefs.get(issue.path)

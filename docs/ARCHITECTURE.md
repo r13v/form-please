@@ -319,8 +319,12 @@ until no new field becomes hidden. Feature restores, context changes, and fields
 inside the array of a source that reshapes its array do not apply it. See
 [ADR 0027](adr/0027-reset-hidden-field-values-in-managed-updates.md).
 
-Generated controls and `form.update` publish final values through one RHF
-`setValues` call. RHF remains the sole state owner. Direct calls through
+Generated controls and `form.update` publish final values to RHF. A top-level
+key without a mounted generated array goes through one `setValues` call. A
+top-level key that contains a mounted generated array goes through one
+`setValue` call for each changed leaf, because RHF 7.91 regenerates the row
+IDs of each field array that `setValues` covers. RHF remains the sole state
+owner. Direct calls through
 `form.api`, initial values, and reset bypass middleware and managed update hooks
 deliberately. Removing a top-level key is rejected because `setValues`
 shallow-merges roots; assign `undefined` when the schema permits it.

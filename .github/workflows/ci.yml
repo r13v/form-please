@@ -44,9 +44,13 @@ jobs:
       - name: Dry-run package
         run: npm pack --dry-run
 
-  minimum-react-hook-form:
-    name: Unit tests (minimum React Hook Form)
+  react-hook-form-range:
+    name: Unit tests (React Hook Form ${{ matrix.bound }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bound: [minimum, maximum]
 
     steps:
       - name: Checkout
@@ -61,8 +65,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install the minimum supported React Hook Form
-        run: npm run rhf:minimum
+      - name: Install the React Hook Form bound of the peer range
+        run: npm run rhf:${{ matrix.bound }}
 
       - name: Run unit tests
         run: npm test

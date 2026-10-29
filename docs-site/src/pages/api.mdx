@@ -601,8 +601,9 @@ synchronous Immer recipe can mutate the draft or return a replacement, but not
 both. A no-op recipe creates no transaction. Redux middleware may replace the
 terminal return value, so `form.update` returns `unknown`.
 
-Generated controls and `form.update` publish final values with one RHF
-`setValues` call. Generated `append`, `remove`, and `move` preserve native
+Generated controls and `form.update` publish final values to RHF in one
+synchronous commit. A top-level key that contains a mounted generated array is
+written leaf by leaf, so its row IDs stay stable. Generated `append`, `remove`, and `move` preserve native
 `useFieldArray` row IDs; their dependent patches join the same final React
 render, although raw RHF subscribers can observe an intermediate array state.
 Array middleware cannot change the source array length or order beyond the
