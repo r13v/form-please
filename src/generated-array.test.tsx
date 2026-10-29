@@ -4,11 +4,27 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useFormContext, useWatch } from "react-hook-form"
 import { describe, expect, expectTypeOf, it } from "vitest"
 import { z } from "zod"
-import { cloneItemDefault } from "./generated-array.js"
+import { applyArrayAction, cloneItemDefault } from "./generated-array.js"
 import { kit } from "./test-fixtures.js"
 import type { FieldPath, PathValue } from "./types.js"
 
 describe("generated arrays", () => {
+	it.each([
+		{ action: "append", index: 3 },
+		{ action: "remove", index: 2 },
+		{ action: "move", fromIndex: 0, toIndex: 2 },
+		{ action: "move", fromIndex: 0.5, toIndex: 1 },
+	] as const)(
+		"rejects an array action index outside the items: %j",
+		(action) => {
+			const items = ["a", "b"]
+			expect(() => applyArrayAction(items, "rows", action, "c")).toThrow(
+				RangeError,
+			)
+			expect(items).toEqual(["a", "b"])
+		},
+	)
+
 	it.each([
 		["a Promise", async () => ({ name: "" })],
 		["an array", () => []],

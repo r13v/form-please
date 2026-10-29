@@ -66,6 +66,8 @@ import {
 } from "./form-submission.js"
 import { cloneFormValue } from "./form-value.js"
 import {
+	type ArrayAction,
+	applyArrayAction,
 	cloneItemDefault,
 	fieldPathSegments,
 	getMutableArrayValue,
@@ -1665,18 +1667,15 @@ function GeneratedArray({
 			<Slot
 				add={() => {
 					if (!canAdd) return
-					const item = cloneItemDefault(node.itemDefault)
 					const index = fieldIds.length
 					dispatchArrayAction(
 						form,
 						path,
-						(draftItems) => {
-							draftItems.push(item)
-						},
-						{ action: "append", index, path, type: "array" },
+						{ action: "append", index },
 						(transaction) => {
 							append(getMutableArrayValue(transaction.nextValues, path)[index])
 						},
+						cloneItemDefault(node.itemDefault),
 					)
 				}}
 				canAdd={canAdd}
@@ -1705,41 +1704,19 @@ function GeneratedArray({
 						index={index}
 						key={fieldId}
 						move={(toIndex) => {
-							if (
-								canAdd &&
-								Number.isSafeInteger(toIndex) &&
-								toIndex >= 0 &&
-								toIndex < fieldIds.length
-							) {
-								dispatchArrayAction(
-									form,
-									path,
-									(draftItems) => {
-										const [item] = draftItems.splice(index, 1)
-										draftItems.splice(toIndex, 0, item)
-									},
-									{
-										action: "move",
-										fromIndex: index,
-										path,
-										toIndex,
-										type: "array",
-									},
-									() => move(index, toIndex),
-								)
-							}
-						}}
-						readOnly={node.readOnly}
-						remove={() => {
 							if (!canAdd) return
 							dispatchArrayAction(
 								form,
 								path,
-								(draftItems) => {
-									draftItems.splice(index, 1)
-								},
-								{ action: "remove", index, path, type: "array" },
-								() => remove(index),
+								{ action: "move", fromIndex: index, toIndex },
+								() => move(index, toIndex),
+							)
+						}}
+						readOnly={node.readOnly}
+						remove={() => {
+							if (!canAdd) return
+							dispatchArrayAction(form, path, { action: "remove", index }, () =>
+								remove(index),
 							)
 						}}
 						rootProps={structuralProps("array-item", {
@@ -1867,27 +1844,28 @@ function renderErrors(
 function dispatchArrayAction(
 	form: RuntimeForm,
 	path: string,
-	recipe: (items: unknown[]) => void,
-	source: Extract<ValueTransactionSource<FieldValues>, { type: "array" }>,
+	action: ArrayAction,
 	commitArray: (transaction: ValueTransaction<FieldValues, unknown>) => void,
+	item?: unknown,
 ): unknown {
 	const arrayPath = fieldPathSegments(form.api.getValues(), path)
 	return form.dispatch(
-		(draft) => recipe(getMutableArrayValue(draft, path)),
-		source,
+		(draft) =>
+			applyArrayAction(getMutableArrayValue(draft, path), path, action, item),
+		{ ...action, path, type: "array" } as ValueTransactionSource<FieldValues>,
 		{
 			arrayPath,
 			commit: (transaction) => {
 				assertMountedArrayStructures(form.api.control, transaction, path)
-				if (source.action === "append") {
+				if (action.action === "append") {
 					commitArray(transaction)
 					return form.commit(transaction)
 				}
-				// The recipe applied to old row indexes maps each kept row to its new index.
+				// The action applied to old row indexes maps each kept row to its new index.
 				const rows = getMutableArrayValue(form.api.getValues(), path).map(
 					(_, index) => index,
 				)
-				recipe(rows)
+				applyArrayAction(rows, path, action)
 				const indexes = new Map(
 					rows.map((oldIndex, newIndex) => [oldIndex, newIndex]),
 				)

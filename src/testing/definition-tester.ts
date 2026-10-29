@@ -13,6 +13,8 @@ import {
 import { createFieldOptionsResolution } from "../field-options.js"
 import { cloneFormValue } from "../form-value.js"
 import {
+	type ArrayAction,
+	applyArrayAction,
 	cloneItemDefault,
 	fieldPathSegments,
 	getMutableArrayValue,
@@ -479,37 +481,45 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 			activeCommit = undefined
 		}
 	}
+	/** A generated control or array action that the UI could not start. */
+	const blockedTransition = (): ManagedDefinitionTransition<Definition> =>
+		Object.freeze({
+			...createTransition(state.inspection),
+			committed: false,
+			result: undefined,
+			transaction: undefined,
+		})
+	const isBlocked = (node: {
+		readonly disabled: boolean
+		readonly readOnly: boolean
+		readonly visible: boolean
+	}) => node.disabled || node.readOnly || !node.visible
 	const arrayAction = <
 		Path extends ArrayFieldPath<DefinitionTestValues<Definition>>,
 	>(
 		path: Path,
-		recipe: (items: unknown[]) => void,
-		source:
-			| { readonly action: "append"; readonly index: number }
-			| { readonly action: "remove"; readonly index: number }
-			| {
-					readonly action: "move"
-					readonly fromIndex: number
-					readonly toIndex: number
-			  },
+		action: ArrayAction,
+		item?: unknown,
 	): ManagedDefinitionTransition<Definition> => {
-		const array = state.inspection.array(path)
-		if (array.disabled || array.readOnly) {
-			const transition = createTransition(state.inspection)
-			return Object.freeze({
-				...transition,
-				committed: false,
-				result: undefined,
-				transaction: undefined,
-			})
-		}
+		applyArrayAction(
+			[...getMutableArrayValue(state.values, path)],
+			path,
+			action,
+			item,
+		)
+		if (isBlocked(state.inspection.array(path))) return blockedTransition()
 		const arrayPath = fieldPathSegments(state.values, path)
 		return runManaged(() =>
 			coordinator.dispatch(
 				(draft) => {
-					recipe(getMutableArrayValue(draft, path))
+					applyArrayAction(
+						getMutableArrayValue(draft, path),
+						path,
+						action,
+						item,
+					)
 				},
-				{ ...source, path, type: "array" },
+				{ ...action, path, type: "array" },
 				{ arrayPath },
 			),
 		)
@@ -522,48 +532,27 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 			return state.values as DeepReadonly<DefinitionTestValues<Definition>>
 		},
 		array: (path) => state.inspection.array(path),
-		append: (path) => {
-			const array = state.inspection.array(path)
-			const index = getMutableArrayValue(state.values, path).length
-			return arrayAction(
+		append: (path) =>
+			arrayAction(
 				path,
-				(items) => items.push(cloneItemDefault(array.itemDefault)),
-				{ action: "append", index },
-			)
-		},
+				{
+					action: "append",
+					index: getMutableArrayValue(state.values, path).length,
+				},
+				cloneItemDefault(state.inspection.array(path).itemDefault),
+			),
 		field: (path) => state.inspection.field(path),
-		move: (path, fromIndex, toIndex) => {
-			const items = getMutableArrayValue(state.values, path)
-			assertArrayIndex(path, fromIndex, items.length, "fromIndex")
-			assertArrayIndex(path, toIndex, items.length, "toIndex")
-			return arrayAction(
-				path,
-				(draftItems) => {
-					const [item] = draftItems.splice(fromIndex, 1)
-					draftItems.splice(toIndex, 0, item)
-				},
-				{ action: "move", fromIndex, toIndex },
-			)
-		},
+		move: (path, fromIndex, toIndex) =>
+			arrayAction(path, { action: "move", fromIndex, toIndex }),
 		node: (id) => state.inspection.node(id),
-		remove: (path, index) => {
-			const items = getMutableArrayValue(state.values, path)
-			assertArrayIndex(path, index, items.length, "index")
-			return arrayAction(
-				path,
-				(draftItems) => {
-					draftItems.splice(index, 1)
-				},
-				{ action: "remove", index },
-			)
-		},
+		remove: (path, index) => arrayAction(path, { action: "remove", index }),
 		rerender,
 		resolveOptions: (path) => state.inspection.resolveOptions(path),
 		setContext: (context) => rerender({ context }),
 		setDisabled: (disabled) => rerender({ disabled }),
 		setReadOnly: (readOnly) => rerender({ readOnly }),
 		setValue: (path, value) => {
-			state.inspection.field(path)
+			if (isBlocked(state.inspection.field(path))) return blockedTransition()
 			return runManaged(() =>
 				coordinator.dispatch((draft) => set(draft, path, value), {
 					path,
@@ -574,22 +563,6 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 		update: (recipe) => runManaged(() => coordinator.update(recipe)),
 	}
 	return Object.freeze(tester)
-}
-
-/** Validates an index that must identify one current generated array item. */
-function assertArrayIndex(
-	path: string,
-	index: number,
-	length: number,
-	name: "fromIndex" | "index" | "toIndex",
-): void {
-	if (Number.isSafeInteger(index) && index >= 0 && index < length) return
-	throw new TypeError(
-		`Generated array ${name} for "${path}" must be between 0 and ${Math.max(
-			length - 1,
-			0,
-		)}`,
-	)
 }
 
 /** Creates one immutable public projection around a private resolution. */
