@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.0.0](https://github.com/r13v/form-please/compare/v1.12.2...v2.0.0) (2026-10-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* form.update, control updates, and generated array actions now throw when they change the number of rows of another mounted generated array. Use that array's actions or form.array(path).reconcile instead.
+* an ArrayItem slot move to an index outside the array throws a RangeError instead of being ignored. The tester throws RangeError instead of TypeError for an invalid index, and tester.setValue on a field that the UI cannot edit returns an uncommitted transition.
+* the devtools Features tab lists only configured features and shows "This form configures no optional features." when there are none.
+* the Material UI preset i18n keys addItem, removeItem, moveItemUp, and moveItemDown are now arrayAdd, arrayRemove, arrayMoveUp, and arrayMoveDown. Item callbacks get { index, position } instead of a number.
+* react-hook-form 7.81.0 or newer is required.
+
+### Features
+
+* guard generated array structure and add regression checks ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+* keep the form binding for an inline context with the same entries ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+* share array action messages across kits and export MUI parts ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+
+
+### Bug Fixes
+
+* correct managed validation, row issues, and feature restores ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+* guard only row count changes of mounted generated arrays ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+* require React Hook Form 7.81.0 or newer ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+* support React Hook Form 7.90 and 7.91 ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+
+
+### Code Refactoring
+
+* make node kinds, sources, restores, and features extensible ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+* share generated array actions between the runtime and the tester ([79b5882](https://github.com/r13v/form-please/commit/79b5882e57cb85c8178ecbe3943f1b5702bfa0a4))
+
 ## [1.12.2](https://github.com/r13v/form-please/compare/v1.12.1...v1.12.2) (2026-10-18)
 
 
