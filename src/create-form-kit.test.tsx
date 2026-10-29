@@ -2076,4 +2076,28 @@ describe("form kit", () => {
 			"Reset",
 		)
 	})
+	it("keeps the binding for an inline context with the same entries", () => {
+		const bindings: unknown[] = []
+		function View({ label }: { readonly label: string }) {
+			const form = kit.useForm(definition, {
+				context: { label },
+				defaultValues: { name: "Ada" },
+			})
+			bindings.push(form)
+			return <kit.AutoForm form={form} />
+		}
+		const view = render(<View label="first" />)
+		view.rerender(<View label="first" />)
+		view.rerender(<View label="second" />)
+		const [first, same, changed] = [
+			bindings[0],
+			bindings.at(-2),
+			bindings.at(-1),
+		]
+		expect(same).toBe(first)
+		expect(changed).not.toBe(first)
+		expect((changed as { context: unknown }).context).toEqual({
+			label: "second",
+		})
+	})
 })

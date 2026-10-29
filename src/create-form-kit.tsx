@@ -24,6 +24,7 @@ import {
 } from "./array-reconcile.js"
 import {
 	createFormFragment,
+	hasEqualResolvedValue,
 	hasWhenHidden,
 	normalizeDefinition,
 	normalizeGrid,
@@ -271,8 +272,12 @@ function assembleKit(
 		})
 		const apiRef = useRef(api)
 		apiRef.current = api
+		// An inline context object with the same entries keeps the binding stable.
 		const contextRef = useRef(options.context)
-		contextRef.current = options.context
+		if (!hasEqualResolvedValue(contextRef.current, options.context)) {
+			contextRef.current = options.context
+		}
+		const context = contextRef.current
 		const submittedRef = useRef(false)
 		const validation: ManagedValidationOptions = {
 			isSubmitted: () => submittedRef.current,
@@ -391,7 +396,7 @@ function assembleKit(
 			const instance: FormBinding<Schema, unknown> = {
 				api,
 				definition: fixedDefinition,
-				context: options.context,
+				context,
 				update: coordinator.update,
 				actions: submission.actions as unknown as FormBinding<
 					Schema,
@@ -445,7 +450,7 @@ function assembleKit(
 			commit,
 			coordinator,
 			fixedDefinition,
-			options.context,
+			context,
 			options.disabled,
 			options.errorDisplay,
 			options.readOnly,

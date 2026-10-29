@@ -1079,7 +1079,10 @@ function hasEqualResolvedProperties(
 }
 
 /** Compares opaque resolved values without traversing nested configuration. */
-function hasEqualResolvedValue(previous: unknown, next: unknown): boolean {
+export function hasEqualResolvedValue(
+	previous: unknown,
+	next: unknown,
+): boolean {
 	if (Object.is(previous, next)) return true
 	if (previous === null || next === null) return false
 	if (typeof previous !== "object" || typeof next !== "object") return false
