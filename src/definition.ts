@@ -13,6 +13,7 @@ import type {
 } from "./types.js"
 import {
 	type HiddenFieldWrite,
+	isPromiseLike,
 	readPatchTarget,
 	type ValueTransaction,
 } from "./value-middleware.js"
@@ -934,6 +935,7 @@ function previousRowPath(
 		.join(".")
 }
 
+/** Reads one property of an object value; other values have no properties. */
 function readChild(value: unknown, segment: string): unknown {
 	return value !== null && typeof value === "object"
 		? (value as Record<string, unknown>)[segment]
@@ -1110,12 +1112,7 @@ function resolveOptional<Value = unknown, Context = unknown>(
 			},
 		) => unknown
 	)(values, { context })
-	if (
-		result !== null &&
-		(typeof result === "object" || typeof result === "function") &&
-		"then" in result &&
-		typeof result.then === "function"
-	) {
+	if (isPromiseLike(result)) {
 		throw new TypeError("UI resolvers must be synchronous")
 	}
 	return result as Value
@@ -1123,17 +1120,8 @@ function resolveOptional<Value = unknown, Context = unknown>(
 
 /** Reads a value from an object by a validated dot path. */
 function getPathValue(value: unknown, path: string): unknown {
-	if (path.length === 0) {
-		return value
-	}
-	let current = value
-	for (const segment of path.split(".")) {
-		if (current === null || typeof current !== "object") {
-			return undefined
-		}
-		current = (current as Record<string, unknown>)[segment]
-	}
-	return current
+	if (path.length === 0) return value
+	return path.split(".").reduce(readChild, value)
 }
 
 /** Validates a relative field or array path. */

@@ -1,7 +1,7 @@
 import type { ResolvedDefinition } from "./definition.js"
 
 /** One opaque managed-update identity shared across diagnostic stages. */
-export type ManagedDiagnosticToken = object
+type ManagedDiagnosticToken = object
 
 /** A package-private managed-update stage published by the coordinator. */
 export type ManagedDiagnosticEvent =
