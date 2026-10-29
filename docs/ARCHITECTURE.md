@@ -72,12 +72,17 @@ remain optional because only the Material UI preset uses them.
 | `src/control-definition.ts` | Validate and freeze a typed control definition |
 | `src/definition.ts` | Materialize authoring builders, validate, normalize, and synchronously resolve UI definitions |
 | `src/standard-schema-resolver.ts` | Validate through Standard Schema once and translate all issues to and from RHF errors |
-| `src/create-form-kit.tsx` | Create kits, bind React Hook Form, render generated UI, submit, and focus errors |
+| `src/create-form-kit.tsx` | Create kits, bind React Hook Form, and wire `Form`, `Fields`, `Submit`, and `AutoForm` |
+| `src/form-kit-types.ts` | Public binding, kit, action, and submission types and the package-private runtime form type |
+| `src/form-context.ts` | Provide the runtime form and native form ID to generated components |
+| `src/generated-nodes.tsx` | Render resolved fields, sections, arrays, and the error summary through kit slots |
+| `src/managed-commit.ts` | Commit and restore managed value transactions in React Hook Form and schedule change validation |
+| `src/form-focus.ts` | Focus an issue field or the error summary and publish the focus diagnostic |
 | `src/form-submission.ts` | Submission runtime: action selection, submit snapshots, action validation, and external issues |
 | `src/form-issues.ts` | Store action and external issues beside schema errors and remap them with array rows |
 | `src/form-value.ts` | Clone and compare editable form values while preserving browser-owned leaf values |
 | `src/array-reconcile.ts` | Register mounted generated arrays and reconcile their rows through one managed transaction |
-| `src/diagnostics.ts` | Provide the dormant package-private observer bridge and optional-feature registry |
+| `src/diagnostics.ts` | Provide the dormant package-private observer bridge, optional-feature registry, and devtools runtime access |
 | `src/devtools/devtools.tsx` | Bind RHF DevTools and render the Form Please diagnostic drawer |
 | `src/devtools/store.ts` | Aggregate bounded form-local diagnostic snapshots for the optional UI |
 | `src/value-middleware.ts` | Produce Immer patches, run the fixed Redux-shaped middleware chain, and coordinate terminal value transactions |

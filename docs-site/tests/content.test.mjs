@@ -523,24 +523,10 @@ test("documents each public export on the API or TypeScript page", async () => {
 		await readFile(new URL("src/pages/api.mdx", siteRoot), "utf8"),
 		await readFile(new URL("src/pages/types.mdx", siteRoot), "utf8"),
 	].join("\n")
-	const packageJson = JSON.parse(
-		await readFile(new URL("package.json", repositoryRoot), "utf8"),
+	const { packageEntries } = await import(
+		new URL("scripts/package-entries.mjs", repositoryRoot).href
 	)
-	const tsdownEntries = new Map(
-		Array.from(
-			(
-				await readFile(new URL("tsdown.config.ts", repositoryRoot), "utf8")
-			).matchAll(/^\t\t"?([\w-]+)"?: "(src\/[^"]+)"/gm),
-			([, name, file]) => [name, file],
-		),
-	)
-	const entries = Object.keys(packageJson.exports)
-		.filter((key) => !/\.\w+$/.test(key))
-		.map((key) => {
-			const entry = tsdownEntries.get(key === "." ? "index" : key.slice(2))
-			assert.ok(entry, `tsdown.config.ts has no entry for export ${key}`)
-			return entry
-		})
+	const entries = packageEntries().map(({ source }) => source)
 	const names = new Set()
 
 	for (const entry of entries) {

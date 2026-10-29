@@ -19,15 +19,13 @@ import type { Control, FieldValues } from "react-hook-form"
 import { useFormState } from "react-hook-form"
 import { assertNever } from "../assert-never.js"
 
-import {
-	type FormBinding,
-	getFormDiagnosticsRuntime,
-} from "../create-form-kit.js"
+import type { FormBinding } from "../create-form-kit.js"
 import type {
 	ResolvedDefinition,
 	ResolvedFieldNode,
 	ResolvedNode,
 } from "../definition.js"
+import { getFormDiagnosticsRuntime } from "../diagnostics.js"
 import { fieldErrorsToIssues } from "../standard-schema-resolver.js"
 import type { FormIssue, StandardSchema } from "../types.js"
 import {
