@@ -41,8 +41,9 @@ invalid input.
 
 ## Resolve a restore conflict
 
-Persistence never overwrites a local edit made while `load()` is pending. The
-handle enters the `conflict` phase and returns `"conflict"`. Call `start()` to
+Persistence never overwrites a local edit made while `load()` is pending. This
+applies also when `usePersistence` unmounts before the load ends. The handle
+enters the `conflict` phase and returns `"conflict"`. Call `start()` to
 keep the current form and save it. Remount the form if the user must discard the
 local input and try the load again.
 
@@ -55,6 +56,8 @@ immediately saves the current input.
 
 After restore or start, persistence observes all RHF value publications. This
 includes generated controls, `form.update`, and direct `form.api` changes.
+Persistence also saves edits made while no `usePersistence` hook is mounted.
+The next mount records them as one change.
 Autosave uses a trailing 500 ms delay by default. Set `saveDelay` to another
 finite non-negative number.
 

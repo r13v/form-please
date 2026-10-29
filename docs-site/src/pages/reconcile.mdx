@@ -64,8 +64,8 @@ Reconcile enters `beforeUpdate`, middleware, and `afterUpdate` as an `array`
 source with action `reconcile`. Middleware can cancel the operation or adjust
 ordinary values. It cannot change the selected array's keys, length, or order.
 During reconcile, it must keep nested arrays in selected rows unchanged, including
-their leaf values. It must also keep other mounted generated array structures
-unchanged. Unsupported middleware changes fail before native operations.
+their leaf values. It must also keep the row count of each other mounted
+generated array unchanged. Unsupported middleware changes fail before native operations.
 A successful call records one history step when history is configured. Native
 RHF subscribers can observe intermediate array operations before the final
 managed value publication.

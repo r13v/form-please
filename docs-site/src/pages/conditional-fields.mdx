@@ -225,7 +225,7 @@ The form does not apply `whenHidden` in these cases:
 - The field was hidden before the edit.
 - A context change hides the field. Call `form.update` in the code that
   changes the context.
-- History or persistence restores values.
+- A managed feature, such as history or persistence, restores values.
 - `beforeUpdate` cancels the edit.
 
 `whenHidden` does not change submission or validation. The key stays in the
@@ -235,8 +235,11 @@ use a schema transform.
 In an array item, `"reset"` needs a value at the same path in `defaultValues`.
 An appended item has no such value, so the form throws a `TypeError`. Use
 `{ value }` for fields in array items. A structural array edit, such as
-append, remove, or move, does not apply `whenHidden` to the fields of that
-array.
+append, remove, move, or reconcile, does not apply `whenHidden` to the fields of
+that array.
+
+A `form.update` that reorders rows finds each moved row by its value. A field
+in a moved row that stays hidden or stays visible keeps its value.
 
 ## Keep conditional validation in the schema
 

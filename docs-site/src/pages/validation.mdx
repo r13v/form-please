@@ -53,6 +53,10 @@ The first submit attempt can be valid or invalid. After that attempt, each edit
 runs the complete form-level schema. `useForm` can override `mode`,
 `reValidateMode`, and `delayError`; it does not expose a replacement resolver.
 
+A managed update follows the same `mode` and `reValidateMode` rules as a native
+RHF input. With `mode: "all"`, each managed update validates, also after a
+submit.
+
 ## Display issues
 
 Standard Schema issues become public `FormIssue` values:

@@ -211,7 +211,7 @@ component-local form instance.
 | `FormSubmissionSnapshot<Name>` | `{ action, error }` snapshot of `FormSubmission`. `error` is `{ value }` or `null`. |
 | `FormIssueInput<Schema>` | An issue with a typed optional path for `validate` and `setIssues`. |
 | `SetIssuesOptions<Schema>` | The `focus` option of `setIssues`. |
-| `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, and current context. |
+| `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, current context, submit actions, submission store, `setIssues`, and `array`. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
 `AutoFormProps<Schema, Context>` is currently the same contract as
@@ -220,7 +220,8 @@ component-local form instance.
 
 Use `form.api` from `FormBinding` for unchanged React Hook Form operations. Use
 `form.update` for a managed value transaction. The other public fields are the
-fixed `definition` and current `context`. Read [`FormBinding` on the API
+fixed `definition`, the current `context`, `actions`, `submission`,
+`setIssues`, and `array`. Read [`FormBinding` on the API
 page](/api#formbinding) for their behavior.
 
 ### Managed value types
@@ -329,8 +330,10 @@ required slot components. The three option generics set the corresponding
 | `ErrorMessageSlotProps` | `ErrorMessage` slot. |
 
 `SubmitSlotProps<Schema>` types the `Submit` slot and typed render functions. It
-provides `buttonProps`, deeply readonly input `values`, `isSubmitting`,
-`isDirty`, and `canSubmit` (`!isValidating && !isSubmitting`).
+provides `buttonProps`, deeply readonly input `values`, `isPending`,
+`isSubmitting`, `isDirty`, and `canSubmit`
+(`!isPending && !isValidating && !isSubmitting`). `isPending` is `true` while
+any submit action of the form runs.
 
 ### Shared structure types
 

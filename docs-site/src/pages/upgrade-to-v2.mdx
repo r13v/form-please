@@ -64,6 +64,7 @@ change of values that keeps the row count is still allowed.
 | `move` of an `ArrayItem` slot to an index outside the array | Ignored | `RangeError` |
 | Invalid index in a definition tester array action | `TypeError` | `RangeError` |
 | `tester.setValue` on a disabled, read-only, or hidden field | Changes the value | Returns `committed: false` |
+| Definition tester array action on a hidden array | Changes the value | Returns `committed: false` |
 | Asynchronous `form.update` recipe, or an `itemDefault` that is not a plain object | Unclear error or wrong value | `TypeError` |
 | Undo after a persistence restore | Goes back to the default values | Stops at the restored draft |
 | Managed value update after submit with `mode: "all"` | Not validated with `reValidateMode` `onBlur` or `onSubmit` | Validated, as a native RHF input is |

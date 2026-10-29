@@ -67,9 +67,12 @@ executor.
 | `setContext`, `setDisabled`, `setReadOnly`, `rerender` | Re-resolve non-value form inputs without middleware. |
 | `resolveOptions(path)` | Resolve static or asynchronous field options and expose failures. |
 
-Each operation returns a transition with `before`, `after`, and exact public
-node `changes`. Managed transitions also report `committed`, `transaction`, and
-the middleware `result`. Read [Test definitions](/testing) for complete examples
+Each operation except `resolveOptions` returns a transition with `before`,
+`after`, and exact public node `changes`. Managed transitions also report
+`committed`, `transaction`, and the middleware `result`. `setValue` and the
+array actions return `committed: false` for a disabled, read-only, or hidden
+node. An array action with an index outside the array throws a `RangeError`.
+Read [Test definitions](/testing) for complete examples
 and boundaries.
 
 ## `useSnapshot`
@@ -524,8 +527,9 @@ A binding contains these public fields:
 | `context` | Current runtime context. |
 | `update(recipe)` | Apply one managed Immer recipe through value middleware. |
 | `actions` | Submit actions with stable identity for `kit.Submit action`. |
-| `submission` | External store with the running action name. |
+| `submission` | External store with the running action name and the last `onSubmit` rejection. |
 | `setIssues(issues, options)` | Replace the external issues and optionally move focus. |
+| `array(path)` | Select a mounted generated array. Its `reconcile` method selects rows. |
 
 Form-wide interaction and focus bookkeeping remain private. Use `form.api` for
 raw RHF operations that deliberately bypass managed middleware.
@@ -610,14 +614,15 @@ Array middleware cannot change the source array length or order beyond the
 source action. A change to the row count of another mounted generated array
 throws a `TypeError`.
 
-Only the proposed generated array action can change generated array length or
-order. `setValues` cannot synchronize the private row IDs in `useFieldArray`.
-Use each array's generated action for a managed structural change. Use a raw
-`useFieldArray` method only when the application deliberately bypasses
-middleware.
+Only the proposed generated array action can change the row count of a mounted
+generated array. `setValues` cannot synchronize the private row IDs in
+`useFieldArray`. Use each array's generated action for a managed structural
+change. Use a raw `useFieldArray` method only when the application deliberately
+bypasses middleware.
 
-Do not change generated array length or order from a generated control or
-`form.update`. These entry points cannot synchronize `useFieldArray` row IDs.
+Do not change generated array order from a generated control or
+`form.update`. These entry points write the new values into the existing rows,
+so each row ID stays at its index and does not move with its values.
 
 Initial values, reset, and every direct `form.api` mutation bypass middleware.
 Managed updates cannot remove a top-level value because RHF shallow-merges

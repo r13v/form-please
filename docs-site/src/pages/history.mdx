@@ -40,10 +40,14 @@ application-owned `useFieldArray` operations bypass history. When raw values
 diverge, the next managed update or history operation makes those current
 values a new non-undoable boundary and discards the older branches.
 
+A restore from another feature, such as persistence, is also a boundary. Undo
+does not go back past the restored values.
+
 History never retains errors, touched state, validation, submission, focus,
 context, or the default-value baseline. Restore keeps the current RHF metadata,
 recalculates dirty state against the original defaults, and may regenerate
-private field-array row IDs.
+private field-array row IDs. Restore validates the values by the form `mode`
+and `reValidateMode`, as a managed update does.
 
 ## Group and retain positions
 

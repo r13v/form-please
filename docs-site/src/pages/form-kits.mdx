@@ -83,7 +83,8 @@ Use the same kit to create the form binding and render its generated UI:
 uses the kit's submit slot. After validation succeeds, `onSubmit` receives the
 schema output in `value`.
 
-All JavaScript package entries are React client modules. In a Next.js App Router
+All JavaScript package entries except `form-please/testing` are React client
+modules. In a Next.js App Router
 project, keep the kit and the component that calls `useForm` behind a
 `"use client"` boundary.
 
@@ -260,12 +261,14 @@ The slot types contain these props:
 | `index` | `ArrayItem` | The zero-based item index. |
 | `disabled`, `readOnly` | `ArrayItem` | Resolved interaction state for the item. |
 | `canMoveUp`, `canMoveDown` | `ArrayItem` | Boundary and interaction state for move actions. |
-| `move(toIndex)`, `remove()` | `ArrayItem` | Array mutation callbacks. |
+| `move(toIndex)`, `remove()` | `ArrayItem` | Array mutation callbacks. `move` throws a `RangeError` for an index outside the array. |
 | `children` | `Section`, `Array`, `ArrayItem` | Rendered child nodes or items. |
 | `issue` | `ErrorMessage` | One normalized `FormIssue`. |
 | `buttonProps` | `Submit` | Button content, attributes, submit type, and resolved disabled state. |
 | `values` | `Submit` | The current form input object. |
 | `isSubmitting` | `Submit` | Whether the submit handler has a pending promise. |
+| `isPending` | `Submit` | Whether any submit action of the form runs. |
+| `isDirty`, `canSubmit` | `Submit` | Whether the values differ from the baseline, and whether the form can submit now. |
 
 ### Implement a field slot
 

@@ -28,7 +28,9 @@ can forward the proposal, add dependent patches, or cancel it. Read
 A publication is one value notification that React Hook Form (RHF) sends to its
 subscribers.
 Generated controls and `form.update` make one publication for each managed
-update. Read [Keep dependent values atomic](/recipes#keep-dependent-values-atomic).
+update when the update changes no key that contains a mounted generated array.
+For such a key, each changed value in it makes one publication. Read
+[Keep dependent values atomic](/recipes#keep-dependent-values-atomic).
 
 ## React Hook Form (RHF)
 

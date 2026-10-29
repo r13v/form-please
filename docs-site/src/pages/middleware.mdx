@@ -147,7 +147,7 @@ Hooks and middleware handle these entry points:
 | Entry point | `transaction.source.type` |
 | --- | --- |
 | Generated control change | `control` |
-| Generated array add, remove, or move | `array` |
+| Generated array add, remove, or move, and `form.array(path).reconcile` | `array` |
 | `form.update(recipe)` | `update` |
 | History undo, redo, seek, or import | `history` |
 | Persistence restore | `persistence` |
@@ -174,10 +174,12 @@ create a transaction.
 side of the middleware chain. The order is:
 
 1. `beforeUpdate`.
-2. Middleware code before `next`, in list order.
-3. The commit to RHF.
-4. Middleware code after `next`, in reverse order.
-5. `afterUpdate`.
+2. The `whenHidden` writes for fields that the change hides. A history or
+   persistence restore skips this step.
+3. Middleware code before `next`, in list order.
+4. The commit to RHF.
+5. Middleware code after `next`, in reverse order.
+6. `afterUpdate`.
 
 `afterUpdate` still runs when middleware throws after a commit, because the
 committed change remains observable. If both fail after commit, dispatch throws
@@ -201,9 +203,10 @@ Hooks and middleware receive one `ValueTransaction`.
 | `source` | The generated control, generated array action, `form.update`, or optional feature restore. |
 | `context` | Current deeply readonly runtime context for the form binding. |
 
-Control sources contain a typed `path`. Array sources contain a typed `path`,
-an action, and the affected index. Move sources contain `fromIndex` and
-`toIndex`. Optional history restores contain an `undo`, `redo`, `seek`, or
+Control sources contain a typed `path`. Array sources contain a typed `path`
+and an action. Append and remove sources contain the affected `index`. Move
+sources contain `fromIndex` and `toIndex`. A `reconcile` source contains no
+index. Optional history restores contain an `undo`, `redo`, `seek`, or
 `import` action. Persistence restore contains a `restore` action.
 
 Patch paths are segment arrays such as `["items", 0, "price"]`. They are not
@@ -253,13 +256,16 @@ Generated add, remove, and move actions enter middleware. Middleware can cancel
 the action or add dependent value patches. The source action still uses RHF
 `useFieldArray`, so the row IDs remain stable.
 
-Do not change the source array length or order beyond its proposed action. Do
-not change the structure of another generated array in the same transaction.
-Use the generated action of that array for its structural change.
+Do not change the source array length or order beyond its proposed action.
+That change throws a `TypeError`.
 
-Do not change generated array length or order from a generated control or
-`form.update`. RHF `setValues` cannot synchronize the private row IDs that
-`useFieldArray` owns.
+A managed update that changes the number of rows of a mounted generated array,
+other than the source array of the action, throws a `TypeError`. This rule
+applies to generated controls, `form.update`, `beforeUpdate`, and middleware
+patches. RHF `setValues` cannot synchronize the rows that `useFieldArray` owns.
+Use the actions of that array or `form.array(path).reconcile`. A change of
+values that keeps the row count is allowed. History and persistence restores
+do not use this rule.
 
 Generated array actions promise one final React render with dependent values.
 They do not promise one raw RHF publication. A raw RHF subscriber can observe
@@ -283,6 +289,8 @@ touched only after a real blur event.
 | Call `next` twice | Throws; an earlier commit is not rolled back. |
 | Call `api.update` during a transaction | Throws because nested managed updates are not allowed. |
 | Remove a top-level key | Throws because RHF shallow-merges root values. |
+| Return a Promise from a `form.update` recipe, `beforeUpdate`, or `afterUpdate` | Throws a `TypeError`. |
+| Change the row count of a mounted generated array outside its actions | Throws a `TypeError`. |
 | Throw before `next` | Prevents the commit. |
 | Throw after `next` | Propagates the error without rolling back the commit. |
 

@@ -10,7 +10,7 @@ Devtools answers "why did Form Please render and change the form this way?"
 | Lens | Owns |
 | --- | --- |
 | React Hook Form DevTools | Registered fields, values, errors, dirty, touched, and form state |
-| Form Please Devtools | Resolved UI, issue routing, managed updates, async options, history, and persistence |
+| Form Please Devtools | Resolved UI, issue routing, managed updates, async options, and configured managed features |
 
 The public integration is one component:
 
@@ -67,7 +67,7 @@ attaches to the exact form capability. The devtools store then observes:
   settlement stages for managed updates;
 - RHF value publications outside a managed commit;
 - async option requests and their observed value or context dependencies;
-- configured history and persistence snapshots.
+- snapshots of each configured managed feature, such as history and persistence.
 
 The store retains at most 100 updates and 20 transitions for each optional
 feature. Disconnecting the component releases all subscriptions. RHF remains
@@ -83,7 +83,7 @@ The Form Please launcher opens a resizable bottom drawer. Its initial height is
 | **UI** | Complete resolved tree, including hidden nodes; effective and inherited state; issue routing; submit focus; copy path; highlight control |
 | **Updates** | Managed and direct RHF publications; source, paths, before/after value comparison, pipeline stages, patches, outcome, and duration |
 | **Options** | Static and async option sources; current and previous request; observed dependencies, duration, error, and option count |
-| **Features** | Configured or absent history and persistence; current snapshot, internal status details, and recent transitions |
+| **Features** | Each configured managed feature under its label; current snapshot, internal status details, and recent transitions. A form without features shows "This form configures no optional features." |
 
 `UI` is the default view. Search is local to the UI and update lists. Recording
 can be paused without pausing or changing the form. All diagnostic views are

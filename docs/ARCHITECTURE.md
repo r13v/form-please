@@ -81,7 +81,8 @@ remain optional because only the Material UI preset uses them.
 | `src/form-submission.ts` | Submission runtime: action selection, submit snapshots, action validation, and external issues |
 | `src/form-issues.ts` | Store action and external issues beside schema errors and remap them with array rows |
 | `src/form-value.ts` | Clone and compare editable form values while preserving browser-owned leaf values |
-| `src/array-reconcile.ts` | Register mounted generated arrays and reconcile their rows through one managed transaction |
+| `src/array-reconcile.ts` | Register mounted generated arrays, reject row count changes of other mounted arrays, apply native row operations, and reconcile rows through one managed transaction |
+| `src/array-actions-i18n.ts` | Share the array action messages, their English defaults, and their formatter between the default slots and the presets |
 | `src/diagnostics.ts` | Provide the dormant package-private observer bridge, optional-feature registry, and devtools runtime access |
 | `src/devtools/devtools.tsx` | Bind RHF DevTools and render the Form Please diagnostic drawer |
 | `src/devtools/store.ts` | Aggregate bounded form-local diagnostic snapshots for the optional UI |
@@ -124,8 +125,11 @@ context on the next managed proposal.
 Public inspections project stable observable node properties rather than
 exporting the private `ResolvedDefinition` graph. Transitions retain before and
 after inspections, the exact public node diff, and final managed transaction
-when a proposal commits. The tester does not emulate RHF validation, metadata,
-submission, focus, or field-array row IDs.
+when a proposal commits. A control or array action on a disabled, read-only, or
+hidden node does not change values and reports `committed: false`, because the
+UI cannot make that edit. The tester does not emulate RHF validation, metadata,
+submission, focus, or field-array row IDs. It mounts no generated arrays, so it
+does not apply the row count check of mounted generated arrays.
 
 ## Form-kit ownership
 
@@ -229,7 +233,9 @@ no cache, retry, search, or pagination policy. Applications that need those
 policies continue to own resource state or a custom control.
 
 Visibility affects rendering only. Hidden fields preserve their React Hook
-Form values because unregistration is disabled.
+Form values because unregistration is disabled. A field `whenHidden` action can
+write a value when a managed update hides the field; see
+[Managed value updates](#managed-value-updates).
 
 ## Form binding and lifetime
 

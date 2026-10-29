@@ -239,7 +239,8 @@ Generated field paths use React Hook Form (RHF) dot syntax. The title above can 
 `itemDefault` accepts a complete item or a function that returns one. Form,
 Please clones the result before each insertion. Use a function when the default
 needs a new value, such as a generated ID. This function takes no arguments and
-is not a UI resolver.
+is not a UI resolver. The item must be a plain object. Another value throws a
+`TypeError` when the user adds an item.
 
 The `children` callback runs once while the definition is created. Its builder
 is bound to the array item, so each nested path is relative to that item. It is
@@ -378,6 +379,7 @@ argument:
 | `props` | Control-dependent | Supplies application-owned props to the selected control. |
 | `options` | Option-capable controls | Supplies a static or asynchronously loaded selectable list. |
 | `required` | No | Passes UI requirement state to the control. |
+| `whenHidden` | No | Keeps, resets, or replaces the value when a managed update hides the field. |
 
 Section properties. `ui.section(id, options)` takes the ID as its first
 argument:
@@ -410,8 +412,8 @@ argument:
 | `component` | Yes | Supplies the React component to render. |
 
 `label`, `description`, `title`, `props`, `slotOptions`, `visible`,
-`disabled`, `readOnly`, `required`, `className`, `columns`, and `span` can use
-resolvers where their node type supports the property.
+`disabled`, `readOnly`, `required`, `className`, `columns`, `span`,
+`errorDisplay`, and `whenHidden` can use resolvers where their node type supports the property.
 
 See [Form kits](/form-kits) for control props, selectable options, slot options, and
 custom slot examples.
