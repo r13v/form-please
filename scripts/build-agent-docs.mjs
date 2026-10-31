@@ -125,7 +125,8 @@ function packageHref(href, fromPage, context, prefix = "") {
 	const suffixStart = rest.search(/[#?]/)
 	const path = suffixStart === -1 ? rest : rest.slice(0, suffixStart)
 	const fragment = suffixStart === -1 ? "" : rest.slice(suffixStart)
-	const route = path.replace(/^\/|\/$/g, "") || "index"
+	// `llms.txt` links pages as `/<page>.md`, and the pages link to `/<page>`.
+	const route = path.replace(/^\/|\/$/g, "").replace(/\.md$/, "") || "index"
 	const page = [`${route}.md`, `${route}/index.md`].find((name) =>
 		context.pages.has(name),
 	)

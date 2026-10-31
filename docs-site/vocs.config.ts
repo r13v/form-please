@@ -5,9 +5,9 @@ import { findScenario } from "#lib/playground-scenarios"
 // A JSON import is inlined into the server bundle. A runtime file read would
 // resolve against dist/server and fail in `vocs preview`.
 import rootPackage from "../package.json" with { type: "json" }
+import { transformMarkdownOutput } from "../scripts/fix-vocs-llms-links.mjs"
 
 const basePath = process.env.BASE_PATH ?? "/"
-const assetBasePath = basePath.replace(/\/$/, "")
 const { version } = rootPackage
 
 type MarkdownNode = {
@@ -66,9 +66,9 @@ export default defineConfig({
 	title: "Form, Please",
 	description:
 		"Typed, schema-validated React forms that keep native HTML semantics and your design system.",
-	iconUrl: `${assetBasePath}/favicon.ico`,
+	iconUrl: "/favicon.ico",
 	// Keep baseUrl separate from basePath: Vocs adds basePath to canonical URLs.
-	// postbuild fixes the sitemap and robots output, where Vocs 2.7.2 omits it.
+	// postbuild fixes the sitemap and robots output, where Vocs 2.12.0 omits it.
 	baseUrl: process.env.BASE_URL ?? "https://r13v.github.io",
 	basePath,
 	renderStrategy: "full-static",
@@ -85,6 +85,10 @@ export default defineConfig({
 		},
 	},
 	markdown: {
+		output: {
+			validation: "fail",
+			transform: (output) => transformMarkdownOutput(output, basePath),
+		},
 		outputRemarkPlugins: [
 			remarkScriptedPlayground,
 			[

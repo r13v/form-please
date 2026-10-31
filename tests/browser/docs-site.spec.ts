@@ -1,9 +1,19 @@
 import { readFileSync } from "node:fs"
-import { expect, type Page, test } from "@playwright/test"
+import { expect, type Locator, type Page, test } from "@playwright/test"
 
 const { version } = JSON.parse(
 	readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
 ) as { version: string }
+
+/** A click before hydration selects nothing, so retry until the tab is selected. */
+async function selectTab(tab: Locator): Promise<void> {
+	await expect(async () => {
+		await tab.click()
+		await expect(tab).toHaveAttribute("aria-selected", "true", {
+			timeout: 1_000,
+		})
+	}).toPass()
+}
 
 function pageErrors(page: Page): string[] {
 	const errors: string[] = []
@@ -324,10 +334,15 @@ test.describe("Form, Please documentation", () => {
 			.locator("[data-v-twoslash-trigger]", { hasText: "createMuiFormKit" })
 			.first()
 		await expect(trigger).toBeVisible()
-		await trigger.hover()
-		await expect(page.locator(".twoslash-popup-container")).toContainText(
-			"createMuiFormKit",
-		)
+		// A hover before hydration opens nothing, so retry until the popup opens.
+		await expect(async () => {
+			await page.mouse.move(0, 0)
+			await trigger.hover()
+			await expect(page.locator(".twoslash-popup-container")).toContainText(
+				"createMuiFormKit",
+				{ timeout: 1_000 },
+			)
+		}).toPass()
 
 		expect(errors).toEqual([])
 	})
@@ -420,7 +435,7 @@ test.describe("Form, Please documentation", () => {
 		const playground = page.getByTestId("scripted-playground")
 		await expect(playground).toBeVisible()
 
-		await playground.getByRole("tab", { name: "Typed output" }).click()
+		await selectTab(playground.getByRole("tab", { name: "Typed output" }))
 		await playground.getByRole("button", { name: "Save profile" }).click()
 		await expect(
 			playground.locator(
@@ -433,7 +448,7 @@ test.describe("Form, Please documentation", () => {
 			),
 		).toContainText("handle: string")
 
-		await playground.getByRole("tab", { name: "Catch the typo" }).click()
+		await selectTab(playground.getByRole("tab", { name: "Catch the typo" }))
 		await expect(playground.getByText("Nothing to render")).toBeVisible()
 		await expect(
 			playground.locator("[role=tabpanel]:not([hidden]) .twoslash-error-line"),
@@ -493,7 +508,7 @@ test.describe("Form, Please documentation", () => {
 		const errors = pageErrors(page)
 		await page.goto("./")
 		const playground = page.getByTestId("scripted-playground")
-		await playground.getByRole("tab", { name: "Conditional field" }).click()
+		await selectTab(playground.getByRole("tab", { name: "Conditional field" }))
 		const demo = playground.locator(
 			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
 		)
@@ -522,7 +537,7 @@ test.describe("Form, Please documentation", () => {
 		const errors = pageErrors(page)
 		await page.goto("./")
 		const playground = page.getByTestId("scripted-playground")
-		await playground.getByRole("tab", { name: "Dependent values" }).click()
+		await selectTab(playground.getByRole("tab", { name: "Dependent values" }))
 		const demo = playground.locator(
 			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
 		)
@@ -545,7 +560,7 @@ test.describe("Form, Please documentation", () => {
 		const errors = pageErrors(page)
 		await page.goto("./")
 		const playground = page.getByTestId("scripted-playground")
-		await playground.getByRole("tab", { name: "Grid layout" }).click()
+		await selectTab(playground.getByRole("tab", { name: "Grid layout" }))
 		const demo = playground.locator(
 			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
 		)
@@ -567,7 +582,7 @@ test.describe("Form, Please documentation", () => {
 		const errors = pageErrors(page)
 		await page.goto("./")
 		const playground = page.getByTestId("scripted-playground")
-		await playground.getByRole("tab", { name: "React Hook Form" }).click()
+		await selectTab(playground.getByRole("tab", { name: "React Hook Form" }))
 		const demo = playground.locator(
 			"[role=tabpanel]:not([hidden]) .form-please-playground__form",
 		)
@@ -591,7 +606,7 @@ test.describe("Form, Please documentation", () => {
 		const demo = page.getByTestId("migration-demo")
 
 		for (const version of ["React Hook Form", "Form, Please"]) {
-			await demo.getByRole("tab", { name: version }).click()
+			await selectTab(demo.getByRole("tab", { name: version }))
 			const panel = demo.locator("[role=tabpanel]:not([hidden])")
 
 			await panel.getByRole("button", { name: "Send ticket" }).click()
@@ -748,11 +763,16 @@ test.describe("Form, Please documentation", () => {
 		const workflow = page.getByRole("region", {
 			name: "Product workflow recipe preview",
 		})
-		await workflow.getByLabel("Name").fill("Ada Lovelace")
-		await workflow.getByLabel("Email").fill("ada@example.com")
-		await workflow.getByLabel("I represent an organization").uncheck()
-		await workflow.getByRole("button", { name: "Continue" }).click()
-		await expect(workflow.getByText(/Details\. Step 2 of 3\./)).toBeVisible()
+		// Hydration resets the values typed before it, so retry the first step.
+		await expect(async () => {
+			await workflow.getByLabel("Name").fill("Ada Lovelace")
+			await workflow.getByLabel("Email").fill("ada@example.com")
+			await workflow.getByLabel("I represent an organization").uncheck()
+			await workflow.getByRole("button", { name: "Continue" }).click()
+			await expect(workflow.getByText(/Details\. Step 2 of 3\./)).toBeVisible({
+				timeout: 1_000,
+			})
+		}).toPass()
 
 		await workflow.getByRole("button", { name: "Clear identity name" }).click()
 		await workflow.getByRole("button", { name: "Review" }).click()

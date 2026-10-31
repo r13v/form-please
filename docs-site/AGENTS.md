@@ -29,7 +29,13 @@
   as `?raw`, `?worker`, or `import.meta.glob`; load those lazily from client
   code (see `src/lib/playground-sources.ts`). Components with children cannot
   use `toMarkdown`; give them a Markdown representation through
-  `markdown.outputRemarkPlugins` in `vocs.config.ts` instead.
+  `markdown.outputRemarkPlugins` in `vocs.config.ts` instead. A Markdown
+  component override (`markdown.output.components`) cannot match
+  `ScriptedPlayground.Scenario`, because it matches module exports only.
+- `markdown.output.validation` is `fail`: a build and `vocs markdown-audit`
+  stop on a finding. The validation does not know `basePath`, so
+  `markdown.output.transform` replaces only the
+  `import.meta.env.BASE_URL` templates, and `postbuild` adds the base path.
 - The live playground evaluates editor code in the browser with Sucrase and
   exposes only the modules listed in `src/lib/playground-runtime.ts`. The
   editor is Monaco; `src/lib/playground-monaco.ts` configures it with the
@@ -86,9 +92,10 @@
   Markdown to `../dist/docs` for the npm package.
   The second script adds the base path to
   root-relative links in `llms.txt`, `llms-full.txt`, and
-  `assets/md/**/*.md`, outside code, and replaces the
-  `import.meta.env.BASE_URL` templates that MDX JSX leaves there. Keep `showAskAi: false` on all pages until Vocs fixes
-  its Ask AI base-path bug. The third script adds the base path
+  `assets/md/**/*.md`, outside code. It also copies each
+  `assets/md/<page>.md` to `<page>.md`: `llms.txt` links to that path, and
+  only a Vocs server maps it to `assets/md`. Keep `showAskAi: false` on all
+  pages until Vocs fixes its Ask AI base-path bug. The third script adds the base path
   to sitemap URLs and the robots sitemap reference. Keep `baseUrl` separate
   from `basePath`; canonical URLs already include both. Do not patch the
   `vocs` dependency.
