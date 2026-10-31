@@ -164,7 +164,7 @@ Form, Please does not add caching or retries.
 - [Troubleshooting](https://r13v.github.io/form-please/troubleshooting)
 - [Shadcn registry adapter](https://r13v.github.io/form-please/examples/shadcn-valibot)
 - [Architecture overview](docs/architecture-overview.md) and the other [design documents](docs/)
-- [Use with AI agents](https://r13v.github.io/form-please/ai-agents)
+- [Use with AI agents](https://r13v.github.io/form-please/ai-agents): the package ships these docs for coding agents in `node_modules/form-please/dist/docs`
 - [LLM documentation index](https://r13v.github.io/form-please/llms.txt)
 - [Full documentation for LLMs](https://r13v.github.io/form-please/llms-full.txt)
 

@@ -1,19 +1,44 @@
 ---
 title: Use with AI agents
-description: Give coding agents the current Form, Please documentation with a prompt, the LLM files, or the installable skill.
+description: Give coding agents the Form, Please documentation from the installed package, the LLM files, or the installable skill.
 showAskAi: false
 ---
 
 # Use with AI agents
 
 Give your coding agent the current Form, Please documentation, so that it does
-not rely only on its training data. You can do this in two ways:
+not rely only on its training data. You can do this in three ways:
 
+- Point the agent to the documentation in the installed package. It matches
+  your version and needs no network access.
 - Paste a prompt that points the agent to the LLM files and their fallback
   links. Your agent needs web or HTTP access.
 - Install the Form, Please skill. This works without a prompt.
 
 The `llms.txt` file is the documentation index.
+
+## Read the documentation from the package
+
+Each npm release after 2.0.0 contains the documentation of its version in
+`node_modules/form-please/dist/docs/`. For 2.0.0 and earlier, give your agent
+the LLM files of the site, as the next section describes. The directory
+contains these files:
+
+- `SKILL.md` is the index: one link and one description for each page. It
+  follows the [Agent Skills](https://agentskills.io/) format.
+- `references/<page>.md` is one page as Markdown, with the complete code of
+  its examples. Links between pages are relative paths.
+
+Copy this prompt into your agent session, and then add your task:
+
+```text
+Read node_modules/form-please/dist/docs/SKILL.md and the pages in its
+references/ directory that concern my task. Treat those pages as the source
+of truth for Form, Please. Use only documented APIs.
+```
+
+Live demos and the playground stay on the site. The package documentation
+links to them.
 
 ## Give your agent the documentation
 
@@ -89,9 +114,6 @@ Codex `web.run` has read both through links on this page. If none of these
 paths gives your agent the pages for its task, it must report the access
 failure before it implements code that depends on them.
 
-Vocs can leave `[!include …]` references in Markdown examples. Read the
-corresponding HTML page for the complete code of those examples.
-
 ## Install the skill
 
 The skill follows the open [Agent Skills](https://agentskills.io/) format. It
@@ -152,9 +174,10 @@ Use the form-please skill. Review this form definition for invalid schema paths,
 validation mistakes, and submission errors.
 ```
 
-When the skill activates, it tells the agent to read `llms.txt` and the pages
-for its task. It includes the same web and HTTP fallback sequence described
-above. The agent uses that documentation as its source of truth.
+When the skill activates, it tells the agent to read the documentation in the
+installed package. If the project does not have the package, the agent reads
+`llms.txt` and the pages for its task from the site. The agent uses that
+documentation as its source of truth.
 
 ## Verify the installation
 

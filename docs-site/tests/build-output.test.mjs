@@ -7,6 +7,7 @@ import { pages } from "./pages.mjs"
 
 const siteRoot = new URL("../", import.meta.url)
 const publicRoot = new URL("dist/public/", siteRoot)
+const packageDocsRoot = new URL("../dist/docs/", siteRoot)
 const expectProductionUrl = process.env.EXPECT_PRODUCTION_URL === "true"
 const basePath = normalizeBasePath(process.env.BASE_PATH ?? "/")
 const llmFiles = ["llms.txt", "llms-full.txt", ...pages.map((p) => p.markdown)]
@@ -124,6 +125,52 @@ test("LLM files link to built pages under the base path", async () => {
 	assert.ok(checked > 0, "no root-relative links were checked")
 })
 
+test("LLM files contain the snippet code, not include lines", async () => {
+	for (const file of llmFiles) {
+		const markdown = await readFile(new URL(file, publicRoot), "utf8")
+		assert.doesNotMatch(markdown, /\/\/ \[!include /, `${file} has an include`)
+	}
+	const getStarted = await readFile(
+		new URL("assets/md/get-started.md", publicRoot),
+		"utf8",
+	)
+	assert.match(getStarted, /const profileSchema = z/)
+})
+
+test("the package documentation indexes each page and links inside itself", async () => {
+	const { version } = JSON.parse(
+		await readFile(new URL("../package.json", siteRoot), "utf8"),
+	)
+	const skill = await readFile(new URL("SKILL.md", packageDocsRoot), "utf8")
+	assert.match(skill, new RegExp(`version: "${escapeRegExp(version)}"`))
+
+	const files = (await readdir(packageDocsRoot, { recursive: true })).filter(
+		(file) => file.endsWith(".md"),
+	)
+	for (const { markdown } of pages) {
+		const page = markdown.replace(/^assets\/md\//, "references/")
+		assert.ok(files.includes(page), `dist/docs is missing ${page}`)
+		assert.match(skill, new RegExp(`\\]\\(${escapeRegExp(page)}\\)`))
+	}
+
+	let checked = 0
+	for (const file of files) {
+		const markdown = await readFile(new URL(file, packageDocsRoot), "utf8")
+		for (const text of proseSegments(markdown)) {
+			for (const [, href] of text.matchAll(/(?:\]\(|href=")([^)"\s]+)/g)) {
+				if (/^(https?:|mailto:|#)/.test(href)) continue
+				const target = new URL(
+					href.replace(/[?#].*$/, ""),
+					new URL(file, packageDocsRoot),
+				)
+				await access(target)
+				checked++
+			}
+		}
+	}
+	assert.ok(checked > 0, "no relative links were checked")
+})
+
 test("the AI agents page and skill list LLM files that the build emits", async () => {
 	for (const source of [
 		new URL("src/pages/ai-agents.mdx", siteRoot),
@@ -212,3 +259,7 @@ test("sitemap, robots, metadata, and HTML links agree on the deployment path", a
 		[`Sitemap: ${origin}${basePath}/sitemap.xml`],
 	)
 })
+
+function escapeRegExp(value) {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}

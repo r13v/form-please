@@ -1,12 +1,94 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
+import { rewriteSiteLinks } from "../../scripts/build-agent-docs.mjs"
 import {
 	prefixMarkdownLinks,
 	proseSegments,
 } from "../../scripts/fix-vocs-llms-links.mjs"
 import { prefixSitemapUrl } from "../../scripts/fix-vocs-sitemap.mjs"
+import { resolveIncludes } from "../src/lib/markdown-includes.ts"
 
 const basePath = "/form-please"
+const siteUrl = "https://r13v.github.io/form-please"
+const docsContext = {
+	basePath,
+	pages: new Set([
+		"index.md",
+		"get-started.md",
+		"examples.md",
+		"examples/history.md",
+	]),
+	siteUrl,
+}
+const snippet = [
+	'"use client"',
+	"// [!region schema]",
+	"// @errors: 2322",
+	"const schema = z.object({})",
+	"//    ^?",
+	"// @ts-expect-error: the value is not a string",
+	"// [!endregion schema]",
+	"export function Form() {}",
+].join("\n")
+
+test("snippet includes resolve to the region code without Twoslash directives", () => {
+	const read = (fileName) => {
+		assert.equal(fileName, "snippets/form.tsx")
+		return snippet
+	}
+
+	assert.equal(
+		resolveIncludes("// [!include ~/snippets/form.tsx:schema]", read),
+		"const schema = z.object({})\n// @ts-expect-error: the value is not a string",
+	)
+	assert.equal(
+		resolveIncludes("before\n// [!include ~/snippets/form.tsx]\nafter", read),
+		[
+			"before",
+			'"use client"',
+			"const schema = z.object({})",
+			"// @ts-expect-error: the value is not a string",
+			"export function Form() {}",
+			"after",
+		].join("\n"),
+	)
+})
+
+test("snippet includes that do not resolve fail the build", () => {
+	const read = () => snippet
+
+	assert.throws(
+		() => resolveIncludes("// [!include ~/snippets/form.tsx:missing]", read),
+		/region missing not found/,
+	)
+	assert.throws(
+		() => resolveIncludes("// [!include ~/snippets/form.tsx /a/b/]", read),
+		/Unsupported snippet include/,
+	)
+})
+
+test("package docs link to pages relatively and to everything else on the site", () => {
+	const markdown = [
+		"See [Get started](/form-please/get-started#install) and [Examples](/form-please/examples/).",
+		'<a href="/form-please/playground">Playground</a> and [home](/form-please/).',
+		"![Logo](/form-please/brand/logo.png) and [external](https://example.com/x).",
+		"```md",
+		"[code](/form-please/get-started)",
+		"```",
+	].join("\n")
+
+	assert.equal(
+		rewriteSiteLinks(markdown, "examples/history.md", docsContext),
+		[
+			"See [Get started](../get-started.md#install) and [Examples](../examples.md).",
+			`<a href="${siteUrl}/playground">Playground</a> and [home](../index.md).`,
+			`![Logo](${siteUrl}/brand/logo.png) and [external](https://example.com/x).`,
+			"```md",
+			"[code](/form-please/get-started)",
+			"```",
+		].join("\n"),
+	)
+})
 
 test("sitemap URLs reach the deployment once, including the root and nested pages", () => {
 	for (const [input, expected] of [
