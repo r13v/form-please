@@ -4,6 +4,7 @@ import { rewriteSiteLinks } from "../../scripts/build-agent-docs.mjs"
 import {
 	prefixMarkdownLinks,
 	proseSegments,
+	transformMarkdownOutput,
 } from "../../scripts/fix-vocs-llms-links.mjs"
 import { prefixSitemapUrl } from "../../scripts/fix-vocs-sitemap.mjs"
 import { resolveIncludes } from "../src/lib/markdown-includes.ts"
@@ -199,6 +200,21 @@ test("prefixMarkdownLinks replaces the MDX base URL template", () => {
 	assert.equal(
 		prefixMarkdownLinks(markdown, "/"),
 		'<a href="/workflows">Go</a>',
+	)
+})
+
+test("the Markdown output transform replaces templates and leaves links for validation", () => {
+	const page =
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: the input is MDX output text.
+		"<a href={`${import.meta.env.BASE_URL}workflows`}>Go</a> [Next](/arrays)"
+	const index = "- [Arrays](/arrays.md): Rows."
+
+	assert.deepEqual(
+		transformMarkdownOutput({ index, pages: { "/": page } }, basePath),
+		{
+			index,
+			pages: { "/": '<a href="/form-please/workflows">Go</a> [Next](/arrays)' },
+		},
 	)
 })
 

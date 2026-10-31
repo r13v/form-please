@@ -64,13 +64,13 @@ the pages for my task, report the access failure before implementing code.
 |---|---|---|
 | `llms.txt` | [`https://r13v.github.io/form-please/llms.txt`](https://r13v.github.io/form-please/llms.txt) | The index: one link and one description for each page |
 | `llms-full.txt` | [`https://r13v.github.io/form-please/llms-full.txt`](https://r13v.github.io/form-please/llms-full.txt) | All pages in one Markdown file |
-| Page Markdown | `https://r13v.github.io/form-please/assets/md/<page>.md` | One page as Markdown |
+| Page Markdown | `https://r13v.github.io/form-please/<page>.md` | One page as Markdown |
 | HTML page | `https://r13v.github.io/form-please/<page>/` | One rendered page with its examples |
 
 In the page Markdown URL, `<page>` is the page path without the first slash.
 For example, the Markdown of `/form-please/get-started` is
-[`/form-please/assets/md/get-started.md`](https://r13v.github.io/form-please/assets/md/get-started.md),
-and the Markdown of the overview is `/form-please/assets/md/index.md`.
+[`/form-please/get-started.md`](https://r13v.github.io/form-please/get-started.md),
+and the Markdown of the overview is `/form-please/index.md`.
 
 ### If a documentation URL fails
 
@@ -103,7 +103,7 @@ curl is not required. The Node.js command uses its built-in HTTP client.
 
 Some web tools reject the `text/markdown` response of a page Markdown URL.
 Read the corresponding HTML page instead. For example, read
-[Get started](/get-started) for `assets/md/get-started.md`.
+[Get started](/get-started) for `get-started.md`.
 For Markdown with the supported `text/plain` response, follow **llms-full.txt**
 in the table above. An HTTP client can fetch that file from its URL too.
 Find the relevant page heading in the full file. If the tool truncates the

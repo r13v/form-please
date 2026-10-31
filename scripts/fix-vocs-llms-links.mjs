@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile } from "node:fs/promises"
+import { copyFile, readdir, readFile, writeFile } from "node:fs/promises"
 import { pathToFileURL } from "node:url"
 import { normalizeBasePath } from "./fix-vocs-skip-links.mjs"
 
@@ -12,13 +12,23 @@ if (isMain()) {
 	await patchMarkdownFiles(process.env.BASE_PATH ?? "/")
 }
 
+/**
+ * Adds the base path to the links of the LLM files after the build. The Vocs
+ * Markdown validation does not know the base path, so this cannot run in
+ * `markdown.output.transform`.
+ *
+ * `llms.txt` links each page as `/<page>.md`, which a Vocs server answers from
+ * `/assets/md/<page>.md`. GitHub Pages has no server, so this writes a copy of
+ * each page Markdown at `<page>.md`.
+ */
 export async function patchMarkdownFiles(basePathValue) {
+	const pages = (await readdir(markdownRoot, { recursive: true })).filter(
+		(name) => name.endsWith(".md"),
+	)
 	const files = [
 		new URL("llms.txt", publicRoot),
 		new URL("llms-full.txt", publicRoot),
-		...(await readdir(markdownRoot, { recursive: true }))
-			.filter((name) => name.endsWith(".md"))
-			.map((name) => new URL(name, markdownRoot)),
+		...pages.map((name) => new URL(name, markdownRoot)),
 	]
 
 	for (const file of files) {
@@ -28,6 +38,10 @@ export async function patchMarkdownFiles(basePathValue) {
 		if (output !== source) {
 			await writeFile(file, output)
 		}
+	}
+
+	for (const name of pages) {
+		await copyFile(new URL(name, markdownRoot), new URL(name, publicRoot))
 	}
 }
 
@@ -39,6 +53,35 @@ function isMain() {
 }
 
 /**
+ * `markdown.output.transform` for `vocs.config.ts`. It replaces the
+ * `import.meta.env.BASE_URL` templates that MDX JSX leaves in the page
+ * Markdown, so they do not fail the Vocs Markdown validation.
+ */
+export function transformMarkdownOutput({ index, pages }, basePathValue) {
+	const basePath = normalizeBasePath(basePathValue)
+
+	return {
+		index,
+		pages: Object.fromEntries(
+			Object.entries(pages).map(([route, markdown]) => [
+				route,
+				mapProseLines(markdown, (line) =>
+					mapOutsideInlineCode(line, (text) =>
+						replaceBaseUrlTemplates(text, basePath),
+					),
+				),
+			]),
+		),
+	}
+}
+
+function replaceBaseUrlTemplates(text, basePath) {
+	return text.replace(baseUrlPattern, (_template, path) => {
+		return `"${basePath}/${path}"`
+	})
+}
+
+/**
  * Adds the base path to root-relative Markdown links, and replaces the
  * `import.meta.env.BASE_URL` templates that MDX JSX leaves in the output.
  */
@@ -47,9 +90,7 @@ export function prefixMarkdownLinks(markdown, basePathValue) {
 
 	return mapProseLines(markdown, (line) =>
 		mapOutsideInlineCode(line, (text) => {
-			const replaced = text.replace(baseUrlPattern, (_template, path) => {
-				return `"${basePath}/${path}"`
-			})
+			const replaced = replaceBaseUrlTemplates(text, basePath)
 
 			return basePath === ""
 				? replaced

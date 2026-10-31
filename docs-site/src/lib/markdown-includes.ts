@@ -16,7 +16,7 @@ const twoslashDirectivePattern = /^\s*\/\/\s*(@(?!ts-)|\^\?)/
 /**
  * Markdown output only: replaces `// [!include ~/…]` lines in code fences with
  * the snippet code, as Vocs does for the HTML page, and removes Twoslash
- * directives. Vocs 2.7.2 resolves only virtual files in Markdown output, so
+ * directives. Vocs 2.12.0 resolves only virtual files in Markdown output, so
  * without this plugin `llms.txt` readers get the include lines, not the code.
  */
 export function remarkSnippetIncludes(options: { srcDir: string }) {
