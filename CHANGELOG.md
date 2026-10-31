@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/r13v/form-please/compare/v2.0.0...v2.1.0) (2026-10-31)
+
+
+### Features
+
+* ship the documentation in the npm package for coding agents ([a09105d](https://github.com/r13v/form-please/commit/a09105dce4ca6c2a6124f06048fdfed83f8ac79c))
+
 ## [2.0.0](https://github.com/r13v/form-please/compare/v1.12.2...v2.0.0) (2026-10-29)
 
 
