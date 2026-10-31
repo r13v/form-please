@@ -29,6 +29,7 @@ To add an entry, add it to `package.json#exports`, create `index.ts` in the `src
 - `npm run package:lint` runs publint in strict mode and attw with the node16 profile on every entry. These tools find export conditions and type declarations that resolve differently in ESM and CommonJS consumers.
 - `npm run test:smoke` (`scripts/verify-smoke-fixtures.mjs`) installs the packed package into the projects in `tests/fixtures` and builds or runs each one. The fixtures cover React 18, React 19, Next.js, and plain Node with ESM and CommonJS, which unit tests cannot cover. The React 18 fixture pins the RHF peer minimum.
 - `npm run verify` runs all of these checks, and the `verify` job in `.github/workflows/ci.yml` runs it.
+- The tarball contains `dist/docs`, the site pages as Markdown for coding agents. The docs-site `postbuild` writes it with `scripts/build-agent-docs.mjs`, and `npm run build` deletes it with the rest of `dist`. So a publish needs a site build after the last package build: `npm run site:verify` in `.github/workflows/publish.yml` is that build, and the `prepublishOnly` script stops a publish whose `dist/docs` has a different version. The user contract: `docs-site/src/pages/ai-agents.mdx`.
 
 ## Type instantiation budget
 

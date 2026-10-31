@@ -77,8 +77,13 @@
   and uses Testing Library. `vitest.docs.config.ts` dedupes `react`,
   `react-dom`, and `react-hook-form`, so the snippet, the built package, and
   Testing Library share one copy of each.
+- Vocs resolves `// [!include ~/…]` only in the HTML page.
+  `src/lib/markdown-includes.ts` resolves it in the Markdown output, so the
+  LLM files and the package documentation contain the example code.
 - `postbuild` runs `scripts/fix-vocs-skip-links.mjs`,
-  `scripts/fix-vocs-llms-links.mjs`, and `scripts/fix-vocs-sitemap.mjs`.
+  `scripts/fix-vocs-llms-links.mjs`, `scripts/build-agent-docs.mjs`, and
+  `scripts/fix-vocs-sitemap.mjs`. `build-agent-docs.mjs` writes the site
+  Markdown to `../dist/docs` for the npm package.
   The second script adds the base path to
   root-relative links in `llms.txt`, `llms-full.txt`, and
   `assets/md/**/*.md`, outside code, and replaces the

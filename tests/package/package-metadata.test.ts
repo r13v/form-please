@@ -34,7 +34,7 @@ describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
 			engines: { node: ">=24" },
-			files: ["dist"],
+			files: ["dist", "skills"],
 			license: "MIT",
 			name: "form-please",
 			peerDependencies: {
@@ -94,8 +94,11 @@ describe("package metadata", () => {
 		const [packResult] = JSON.parse(stdout) as [
 			{ readonly files: readonly { readonly path: string }[] },
 		]
-		expect(packResult.files.map((file) => file.path)).toContain(
-			"dist/layout.css",
+		expect(packResult.files.map((file) => file.path)).toEqual(
+			expect.arrayContaining([
+				"dist/layout.css",
+				"skills/form-please/SKILL.md",
+			]),
 		)
 	})
 })

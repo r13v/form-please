@@ -61,14 +61,14 @@ export function prefixMarkdownLinks(markdown, basePathValue) {
 }
 
 /** Calls `rewrite` on each line outside code fences. */
-function mapProseLines(markdown, rewrite) {
+export function mapProseLines(markdown, rewrite) {
 	return Array.from(markdownLines(markdown), ({ line, prose }) =>
 		prose ? rewrite(line) : line,
 	).join("\n")
 }
 
 /** Calls `rewrite` on each part of the line outside inline code spans. */
-function mapOutsideInlineCode(line, rewrite) {
+export function mapOutsideInlineCode(line, rewrite) {
 	return inlineCodeParts(line)
 		.map((part, index) => (index % 2 === 0 ? rewrite(part) : part))
 		.join("")

@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url"
 import { defineConfig } from "vocs/config"
+import { remarkSnippetIncludes } from "#lib/markdown-includes"
 import { findScenario } from "#lib/playground-scenarios"
 // A JSON import is inlined into the server bundle. A runtime file read would
 // resolve against dist/server and fail in `vocs preview`.
@@ -83,7 +84,15 @@ export default defineConfig({
 			vfsRoot: fileURLToPath(new URL("./src/snippets", import.meta.url)),
 		},
 	},
-	markdown: { outputRemarkPlugins: [remarkScriptedPlayground] },
+	markdown: {
+		outputRemarkPlugins: [
+			remarkScriptedPlayground,
+			[
+				remarkSnippetIncludes,
+				{ srcDir: fileURLToPath(new URL("./src", import.meta.url)) },
+			],
+		],
+	},
 	socials: [{ icon: "github", link: "https://github.com/r13v/form-please" }],
 	editLink: {
 		link: "https://github.com/r13v/form-please/edit/main/docs-site/:path",
