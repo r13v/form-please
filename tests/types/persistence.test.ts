@@ -72,7 +72,7 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 }).forContext<Context>()
-const definition = kit.defineForm(schema, { ui: [] }, { middleware: [feature] })
+const definition = kit.defineForm(schema, () => [], { middleware: [feature] })
 
 function usePersistenceForm() {
 	const form = kit.useForm(definition, {

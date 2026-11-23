@@ -9,6 +9,7 @@ import {
 } from "react"
 
 import { defineControl } from "../control-definition.js"
+import { errorMessage } from "../error-codes.js"
 import type { ControlProps, OptionValue } from "../types.js"
 
 /** A supported HTML input type for the native text control. */
@@ -311,12 +312,18 @@ function NativeSelectControl({
 		options.some((option) => option.value === "")
 	) {
 		throw new TypeError(
-			'createNativeControls().select cannot combine props.emptyOption with an option whose value is ""',
+			errorMessage(
+				"FP013",
+				'createNativeControls().select cannot combine props.emptyOption with an option whose value is ""',
+			),
 		)
 	}
 	if (value === undefined && selectProps.emptyOption === undefined) {
 		throw new TypeError(
-			"createNativeControls().select requires props.emptyOption to represent undefined",
+			errorMessage(
+				"FP014",
+				"createNativeControls().select requires props.emptyOption to represent undefined",
+			),
 		)
 	}
 

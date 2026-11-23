@@ -9,11 +9,9 @@ const schema = z.object({
 	generated: z.string().min(3, "Too short"),
 	native: z.string().min(3, "Too short"),
 })
-const definition = kit.defineForm(schema, {
-	ui: [
-		{ kind: "field", path: "generated", control: "text", label: "Generated" },
-	],
-})
+const definition = kit.defineForm(schema, (ui) => [
+	ui.field("generated", { control: "text", label: "Generated" }),
+])
 
 const modes: Mode[] = ["onSubmit", "onBlur", "onChange", "onTouched", "all"]
 const reValidateModes = ["onSubmit", "onBlur", "onChange"] as const

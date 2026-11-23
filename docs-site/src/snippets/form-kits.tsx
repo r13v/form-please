@@ -204,7 +204,11 @@ const brandedSlots = {
 	Field: CardFieldSlot,
 	Array: ListArraySlot,
 	Submit: SaveSubmitSlot,
-} satisfies FormKitSlots<CardFieldOptions, never, ListSlotOptions>
+} satisfies FormKitSlots<{
+	fieldOptions: CardFieldOptions
+	sectionOptions: never
+	arrayOptions: ListSlotOptions
+}>
 
 const brandedKit = createFormKit({
 	controls,

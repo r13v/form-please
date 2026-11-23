@@ -21,6 +21,7 @@ import type {
 	RenderNodeProps,
 	SectionSlotProps,
 	StandardSchema,
+	SubmitRenderProps,
 	SubmitSlotProps,
 } from "./types.js"
 import type { FormMiddleware } from "./value-middleware.js"
@@ -52,9 +53,10 @@ void assertResolvedNodeContract
 describe("form kit", () => {
 	it("keeps erased resolved slot options honest", () => {
 		expectTypeOf<ResolvedFieldNode["slotOptions"]>().toEqualTypeOf<unknown>()
-		expectTypeOf<SubmitSlotProps["values"]>().toEqualTypeOf<
+		expectTypeOf<SubmitRenderProps["values"]>().toEqualTypeOf<
 			Readonly<Record<string, unknown>>
 		>()
+		expectTypeOf<SubmitSlotProps>().not.toHaveProperty("values")
 	})
 
 	it("stores one immutable managed-update policy on the definition", () => {
@@ -67,11 +69,11 @@ describe("form kit", () => {
 			() => (next) => (transaction) =>
 				next(transaction.patches)
 		const middleware = [first]
-		const configured = kit.defineForm(
-			schema,
-			{ ui: [] },
-			{ afterUpdate, beforeUpdate, middleware },
-		)
+		const configured = kit.defineForm(schema, () => [], {
+			afterUpdate,
+			beforeUpdate,
+			middleware,
+		})
 		middleware[0] = second
 
 		expect(configured.beforeUpdate).toBe(beforeUpdate)
@@ -80,7 +82,7 @@ describe("form kit", () => {
 		expect(Object.isFrozen(configured.middleware)).toBe(true)
 	})
 
-	it("normalizes schema-bound builders through the ordinary definition path", () => {
+	it("runs each builder once and freezes the definition", () => {
 		const authorSchema = z.object({
 			name: z.string(),
 			speakers: z.array(z.object({ name: z.string() })),
@@ -115,42 +117,9 @@ describe("form kit", () => {
 				ui.render("summary", { component: Summary }),
 			]
 		})
-		const authored = kit.defineForm(authorSchema, {
-			ui: [
-				{
-					kind: "section",
-					id: "profile",
-					children: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-							label: "Name",
-						},
-					],
-					columns: 2,
-				},
-				{
-					kind: "array",
-					path: "speakers",
-					children: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-							label: "Speaker",
-						},
-					],
-					itemDefault: { name: "" },
-				},
-				{ kind: "render", id: "summary", component: Summary },
-			],
-		})
 
 		expect(rootBuilds).toBe(1)
 		expect(itemBuilds).toBe(1)
-		expect(built.ui).toEqual(authored.ui)
-		expect(built.nodes).toEqual(authored.nodes)
 		expect(Object.isFrozen(built)).toBe(true)
 		expect(built.nodes.every(Object.isFrozen)).toBe(true)
 	})
@@ -185,9 +154,9 @@ describe("form kit", () => {
 
 	it("validates static fragment layout against its form kit grid", () => {
 		expect(() =>
-			kit.defineFragment(schema, {
-				ui: [{ control: "text", kind: "field", path: "name", span: 5 }],
-			} as never),
+			kit.defineFragment(schema, (ui) => [
+				ui.field("name", { control: "text", span: 5 as never }),
+			]),
 		).toThrow("Layout span must use the kit grid")
 	})
 
@@ -196,9 +165,6 @@ describe("form kit", () => {
 			items: z.array(z.object({ name: z.string() })),
 		})
 
-		expect(() => kit.defineFragment(schema, (async () => []) as never)).toThrow(
-			"Fragment definition builder must return a ui array",
-		)
 		expect(() =>
 			kit.defineForm(arraySchema, (ui) => [
 				ui.array("items", {
@@ -207,14 +173,6 @@ describe("form kit", () => {
 				}),
 			]),
 		).toThrow("Array builder children must be a function")
-		expect(() =>
-			kit.defineForm(arraySchema, (ui) => [
-				ui.array("items", {
-					children: (() => ({})) as never,
-					itemDefault: { name: "" },
-				}),
-			]),
-		).toThrow("Array builder children must return a ui array")
 		expect(() =>
 			kit.defineForm(schema, (ui) => [ui.field("name", null as never)]),
 		).toThrow("Field builder options must be an object")
@@ -248,12 +206,26 @@ describe("form kit", () => {
 			)
 		}
 	})
-	it("rejects generated components rendered outside a form context", () => {
-		const bare = createFormKit({ controls: kit.controls, slots: kit.slots })
+	const inForm = "must be called inside a Form of this form kit"
+	it.each([
+		["Fields", (owner: typeof kit) => <owner.Fields />, inForm],
+		["ErrorSummary", (owner: typeof kit) => <owner.ErrorSummary />, inForm],
+		[
+			"Submit",
+			(owner: typeof kit) => <owner.Submit>Save</owner.Submit>,
+			"Submit outside Form requires an action",
+		],
+	])("rejects kit.%s outside a Form of its kit", (name, element, noForm) => {
+		vi.spyOn(console, "error").mockImplementation(() => undefined)
+		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
+		function InOtherKitForm() {
+			const form = kit.useForm(definition, { defaultValues: { name: "Ada" } })
+			return <kit.Form form={form}>{element(otherKit)}</kit.Form>
+		}
 
-		expect(() => render(<bare.Fields />)).toThrow(
-			"React Hook Form context is missing",
-		)
+		expect(() => render(<InOtherKitForm />)).toThrow(`kit.${name} ${inForm}`)
+		expect(() => render(element(otherKit))).toThrow(noForm)
+		vi.restoreAllMocks()
 	})
 
 	it("rejects a definition owned by another form kit", () => {
@@ -289,29 +261,21 @@ describe("form kit", () => {
 		const addressKit = kit.forContext<AddressContext>()
 		const cityFragment = addressKit.defineFragment(
 			z.object({ city: z.string() }),
-			{
-				ui: [
-					{
-						kind: "field",
-						path: "city",
-						control: "text",
-						label: (location) => `City ${location.city}`,
-					},
-				],
-			},
+			(ui) => [
+				ui.field("city", {
+					control: "text",
+					label: (location) => `City ${location.city}`,
+				}),
+			],
 		)
 		const phoneFragment = addressKit.defineFragment(
 			z.object({ number: z.string() }),
-			{
-				ui: [
-					{
-						kind: "field",
-						path: "number",
-						control: "text",
-						label: (phone) => `Phone ${phone.number}`,
-					},
-				],
-			},
+			(ui) => [
+				ui.field("number", {
+					control: "text",
+					label: (phone) => `Phone ${phone.number}`,
+				}),
+			],
 		)
 		const addressSchema = cityFragment.schema.extend({
 			phoneGroups: z.array(
@@ -324,51 +288,37 @@ describe("form kit", () => {
 			),
 			street: z.string(),
 		})
-		const addressFragment = addressKit.defineFragment(addressSchema, {
-			ui: [
-				{
-					kind: "section",
-					id: "details",
-					children: [
-						{
-							kind: "field",
-							path: "street",
-							control: "text",
-							label: (address, { context }) =>
-								`${context.prefix} ${address.street}`,
-						},
-						cityFragment.fields(),
-						{
-							kind: "array",
-							path: "phoneGroups",
-							itemDefault: { phones: [], type: "" },
-							children: [
-								{
-									kind: "field",
-									path: "type",
-									control: "text",
-									label: (address) => `Group ${address.city}`,
-								},
-								{
-									kind: "array",
-									path: "phones",
-									itemDefault: { extension: "", number: "" },
-									children: [
-										phoneFragment.fields(),
-										{
-											kind: "field",
-											path: "extension",
-											control: "text",
-											label: (address) => `Extension ${address.city}`,
-										},
-									],
-								},
-							],
-						},
-					],
-				},
-			],
-		})
+		const addressFragment = addressKit.defineFragment(addressSchema, (ui) => [
+			ui.section("details", {
+				children: [
+					ui.field("street", {
+						control: "text",
+						label: (address, { context }) =>
+							`${context.prefix} ${address.street}`,
+					}),
+					cityFragment.fields(),
+					ui.array("phoneGroups", {
+						itemDefault: { phones: [], type: "" },
+						children: (item) => [
+							item.field("type", {
+								control: "text",
+								label: (address) => `Group ${address.city}`,
+							}),
+							item.array("phones", {
+								itemDefault: { extension: "", number: "" },
+								children: (nested) => [
+									phoneFragment.fields(),
+									nested.field("extension", {
+										control: "text",
+										label: (address) => `Extension ${address.city}`,
+									}),
+								],
+							}),
+						],
+					}),
+				],
+			}),
+		])
 		const hostKit = kit.forContext<
 			AddressContext & { readonly canEdit: boolean }
 		>()
@@ -380,27 +330,21 @@ describe("form kit", () => {
 			),
 			shipping: addressFragment.schema.extend({ id: z.string() }),
 		})
-		const hostDefinition = hostKit.defineForm(hostSchema, {
-			ui: [
-				addressFragment.fields({ at: "shipping" }),
-				addressFragment.fields({ at: "billing" }),
-				{
-					kind: "array",
-					path: "recipients",
-					itemDefault: {
-						address: { city: "", phoneGroups: [], street: "" },
-						name: "",
-					},
-					children: [addressFragment.fields({ at: "address" })],
+		const hostDefinition = hostKit.defineForm(hostSchema, (ui) => [
+			addressFragment.fields({ at: "shipping" }),
+			addressFragment.fields({ at: "billing" }),
+			ui.array("recipients", {
+				itemDefault: {
+					address: { city: "", phoneGroups: [], street: "" },
+					name: "",
 				},
-				{
-					kind: "array",
-					path: "addresses",
-					itemDefault: { city: "", phoneGroups: [], street: "" },
-					children: [addressFragment.fields()],
-				},
-			],
-		})
+				children: () => [addressFragment.fields({ at: "address" })],
+			}),
+			ui.array("addresses", {
+				itemDefault: { city: "", phoneGroups: [], street: "" },
+				children: () => [addressFragment.fields()],
+			}),
+		])
 
 		expect(hostDefinition.ui.map((node) => node.id)).toEqual([
 			"shipping:details",
@@ -474,51 +418,35 @@ describe("form kit", () => {
 		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
 		const foreignFragment = otherKit.defineFragment(
 			z.object({ street: z.string() }),
-			{ ui: [{ kind: "field", path: "street", control: "text" }] },
+			(ui) => [ui.field("street", { control: "text" })],
 		)
 		const hostSchema = z.object({ address: foreignFragment.schema })
 
 		expect(() =>
-			kit.defineFragment(hostSchema, {
-				ui: [foreignFragment.fields({ at: "address" })],
-			}),
-		).toThrow("Fragment placement must come from this exact form kit")
-
-		expect(() =>
-			kit.defineForm(hostSchema, {
-				ui: [foreignFragment.fields({ at: "address" })],
-			}),
+			kit.defineForm(hostSchema, () => [
+				foreignFragment.fields({ at: "address" }),
+			]),
 		).toThrow("Fragment placement must come from this exact form kit")
 	})
 
 	it("snapshots fragment sources and validates placement paths", () => {
 		const schema = z.object({ street: z.string() })
-		const ui = [
-			{
-				kind: "field" as const,
-				path: "street" as const,
-				control: "text" as const,
+		let streetNode: object | undefined
+		const fragment = kit.defineFragment(schema, (ui) => {
+			const node = ui.field("street", {
+				control: "text",
 				label: "Original street",
-			},
-		]
-		const fragment = kit.defineFragment(schema, { ui })
-		expect(() =>
-			kit.defineFragment(schema, {
-				ui: [
-					{
-						kind: "field",
-						path: "street",
-						control: "missing" as never,
-					},
-				],
-			}),
-		).toThrow('Unknown control "missing"')
-
-		ui[0].label = "Mutated street"
-		const placement = fragment.fields({ at: "address" })
-		const placed = kit.defineForm(z.object({ address: fragment.schema }), {
-			ui: [placement],
+			})
+			streetNode = node
+			return [node]
 		})
+
+		Object.assign(streetNode ?? {}, { label: "Mutated street" })
+		const placement = fragment.fields({ at: "address" })
+		const placed = kit.defineForm(
+			z.object({ address: fragment.schema }),
+			() => [placement],
+		)
 
 		expect(fragment.schema).toBe(schema)
 		expect(Object.isFrozen(fragment)).toBe(true)
@@ -596,18 +524,14 @@ describe("form kit", () => {
 		const afterNext = vi.fn()
 		const locationDefinition = kit.defineForm(
 			locationSchema,
-			{
-				ui: [
-					{
-						kind: "field",
-						path: "country",
-						control: "select",
-						label: "Country",
-						options: ["US", "FR", "blocked"],
-					},
-					{ kind: "field", path: "city", control: "text", label: "City" },
-				],
-			},
+			(ui) => [
+				ui.field("country", {
+					control: "select",
+					label: "Country",
+					options: ["US", "FR", "blocked"],
+				}),
+				ui.field("city", { control: "text", label: "City" }),
+			],
 			{
 				middleware: [
 					(api) => (next) => (transaction) => {
@@ -688,8 +612,11 @@ describe("form kit", () => {
 			updateResult = updateLocation("US", "Boston")
 		})
 		expect(updateResult).toMatchObject({
-			nextValues: { city: "Boston", country: "US" },
-			source: { type: "update" },
+			committed: true,
+			transaction: {
+				nextValues: { city: "Boston", country: "US" },
+				source: { type: "update" },
+			},
 		})
 		expect(readValues()).toEqual({ city: "Boston", country: "US" })
 		expect(publications).toEqual([
@@ -710,29 +637,15 @@ describe("form kit", () => {
 			query: z.string(),
 			unrelated: z.string(),
 		})
-		const optionDefinition = kit.defineForm(optionSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "query",
-					control: "text",
-					label: "Option query",
-				},
-				{
-					kind: "field",
-					path: "unrelated",
-					control: "text",
-					label: "Unrelated value",
-				},
-				{
-					kind: "field",
-					path: "choice",
-					control: "select",
-					label: "Loaded choice",
-					options: loadOptions,
-				},
-			],
-		})
+		const optionDefinition = kit.defineForm(optionSchema, (ui) => [
+			ui.field("query", { control: "text", label: "Option query" }),
+			ui.field("unrelated", { control: "text", label: "Unrelated value" }),
+			ui.field("choice", {
+				control: "select",
+				label: "Loaded choice",
+				options: loadOptions,
+			}),
+		])
 		let readChoice = () => ""
 
 		function Form() {
@@ -766,14 +679,6 @@ describe("form kit", () => {
 			fields: z.record(z.string(), z.string()),
 		})
 		type LargeInput = z.input<typeof largeSchema>
-		const largeDefinitionSource = {
-			ui: Array.from({ length: fieldCount }, (_, index) => ({
-				kind: "field" as const,
-				path: `fields.field${index}` as `fields.${string}`,
-				control: "text" as const,
-				label: `Performance field ${index + 1}`,
-			})),
-		}
 		const editValues = Array.from(
 			{ length: 20 },
 			(_, index) => `Edit ${index + 1}`,
@@ -791,7 +696,13 @@ describe("form kit", () => {
 			let updateCommits = 0
 			const largeDefinition = kit.defineForm(
 				largeSchema,
-				largeDefinitionSource,
+				(ui) =>
+					Array.from({ length: fieldCount }, (_, index) =>
+						ui.field(`fields.field${index}`, {
+							control: "text",
+							label: `Performance field ${index + 1}`,
+						}),
+					),
 				{ middleware },
 			)
 
@@ -902,61 +813,36 @@ describe("form kit", () => {
 			items: z.array(z.object({ name: z.string() })),
 			mode: z.string(),
 		})
-		const isolatedDefinition = isolatedKit.defineForm(isolatedSchema, {
-			ui: [
-				{
-					kind: "section",
-					id: "stable",
-					title: "Stable section",
-					children: [
-						{
-							kind: "field",
-							path: "first",
-							control: "text",
-							label: "First isolated field",
-						},
-					],
-				},
-				{
-					kind: "section",
-					id: "dynamic",
-					title: "Dynamic section",
-					children: [
-						{
-							kind: "field",
-							path: "mode",
-							control: "text",
-							label: "Mode",
-						},
-						{
-							kind: "field",
-							path: "details",
-							control: "text",
-							label: "Details",
-							props: (values) =>
-								values.mode === "show"
-									? { marker: undefined }
-									: { alternate: undefined },
-							visible: (values) => values.mode.startsWith("show"),
-						},
-					],
-				},
-				{
-					kind: "array",
-					path: "items",
-					label: "Stable items",
-					itemDefault: { name: "" },
-					children: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-							label: "Stable item name",
-						},
-					],
-				},
-			],
-		})
+		const isolatedDefinition = isolatedKit.defineForm(isolatedSchema, (ui) => [
+			ui.section("stable", {
+				title: "Stable section",
+				children: [
+					ui.field("first", { control: "text", label: "First isolated field" }),
+				],
+			}),
+			ui.section("dynamic", {
+				title: "Dynamic section",
+				children: [
+					ui.field("mode", { control: "text", label: "Mode" }),
+					ui.field("details", {
+						control: "text",
+						label: "Details",
+						props: (values) =>
+							values.mode === "show"
+								? { marker: undefined }
+								: { alternate: undefined },
+						visible: (values) => values.mode.startsWith("show"),
+					}),
+				],
+			}),
+			ui.array("items", {
+				label: "Stable items",
+				itemDefault: { name: "" },
+				children: (item) => [
+					item.field("name", { control: "text", label: "Stable item name" }),
+				],
+			}),
+		])
 
 		function View() {
 			const form = isolatedKit.useForm(isolatedDefinition, {
@@ -1209,111 +1095,73 @@ describe("form kit", () => {
 		const VisibleRenderProbe = () => (
 			<output data-testid="visible-render">visible render</output>
 		)
-		const probeDefinition = probeKit.defineForm(probeSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "driver",
-					control: "text",
-					label: "Resolver driver",
-				},
-				{
-					kind: "field",
-					path: "subject",
-					control: "text",
-					label: (values) => `${values.driver} field label`,
-					description: (values) => `${values.driver} field description`,
-					slotOptions: (values) => ({ token: values.driver }),
-					required: (values) => values.driver === "after",
-					disabled: (values) => values.driver === "after",
-					readOnly: (values) => values.driver === "after",
-					className: (values) => `${values.driver}-field-class`,
-					span: (values) => (values.driver === "after" ? "full" : 1),
-					props: (values) => ({ token: values.driver }),
-				},
-				{
-					kind: "field",
-					path: "fieldVisibility",
-					control: "text",
-					label: "Visible field",
-					visible: (values) => values.driver === "before",
-				},
-				{
-					kind: "field",
-					path: "formFlags",
-					control: "text",
-					label: "Form flags",
-				},
-				{
-					kind: "section",
-					id: "subject-section",
-					title: (values) => `${values.driver} section title`,
-					description: (values) => `${values.driver} section description`,
-					slotOptions: (values) => ({ token: values.driver }),
-					disabled: (values) => values.driver === "after",
-					readOnly: (values) => values.driver === "after",
-					className: (values) => `${values.driver}-section-class`,
-					columns: (values) => (values.driver === "after" ? 2 : 1),
-					span: (values) => (values.driver === "after" ? 2 : 1),
-					children: [
-						{
-							kind: "field",
-							path: "sectionChild",
-							control: "text",
-							label: "Section child",
-						},
-					],
-				},
-				{
-					kind: "section",
-					id: "visible-section",
-					title: "Visible section",
-					visible: (values) => values.driver === "before",
-					children: [],
-				},
-				{
-					kind: "array",
-					path: "items",
-					label: (values) => `${values.driver} array label`,
-					description: (values) => `${values.driver} array description`,
-					slotOptions: (values) => ({ token: values.driver }),
-					disabled: (values) => values.driver === "after",
-					readOnly: (values) => values.driver === "after",
-					className: (values) => `${values.driver}-array-class`,
-					span: (values) => (values.driver === "after" ? "full" : 1),
-					itemDefault: { name: "" },
-					children: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-							label: "Array child",
-						},
-					],
-				},
-				{
-					kind: "array",
-					path: "visibleItems",
-					label: "Visible array",
-					visible: (values) => values.driver === "before",
-					itemDefault: { name: "" },
-					children: [],
-				},
-				{
-					kind: "render",
-					id: "render-probe",
-					component: RenderProbe,
-					disabled: (values) => values.driver === "after",
-					readOnly: (values) => values.driver === "after",
-				},
-				{
-					kind: "render",
-					id: "visible-render-probe",
-					component: VisibleRenderProbe,
-					visible: (values) => values.driver === "before",
-				},
-			],
-		})
+		const probeDefinition = probeKit.defineForm(probeSchema, (ui) => [
+			ui.field("driver", { control: "text", label: "Resolver driver" }),
+			ui.field("subject", {
+				control: "text",
+				label: (values) => `${values.driver} field label`,
+				description: (values) => `${values.driver} field description`,
+				slotOptions: (values) => ({ token: values.driver }),
+				required: (values) => values.driver === "after",
+				disabled: (values) => values.driver === "after",
+				readOnly: (values) => values.driver === "after",
+				className: (values) => `${values.driver}-field-class`,
+				span: (values) => (values.driver === "after" ? "full" : 1),
+				props: (values) => ({ token: values.driver }),
+			}),
+			ui.field("fieldVisibility", {
+				control: "text",
+				label: "Visible field",
+				visible: (values) => values.driver === "before",
+			}),
+			ui.field("formFlags", { control: "text", label: "Form flags" }),
+			ui.section("subject-section", {
+				title: (values) => `${values.driver} section title`,
+				description: (values) => `${values.driver} section description`,
+				slotOptions: (values) => ({ token: values.driver }),
+				disabled: (values) => values.driver === "after",
+				readOnly: (values) => values.driver === "after",
+				className: (values) => `${values.driver}-section-class`,
+				columns: (values) => (values.driver === "after" ? 2 : 1),
+				span: (values) => (values.driver === "after" ? 2 : 1),
+				children: [
+					ui.field("sectionChild", { control: "text", label: "Section child" }),
+				],
+			}),
+			ui.section("visible-section", {
+				title: "Visible section",
+				visible: (values) => values.driver === "before",
+				children: [],
+			}),
+			ui.array("items", {
+				label: (values) => `${values.driver} array label`,
+				description: (values) => `${values.driver} array description`,
+				slotOptions: (values) => ({ token: values.driver }),
+				disabled: (values) => values.driver === "after",
+				readOnly: (values) => values.driver === "after",
+				className: (values) => `${values.driver}-array-class`,
+				span: (values) => (values.driver === "after" ? "full" : 1),
+				itemDefault: { name: "" },
+				children: (item) => [
+					item.field("name", { control: "text", label: "Array child" }),
+				],
+			}),
+			ui.array("visibleItems", {
+				label: "Visible array",
+				visible: (values) => values.driver === "before",
+				itemDefault: { name: "" },
+				children: () => [],
+			}),
+			ui.render("render-probe", {
+				component: RenderProbe,
+				disabled: (values) => values.driver === "after",
+				readOnly: (values) => values.driver === "after",
+			}),
+			ui.render("visible-render-probe", {
+				component: VisibleRenderProbe,
+				visible: (values) => values.driver === "before",
+			}),
+		])
 		function View({
 			disabled = false,
 			readOnly = false,
@@ -1492,7 +1340,7 @@ describe("form kit", () => {
 			profile: z.object({ name: z.string(), note: z.string().optional() }),
 		})
 		type ProfileInput = z.input<typeof profileSchema>
-		const profileDefinition = kit.defineForm(profileSchema, { ui: [] })
+		const profileDefinition = kit.defineForm(profileSchema, () => [])
 		let readValues = (): ProfileInput => ({
 			count: 0,
 			profile: { name: "" },
@@ -1554,17 +1402,10 @@ describe("form kit", () => {
 		}
 		const touchedDefinition = kit.defineForm(
 			touchedSchema,
-			{
-				ui: [
-					{
-						kind: "field",
-						path: "name",
-						control: "text",
-						label: "Touched name",
-					},
-					{ kind: "field", path: "mirror", control: "text", label: "Mirror" },
-				],
-			},
+			(ui) => [
+				ui.field("name", { control: "text", label: "Touched name" }),
+				ui.field("mirror", { control: "text", label: "Mirror" }),
+			],
 			{
 				middleware: [
 					() => (next) => (transaction) =>
@@ -1606,16 +1447,9 @@ describe("form kit", () => {
 			manual: z.string().min(1),
 		})
 		type EcosystemInput = z.input<typeof ecosystemSchema>
-		const ecosystemDefinition = kit.defineForm(ecosystemSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "generated",
-					control: "text",
-					label: "Generated field",
-				},
-			],
-		})
+		const ecosystemDefinition = kit.defineForm(ecosystemSchema, (ui) => [
+			ui.field("generated", { control: "text", label: "Generated field" }),
+		])
 		const onSubmit = vi.fn()
 
 		function ManualFields() {
@@ -1672,17 +1506,13 @@ describe("form kit", () => {
 			editable: z.string(),
 			locked: z.string().min(1),
 		})
-		const disabledDefinition = kit.defineForm(disabledSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "locked",
-					control: "text",
-					label: "Locked value",
-					disabled: true,
-				},
-			],
-		})
+		const disabledDefinition = kit.defineForm(disabledSchema, (ui) => [
+			ui.field("locked", {
+				control: "text",
+				label: "Locked value",
+				disabled: true,
+			}),
+		])
 		const onSubmit = vi.fn()
 
 		function View({ disabled }: { readonly disabled: boolean }) {
@@ -1727,7 +1557,7 @@ describe("form kit", () => {
 			})
 			return (
 				<kit.AutoForm form={form}>
-					<kit.Submit binding={form}>
+					<kit.Submit action={form.actions.submit}>
 						{({ buttonProps, values, isDirty, canSubmit }) => {
 							expectTypeOf(values).toEqualTypeOf<{
 								readonly name: string
@@ -1784,7 +1614,7 @@ describe("form kit", () => {
 				},
 			},
 		}
-		const oneParseDefinition = kit.defineForm(oneParseSchema, { ui: [] })
+		const oneParseDefinition = kit.defineForm(oneParseSchema, () => [])
 		const onSubmit = vi.fn()
 		const onRawSubmit = vi.fn()
 		let submitRaw: (() => Promise<void>) | undefined
@@ -1840,9 +1670,9 @@ describe("form kit", () => {
 				},
 			},
 		}
-		const asyncDefinition = kit.defineForm(asyncSchema, {
-			ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
-		})
+		const asyncDefinition = kit.defineForm(asyncSchema, (ui) => [
+			ui.field("name", { control: "text", label: "Name" }),
+		])
 		const onSubmit = vi.fn()
 
 		function View() {
@@ -1915,7 +1745,7 @@ describe("form kit", () => {
 				},
 			},
 		}
-		const fileDefinition = kit.defineForm(fileSchema, { ui: [] })
+		const fileDefinition = kit.defineForm(fileSchema, () => [])
 		const onSubmit = vi.fn()
 
 		function View() {
@@ -1938,12 +1768,12 @@ describe("form kit", () => {
 	})
 
 	it("keeps the initial definition until React remounts the hook", () => {
-		const first = kit.defineForm(schema, {
-			ui: [{ kind: "field", path: "name", control: "text", label: "First" }],
-		})
-		const second = kit.defineForm(schema, {
-			ui: [{ kind: "field", path: "name", control: "text", label: "Second" }],
-		})
+		const first = kit.defineForm(schema, (ui) => [
+			ui.field("name", { control: "text", label: "First" }),
+		])
+		const second = kit.defineForm(schema, (ui) => [
+			ui.field("name", { control: "text", label: "Second" }),
+		])
 		let activeDefinition: unknown
 
 		function View({ definition }: { readonly definition: typeof first }) {
@@ -1981,16 +1811,12 @@ describe("form kit", () => {
 		const middleware = [firstMiddleware]
 		const contextualDefinition = contextualKit.defineForm(
 			z.object({ name: z.string() }),
-			{
-				ui: [
-					{
-						kind: "field",
-						path: "name",
-						control: "text",
-						label: (_values, { context }) => context.label,
-					},
-				],
-			},
+			(ui) => [
+				ui.field("name", {
+					control: "text",
+					label: (_values, { context }) => context.label,
+				}),
+			],
 			{ middleware },
 		)
 		middleware[0] = secondMiddleware
@@ -2021,9 +1847,7 @@ describe("form kit", () => {
 		const observed: string[] = []
 		const definition = contextualKit.defineForm(
 			schema,
-			{
-				ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
-			},
+			(ui) => [ui.field("name", { control: "text", label: "Name" })],
 			{
 				afterUpdate(transaction) {
 					observed.push(
@@ -2069,28 +1893,141 @@ describe("form kit", () => {
 			"Reset",
 		)
 	})
-	it("keeps the binding for an inline context with the same entries", () => {
+	it("keeps one binding while generated UI follows the changing useForm options", async () => {
+		type Context = { readonly label: string }
+		const probeKit = createFormKit({
+			controls: {
+				probe: defineControl<string, Record<string, never>, Context>({
+					component: ({
+						context,
+						disabled,
+						input,
+						readOnly,
+						setValue,
+						value,
+					}) => (
+						<input
+							data-context={context.label}
+							disabled={disabled}
+							id={input.id}
+							name={input.name}
+							onChange={(event) => setValue(event.currentTarget.value)}
+							readOnly={readOnly}
+							ref={input.ref}
+							value={value}
+						/>
+					),
+				}),
+			},
+			slots: kit.slots,
+		}).forContext<Context>()
+		const probeDefinition = probeKit.defineForm(
+			z.object({
+				name: z
+					.string()
+					.min(3, "Enter three characters")
+					.regex(/^[A-Z]/, "Start with a capital letter"),
+			}),
+			(ui) => [
+				ui.field("name", {
+					control: "probe",
+					label: (_values, { context }) => `Name for ${context.label}`,
+				}),
+			],
+		)
 		const bindings: unknown[] = []
-		function View({ label }: { readonly label: string }) {
-			const form = kit.useForm(definition, {
+		type ViewProps = {
+			readonly disabled: boolean
+			readonly errorDisplay: "all" | "first"
+			readonly label: string
+			readonly readOnly: boolean
+		}
+		function View({ disabled, errorDisplay, label, readOnly }: ViewProps) {
+			const form = probeKit.useForm(probeDefinition, {
 				context: { label },
-				defaultValues: { name: "Ada" },
+				defaultValues: { name: "a" },
+				disabled,
+				errorDisplay,
+				onSubmit: () => undefined,
+				readOnly,
 			})
 			bindings.push(form)
-			return <kit.AutoForm form={form} />
+			return (
+				<probeKit.AutoForm form={form}>
+					<probeKit.Submit>Save</probeKit.Submit>
+				</probeKit.AutoForm>
+			)
 		}
-		const view = render(<View label="first" />)
-		view.rerender(<View label="first" />)
-		view.rerender(<View label="second" />)
-		const [first, same, changed] = [
-			bindings[0],
-			bindings.at(-2),
-			bindings.at(-1),
-		]
-		expect(same).toBe(first)
-		expect(changed).not.toBe(first)
-		expect((changed as { context: unknown }).context).toEqual({
+		const initial: ViewProps = {
+			disabled: false,
+			errorDisplay: "all",
+			label: "first",
+			readOnly: false,
+		}
+		const view = render(<View {...initial} />)
+		fireEvent.click(screen.getByRole("button", { name: "Save" }))
+		await screen.findByText("Start with a capital letter")
+		expect(screen.getByText("Enter three characters")).toBeTruthy()
+
+		view.rerender(<View {...initial} label="second" />)
+		const input = screen.getByLabelText("Name for second") as HTMLInputElement
+		expect(input.dataset.context).toBe("second")
+		expect((bindings.at(-1) as { context: unknown }).context).toEqual({
 			label: "second",
 		})
+
+		view.rerender(<View {...initial} errorDisplay="first" label="second" />)
+		expect(screen.getByText("Enter three characters")).toBeTruthy()
+		expect(screen.queryByText("Start with a capital letter")).toBeNull()
+
+		view.rerender(<View {...initial} label="second" readOnly />)
+		expect(input.readOnly).toBe(true)
+
+		view.rerender(<View {...initial} disabled label="second" />)
+		expect(input.disabled).toBe(true)
+		expect(
+			(screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+				.disabled,
+		).toBe(true)
+		expect(input.closest("form")?.hasAttribute("data-disabled")).toBe(true)
+
+		expect(bindings.length).toBeGreaterThan(5)
+		expect(bindings.every((binding) => binding === bindings[0])).toBe(true)
+	})
+
+	it("keeps a static Submit slot out of value subscriptions and its props", () => {
+		const slotProps: SubmitSlotProps[] = []
+		const countingKit = createFormKit({
+			controls: kit.controls,
+			slots: {
+				...kit.slots,
+				Submit: (props: SubmitSlotProps) => {
+					slotProps.push(props)
+					return <button {...props.buttonProps} />
+				},
+			},
+		})
+		const countingDefinition = countingKit.defineForm(schema, (ui) => [
+			ui.field("name", { control: "text", label: "Name" }),
+		])
+		// A hoisted element re-renders only through its own subscriptions.
+		const submit = <countingKit.Submit>Save</countingKit.Submit>
+		function View() {
+			const form = countingKit.useForm(countingDefinition, {
+				defaultValues: { name: "Ada" },
+				onSubmit: () => undefined,
+			})
+			return <countingKit.AutoForm form={form}>{submit}</countingKit.AutoForm>
+		}
+
+		render(<View />)
+		const name = screen.getByLabelText("Name")
+		fireEvent.change(name, { target: { value: "Bob" } })
+		const rendersAfterDirty = slotProps.length
+		fireEvent.change(name, { target: { value: "Bobby" } })
+		fireEvent.change(name, { target: { value: "Bobbie" } })
+
+		expect(slotProps).toHaveLength(rendersAfterDirty)
+		expect(slotProps.every((props) => !("values" in props))).toBe(true)
 	})
 })

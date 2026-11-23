@@ -8,7 +8,7 @@
 
 The component does not add middleware and does not become a form store. React Hook Form stays the only live store and value authority.
 
-The root entry, the presets, history and persistence do not import `src/devtools`, so they do not load the devtools UI or its store.
+The root entry, the presets, history and persistence do not import `src/devtools`, so they do not load the devtools UI or its store. `@hookform/devtools` and `@uiw/react-json-view` are optional peers that only this entry imports; `architecture-overview.md` § Dependency rules owns the rule.
 
 ## Dormant without a sink
 
@@ -18,7 +18,7 @@ The devtools store in `src/devtools/store.ts` attaches its sink and its React Ho
 
 ## Private runtime capability
 
-The devtools read package-private data from the binding through `getFormDiagnosticsRuntime` in `src/diagnostics.ts`. The data is attached with a symbol key and is not part of the public `FormBinding` type.
+The devtools read package-private data from the binding through `getFormDiagnosticsRuntime` in `src/diagnostics.ts`. The data is a view of the form runtime, attached once with a symbol key, and is not part of the public `FormBinding` type. The devtools read `disabled` and `readOnly` from its settings store, because the binding identity does not change with them; see `form-binding-and-submission.md` § Form runtime.
 
 ## Retention
 

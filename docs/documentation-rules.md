@@ -53,7 +53,7 @@ A library change that a user can observe updates the site in the same change. Th
 
 - A new public export of an entry in `package.json#exports` is named in inline code in `docs-site/src/pages/api.mdx` or `types.mdx`.
 - A new or changed `i18n` key in `src/array-actions-i18n.ts` or `src/preset-mui/controls.tsx` updates the table in `docs-site/src/pages/localization.mdx`.
-- A breaking change adds a row to `docs-site/src/pages/upgrade-to-v2.mdx` while the 2.x line is current.
+- A breaking change for the next major line adds an entry to `docs-site/src/pages/upgrade-to-v3.mdx`.
 - A change of observable behaviour can make a page stale. Search `docs-site/src/pages` for the old behaviour and update each page that describes it.
 
 ## Changes

@@ -6,17 +6,19 @@ import {
 	type ControlProps,
 	createFormKit,
 	defineControl,
+	type FormBinding,
 	type FormInput,
 	type FormOutput,
 	fromResource,
 	matchResource,
 	type ResourceState,
 	type UiResolver,
+	useSnapshot,
 } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { nativeFormKit } from "form-please/preset-native"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { useFormState, useWatch } from "react-hook-form"
 import { z } from "zod"
 
@@ -75,6 +77,37 @@ function ProfileForm() {
 	)
 }
 // [!endregion composition]
+
+// [!region custom-field]
+function DepartmentPicker({
+	form,
+}: {
+	readonly form: FormBinding<typeof profileSchema>
+}) {
+	const field = nativeFormKit.useField(form, "department")
+	const [firstIssue] = field.meta.displayErrors
+	let errorId: string | undefined
+	if (firstIssue !== undefined) errorId = `${field.input.id}-error`
+
+	return (
+		<fieldset aria-describedby={errorId}>
+			<legend>Department</legend>
+			{["Research", "Design"].map((department) => (
+				<button
+					aria-pressed={field.value === department}
+					key={department}
+					onBlur={field.blur}
+					onClick={() => field.setValue(department)}
+					type="button"
+				>
+					{department}
+				</button>
+			))}
+			{firstIssue !== undefined && <p id={errorId}>{firstIssue.message}</p>}
+		</fieldset>
+	)
+}
+// [!endregion custom-field]
 
 // [!region edit-baseline]
 function ProfileScreen({ profile }: { readonly profile: Profile | undefined }) {
@@ -135,22 +168,36 @@ function SavingProfile({ profile }: { readonly profile: Profile }) {
 // [!endregion async-submit]
 
 // [!region dialog-submit]
-function ProfileDialog({ profile }: { readonly profile: Profile }) {
+function ProfileDialog({
+	profile,
+	onClose,
+}: {
+	readonly profile: Profile
+	readonly onClose: () => void
+}) {
 	const form = nativeFormKit.useForm(profileDefinition, {
 		defaultValues: profile,
 		onSubmit: async ({ value }) => {
 			await updateProfile(value)
 		},
 	})
+	const isPending = useSnapshot(form.submission).action !== null
 
 	return (
 		<dialog open aria-labelledby="profile-dialog-title">
 			<h2 id="profile-dialog-title">Edit profile</h2>
-			<nativeFormKit.AutoForm form={form} id="profile-dialog-form" />
+			<nativeFormKit.AutoForm form={form} />
 			<footer>
-				<nativeFormKit.Submit binding={form} form="profile-dialog-form">
+				<button
+					disabled={isPending}
+					type="button"
+					onClick={async () => {
+						const result = await form.submit()
+						if (result.accepted) onClose()
+					}}
+				>
 					Save profile
-				</nativeFormKit.Submit>
+				</button>
 			</footer>
 		</dialog>
 	)
@@ -465,7 +512,6 @@ export function DraftSubscriptionRecipe() {
 // [!endregion draft-subscription]
 
 type WizardStep = "identity" | "details"
-type WizardContext = { readonly step: WizardStep }
 
 const wizardSchema = z.object({
 	name: z.string().min(1, "Enter a name"),
@@ -473,47 +519,42 @@ const wizardSchema = z.object({
 	department: z.string().optional(),
 })
 
-const wizardKit = nativeFormKit.forContext<WizardContext>()
-const wizardDefinition = wizardKit.defineForm(wizardSchema, (ui) => [
-	ui.field("name", {
-		control: "text",
-		label: "Name",
-		visible: (_values, { context }) => context.step === "identity",
+const wizardDefinition = nativeFormKit.defineForm(wizardSchema, (ui) => [
+	ui.section("identity", {
+		children: [
+			ui.field("name", { control: "text", label: "Name" }),
+			ui.field("email", {
+				control: "text",
+				label: "Email",
+				props: { type: "email" },
+			}),
+		],
 	}),
-	ui.field("email", {
-		control: "text",
-		label: "Email",
-		props: { type: "email" },
-		visible: (_values, { context }) => context.step === "identity",
-	}),
-	ui.field("department", {
-		control: "text",
-		label: "Department",
-		visible: (_values, { context }) => context.step === "details",
+	ui.section("details", {
+		children: [
+			ui.field("department", { control: "text", label: "Department" }),
+		],
 	}),
 ])
-
-const identityFields = ["name", "email"] as const
 
 // [!region step-validation]
 export function StepValidationRecipe() {
 	const [step, setStep] = useState<WizardStep>("identity")
 	const [saved, setSaved] = useState(false)
 	const isClientReady = useClientReady()
-	const context = useMemo(() => ({ step }), [step])
-	const form = wizardKit.useForm(wizardDefinition, {
-		context,
+	const form = nativeFormKit.useForm(wizardDefinition, {
 		defaultValues: { name: "", email: "", department: "" },
 		onSubmit: () => setSaved(true),
 	})
 
 	async function showDetails() {
-		for (const path of identityFields) {
+		const paths = form.fieldPaths("identity")
+		for (const path of paths) {
 			form.api.setValue(path, form.api.getValues(path), { shouldTouch: true })
 		}
-		const valid = await form.api.trigger(identityFields)
+		const valid = await form.api.trigger(paths)
 		if (!valid) {
-			const firstInvalid = identityFields.find(
+			const firstInvalid = paths.find(
 				(path) => form.api.getFieldState(path).invalid,
 			)
 			if (firstInvalid !== undefined) form.api.setFocus(firstInvalid)
@@ -534,9 +575,9 @@ export function StepValidationRecipe() {
 				<button type="button" onClick={() => setStep("identity")}>
 					Back
 				</button>
-				<wizardKit.Submit className="form-please-complex__primary">
+				<nativeFormKit.Submit className="form-please-complex__primary">
 					Save profile
-				</wizardKit.Submit>
+				</nativeFormKit.Submit>
 			</>
 		)
 	}
@@ -551,9 +592,11 @@ export function StepValidationRecipe() {
 		>
 			<p className="form-please-complex__kicker">Live preview</p>
 			<p className="form-please-complex__summary">Step {stepLabel}</p>
-			<wizardKit.AutoForm form={form}>
+			<nativeFormKit.Form form={form}>
+				<nativeFormKit.ErrorSummary />
+				<nativeFormKit.Fields node={step} />
 				<div className="form-please-complex__actions">{actions}</div>
-			</wizardKit.AutoForm>
+			</nativeFormKit.Form>
 			<output aria-live="polite">{status}</output>
 		</section>
 	)

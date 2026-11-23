@@ -8,10 +8,10 @@ searchPriority: 2
 # Definitions
 
 A definition connects one Standard Schema to the UI and managed-update policy
-that govern its input. Call `kit.defineForm(schema, source, options?)` outside
-the component that uses the form. The schema-bound helpers keep paths,
-controls, options, and resolver values connected. They also set the internal
-node type, so you never write it.
+that govern its input. Call `kit.defineForm(schema, (ui) => [...], options?)`
+outside the component that uses the form. The second argument is always a
+builder function. Its schema-bound helpers create every node and keep paths,
+controls, options, and resolver values connected.
 
 ```tsx
 import { nativeFormKit } from "form-please/preset-native"
@@ -60,8 +60,10 @@ The type checker verifies these connections:
 - Array defaults match one complete array item.
 - `columns` and `span` use the kit grid.
 
-`defineForm` also validates the tree at runtime. It rejects unknown controls,
-invalid path syntax, duplicate IDs, missing children, and invalid grid values.
+`defineForm` also validates the tree at runtime. It rejects nodes that no
+helper created, unknown controls, invalid path syntax, duplicate IDs, missing
+children, and invalid grid values. To build nodes from data, call the helpers
+in a loop, for example `fields.map((name) => ui.field(name, options))`.
 
 The optional third argument configures `beforeUpdate`, ordered `middleware`,
 and `afterUpdate`. These callbacks and a frozen middleware snapshot become
@@ -431,7 +433,9 @@ custom slot examples.
 
 Sections and render nodes require an explicit `id`. Fields and arrays derive an
 ID from their path when you omit `id`. IDs must be non-empty and unique in the
-same path scope.
+same path scope. `kit.Fields node` and `form.fieldPaths` select a node by its
+ID; read [Node IDs](/api#node-ids) for the IDs of nodes in array rows and
+fragments.
 
 Render one field for each path in a form. The DOM `id`, the label link, and the
 focus target of a field come from its path, not from its node `id`. Two fields
@@ -461,7 +465,9 @@ ui.array("speakers", {
 ## Form-local React content
 
 A render node inserts application content into the generated tree. Its
-component receives the resolved inherited `disabled` and `readOnly` flags.
+component receives the resolved inherited `disabled` and `readOnly` flags, and
+`pathPrefix`: the absolute path of the array item that contains the node, such
+as `"rows.2"`, or `""` at the form root.
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:render-node]
@@ -470,8 +476,10 @@ component receives the resolved inherited `disabled` and `readOnly` flags.
 A render node also accepts resolver-based `visible`, `disabled`, and
 `readOnly`. It requires an explicit `id` and a `component`.
 
-Use direct RHF composition outside `kit.Fields` when content needs the form
-API. Render nodes deliberately receive only interaction state.
+A render node can contain a custom field. Read the binding with
+`kit.useFormContext()` and connect the field with `kit.useField(form, path)`.
+In an array row, build the absolute path from `pathPrefix`. Read [Custom fields
+and the form context](/api#custom-fields-and-the-form-context).
 
 ## Definition lifetime
 

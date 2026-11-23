@@ -25,10 +25,11 @@ matches the problem in your application.
 | Keep dependent values atomic | `middleware` and `form.update(recipe)` |
 | Apply a raw React Hook Form (RHF) update to multiple fields | `form.api.setValues(values)` |
 | Observe values without a form render subscription | `form.api.subscribe` |
-| Validate one wizard step | `form.api.trigger` and `form.api.setFocus` |
+| Add a custom field that makes managed updates | `kit.useField(form, path)` |
+| Validate one wizard step | `form.fieldPaths(nodeId)`, `form.api.trigger`, and `kit.Fields node` |
 | Build a complete product workflow | [`useFormWorkflow`](/workflows) as application code |
 | Save parsed data | The `value` argument in `onSubmit` |
-| Submit from a dialog footer | `kit.Submit` with `binding` and the native `form` attribute |
+| Submit from a dialog footer | `form.submit()` and its result |
 | Show a request failure | Application state with `role="alert"` |
 | Show a server field issue | `form.api.setError` |
 | Load one remote option list | Async field `options` |
@@ -48,9 +49,25 @@ actions, RHF fields, and watched state inside the same `kit.Form`.
 // [!include ~/snippets/production-recipes.tsx:composition]
 ```
 
-Use RHF `Controller`, `useController`, or `register` for custom fields. Use
-`useWatch` and `useFormState` for derived UI. The unchanged methods on
-`form.api`, such as `setValue`, remain available for application actions.
+Use `kit.useField(form, path)` for a custom field. Use `useWatch` and
+`useFormState` for derived UI. The unchanged methods on `form.api`, such as
+`setValue`, remain available for application actions.
+
+`kit.useField` returns the same `path`, `value`, `setValue`, `blur`, `input`,
+and `meta` that a registered control receives. `setValue` makes a managed
+update with the `control` source, so `beforeUpdate`, middleware, `whenHidden`,
+history, and persistence see it. Call the hook inside the `kit.Form` of the
+binding.
+
+```tsx
+// [!include ~/snippets/production-recipes.tsx:custom-field]
+```
+
+The hook renders nothing. Render a label, the issues from
+`meta.displayErrors`, and connect them with `aria-describedby`; the
+[accessibility contract](/accessibility#connect-a-custom-control) applies.
+RHF `Controller`, `useController`, and `register` also work, but their updates
+do not go through middleware. See [Managed updates](/middleware).
 
 Do not copy a form value into React state. Two editable copies can become
 inconsistent. Do not create a second form binding for another panel that edits
@@ -58,7 +75,9 @@ the same document.
 
 Use `kit.AutoForm` when the error summary and generated fields can render first.
 It renders custom children after the generated fields. Use `kit.Form` with
-`kit.Fields` when custom content needs another position or no error summary.
+`kit.ErrorSummary` and `kit.Fields` when custom content needs another position.
+Keep `kit.ErrorSummary` in the form: an invalid submit focuses it when no field
+takes focus.
 
 ## Load an edit-form baseline
 
@@ -227,8 +246,11 @@ mutation methods from the subscription callback.
 
 Requires React Hook Form 7.81.0 or newer, which is the package peer minimum.
 
-Use `trigger` with the paths for the current step. Use `setFocus` when the step
-contains an invalid field. Hidden fields [keep their
+Put the fields of each step in one section. `form.fieldPaths(id)` returns the
+paths of the visible fields in that section for the current values, also
+while the section is not rendered. Validate them with `trigger`, and render the
+current step with `kit.Fields node={id}`. Use `setFocus` when the step contains
+an invalid field. Hidden fields [keep their
 values](/how-it-works#hidden-fields-keep-their-values) when the next step
 renders.
 
@@ -242,7 +264,9 @@ makes their validation messages visible without a form submission.
 <StepValidationRecipePreview />
 
 Keep the complete form rules in the Standard Schema. The path list controls
-step navigation. It does not create a second validation contract.
+step navigation. It does not create a second validation contract. Because the
+definition supplies the list, a new field in the section joins the step
+validation without another change.
 
 For typed paths, conditional screens, progress, review, and first-invalid
 navigation, follow the complete [Product workflows tutorial](/workflows).
@@ -272,17 +296,30 @@ Form, Please wrapper.
 ## Submit from a dialog footer
 
 A dialog or drawer often renders its footer outside the `<form>` element.
-Use `kit.Submit` in the footer with the `binding` or `action` prop. Set the
-native `form` attribute to the Form `id`.
+Call `form.submit()` from the footer button. The call runs the same submission
+as a native submit and resolves with a `FormSubmitResult`. Close the dialog
+only when `result.accepted` is `true`.
 
 ```tsx
 // [!include ~/snippets/production-recipes.tsx:dialog-submit]
 ```
 
-The button keeps the disabled and pending state of the form. The browser
-connects the button to the form through the `form` attribute. `kit.Submit`
-does not read the ID of the Form, so set an explicit `id` on the Form. Outside `kit.Form`, `kit.Submit`
-without `binding` or `action` throws an error.
+`form.submit` does not need a form element or an `id`. With named actions, pass
+the action: `form.submit(form.actions.publish)`. Read `useSnapshot(form.submission).action`
+to disable the button while a submission runs.
+
+To keep a native submit button, use `kit.Submit` in the footer with an
+`action` prop, and set the native `form` attribute to the Form `id`. For a form
+with `onSubmit`, the action is `form.actions.submit`. `kit.Submit` does not
+read the ID of the Form, so set an explicit `id` on the Form. Outside
+`kit.Form`, `kit.Submit` without `action` throws an error
+([FP008](/troubleshooting#fp008)).
+
+```tsx
+<kit.Submit action={form.actions.submit} form="checkout-form">
+	Save
+</kit.Submit>
+```
 
 ## Apply server field errors
 

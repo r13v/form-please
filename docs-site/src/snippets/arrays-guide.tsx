@@ -1,7 +1,7 @@
 // biome-ignore-all lint/correctness/noUnusedVariables: Named regions are consumed independently by the documentation.
 "use client"
 
-import { createFormKit, type FormInput } from "form-please"
+import { createFormKit, defineControl, type FormInput } from "form-please"
 import { createDefaultSlots } from "form-please/default-slots"
 import { createNativeControls } from "form-please/native-controls"
 import { useFieldArray } from "react-hook-form"
@@ -156,3 +156,34 @@ export function ContactsForm() {
 	)
 }
 // [!endregion custom-operations]
+
+// [!region primitive-list]
+const lineListControl = defineControl<string[]>({
+	component: ({ blur, input, meta, setValue, value }) => (
+		<textarea
+			{...input}
+			aria-invalid={meta.invalid || undefined}
+			onBlur={blur}
+			onChange={(event) => setValue(event.currentTarget.value.split("\n"))}
+			value={value.join("\n")}
+		/>
+	),
+})
+
+const tagKit = createFormKit({
+	controls: { ...createNativeControls(), lineList: lineListControl },
+	slots: createDefaultSlots(),
+})
+
+const articleSchema = z.object({
+	tags: z.array(z.string().min(1, "Remove the empty line")).max(5),
+})
+
+const articleDefinition = tagKit.defineForm(articleSchema, (ui) => [
+	ui.field("tags", {
+		control: "lineList",
+		label: "Tags",
+		description: "Enter one tag on each line.",
+	}),
+])
+// [!endregion primitive-list]

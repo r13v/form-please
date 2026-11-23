@@ -20,9 +20,7 @@ import { FormPleaseDevtools } from "./devtools.js"
 
 const definition = nativeFormKit.defineForm(
 	z.object({ name: z.string().min(1) }),
-	{
-		ui: [{ control: "text", kind: "field", label: "Name", path: "name" }],
-	},
+	(ui) => [ui.field("name", { control: "text", label: "Name" })],
 )
 
 describe("FormPleaseDevtools", () => {

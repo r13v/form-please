@@ -29,6 +29,7 @@ import {
 import { getFormDiagnosticsRuntime } from "../diagnostics.js"
 import { fieldErrorsToIssues } from "../standard-schema-resolver.js"
 import type { FormIssue, StandardSchema } from "../types.js"
+import { useSnapshot } from "../use-snapshot.js"
 import {
 	type DevtoolsFeatureState,
 	type DevtoolsOptionsRequest,
@@ -78,7 +79,6 @@ export function FormPleaseDevtools<
 		}
 	}
 	const store = storeRef.current.store
-	store.updateHost(form as unknown as FormBinding, runtime)
 	const snapshot = useSyncExternalStore(
 		store.subscribe,
 		store.getSnapshot,
@@ -271,15 +271,15 @@ function UiView({
 }>) {
 	const [query, setQuery] = useState("")
 	const [selectedId, setSelectedId] = useState<string>()
-	const runtime = store.getRuntime()
+	const { disabled, readOnly } = useSnapshot(store.getRuntime().settings)
 	const rows = useMemo(
 		() =>
 			flattenResolved(snapshot.resolved, {
-				disabled: runtime.disabled,
-				readOnly: runtime.readOnly,
+				disabled,
+				readOnly,
 				visible: true,
 			}),
-		[runtime.disabled, runtime.readOnly, snapshot.resolved],
+		[disabled, readOnly, snapshot.resolved],
 	)
 	const normalizedQuery = query.trim().toLocaleLowerCase()
 	const visibleRows = rows.filter(

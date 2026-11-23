@@ -53,40 +53,26 @@ const countryDescription = fromResource(
 		error: ({ error }) => error.message,
 	},
 )
-const definition = kit.defineForm(schema, {
-	ui: [
-		{
-			kind: "section",
-			id: "profile",
-			title: "Profile",
-			children: [
-				{
-					kind: "field",
-					path: "name",
-					control: "text",
-					label: "Name",
-					required: true,
-				},
-				{
-					kind: "field",
-					path: "country",
-					control: "text",
-					label: (values) => `Country for ${values.name ?? "guest"}`,
-					description: countryDescription,
-				},
-			],
-		},
-		{
-			kind: "array",
-			path: "speakers",
-			label: "Speakers",
-			itemDefault: { name: "" },
-			children: [
-				{ kind: "field", path: "name", control: "text", label: "Speaker" },
-			],
-		},
-	],
-})
+const definition = kit.defineForm(schema, (ui) => [
+	ui.section("profile", {
+		title: "Profile",
+		children: [
+			ui.field("name", { control: "text", label: "Name", required: true }),
+			ui.field("country", {
+				control: "text",
+				label: (values) => `Country for ${values.name ?? "guest"}`,
+				description: countryDescription,
+			}),
+		],
+	}),
+	ui.array("speakers", {
+		label: "Speakers",
+		itemDefault: { name: "" },
+		children: (item) => [
+			item.field("name", { control: "text", label: "Speaker" }),
+		],
+	}),
+])
 
 const muiKit = createMuiFormKit()
 if (

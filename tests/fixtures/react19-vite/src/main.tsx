@@ -19,9 +19,9 @@ const addressSchema: StandardSchema<AddressInput> = {
 		},
 	},
 }
-const addressFragment = kit.defineFragment(addressSchema, {
-	ui: [{ kind: "field", path: "street", control: "text", label: "Street" }],
-})
+const addressFragment = kit.defineFragment(addressSchema, (ui) => [
+	ui.field("street", { control: "text", label: "Street" }),
+])
 
 type Input = {
 	readonly address: AddressInput
@@ -36,12 +36,10 @@ const schema: StandardSchema<Input> = {
 		},
 	},
 }
-const definition = kit.defineForm(schema, {
-	ui: [
-		{ kind: "field", path: "name", control: "text", label: "Name" },
-		addressFragment.fields({ at: "address" }),
-	],
-})
+const definition = kit.defineForm(schema, (ui) => [
+	ui.field("name", { control: "text", label: "Name" }),
+	addressFragment.fields({ at: "address" }),
+])
 const muiKit = createMuiFormKit()
 if (
 	!muiKit.controls.slider ||

@@ -23,25 +23,24 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
-const definitionSource = {
-	ui: [
-		{ control: "text", kind: "field", label: "Name", path: "name" },
-		{
-			children: [
-				{ control: "text", kind: "field", label: "Item name", path: "name" },
-			],
-			itemDefault: { name: "" },
-			kind: "array",
-			label: "Items",
-			path: "items",
-		},
-	],
-} as const
+/** Builds the UI that every history form in this file shares. */
+const buildDefinition: Parameters<typeof kit.defineForm<typeof schema>>[1] = (
+	ui,
+) => [
+	ui.field("name", { control: "text", label: "Name" }),
+	ui.array("items", {
+		children: (item) => [
+			item.field("name", { control: "text", label: "Item name" }),
+		],
+		itemDefault: { name: "" },
+		label: "Items",
+	}),
+]
 
 describe("history React Hook Form integration", () => {
 	it("publishes navigation state through the React history hook", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			middleware: [feature],
 		})
 		let history!: UseHistoryResult<Input>
@@ -82,7 +81,7 @@ describe("history React Hook Form integration", () => {
 
 	it("keeps one hook result identity until navigation state changes", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			middleware: [feature],
 		})
 		const results: UseHistoryResult<Input>[] = []
@@ -119,7 +118,7 @@ describe("history React Hook Form integration", () => {
 
 	it("restores optional top-level keys and generated array structure", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			middleware: [feature],
 		})
 		let form!: FormBinding<typeof schema>
@@ -170,7 +169,7 @@ describe("history React Hook Form integration", () => {
 
 	it("preserves touched and errors while recalculating dirty from defaults", async () => {
 		const feature = createHistoryMiddleware({ groupWindow: 0 })
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			beforeUpdate(_draft, transaction) {
 				if (transaction.source.type === "history") {
 					expect(transaction.source.action).toBe("undo")

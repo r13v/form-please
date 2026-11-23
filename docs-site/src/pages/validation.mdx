@@ -72,8 +72,9 @@ A generated control receives all current issues in `meta.errors`. It receives
 the issues that the UI can show in `meta.displayErrors`. The default field slot
 shows issues after the field is touched or after a submit attempt.
 
-`kit.AutoForm` also renders an error summary. The summary contains issues that
-do not belong to a visible generated control. It also contains issues for
+`kit.AutoForm` also renders an error summary, and `kit.ErrorSummary` renders
+the same summary in a manually composed `kit.Form`. The summary contains issues
+that do not belong to a visible generated control. It also contains issues for
 disabled generated controls.
 
 React Hook Form reserves the top-level `root` key of its errors. A schema issue
@@ -87,9 +88,10 @@ Omit the issue path when the user cannot fix the issue in one field:
 // [!include ~/snippets/validation-guide.tsx:form-issue]
 ```
 
-Use `kit.Form` and `kit.Fields` for manual composition. A manually composed
-`kit.Form` has no summary. The application must render its own summary for
-form-level and hidden-field issues.
+Use `kit.Form`, `kit.ErrorSummary`, and `kit.Fields` for manual composition.
+Without `kit.ErrorSummary`, a manually composed `kit.Form` has no summary, and
+the application must render its own summary for form-level and hidden-field
+issues.
 
 ## Focus the first issue
 
@@ -97,14 +99,13 @@ After an invalid submit, RHF focuses its first registered invalid field,
 including an application-owned field. Focus order follows RHF registration
 order.
 
-If RHF does not move focus to an invalid field, `kit.AutoForm` focuses the
-first error-summary item.
+If RHF does not move focus to an invalid field, the error summary of
+`kit.AutoForm` or `kit.ErrorSummary` receives focus on its first item.
 
 A custom control receives focus only when it attaches `input.ref`. Read
 [Accessibility](/accessibility) for the control contract.
 
-A hidden field has no generated control, so `kit.AutoForm` shows its issue in
-the summary. See [Hidden fields keep their
+A hidden field has no generated control, so the error summary shows its issue. See [Hidden fields keep their
 values](/how-it-works#hidden-fields-keep-their-values).
 
 ## Submit input and output

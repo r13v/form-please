@@ -207,44 +207,26 @@ describe("managed array reconciliation", () => {
 		).toEqual([{ message: "Name too short", path: "rows.0.name" }])
 	})
 
-	it("keeps row issues when a schema reports the array issue before indexed issues", async () => {
-		const validationSchema = schema.superRefine((_values, context) => {
-			context.addIssue({
-				code: "custom",
-				path: ["rows"],
-				message: "Array issue",
-			})
-			context.addIssue({
-				code: "custom",
-				path: ["rows", 1, "name"],
-				message: "Sam issue",
-			})
-		})
-		const form = mount({}, true, validationSchema)
-		await act(() => form.api.trigger())
-		act(() => form.array("rows").reconcile(["sam"], options))
-		expect(
-			fieldErrorToIssues(
-				form.api.getFieldState("rows.0.name").error,
-				"rows.0.name",
-			),
-		).toEqual([{ message: "Sam issue", path: "rows.0.name" }])
-		expect(
-			fieldErrorToIssues(form.api.getFieldState("rows").error, "rows"),
-		).toEqual([{ message: "Array issue", path: "rows" }])
-		expect(form.api.getFieldState("rows.1.name").error).toBeUndefined()
-	})
-
 	it.each([
-		["remove", () => fireEvent.click(rowAction(0, "Remove item 1")), ["sam"]],
 		[
-			"move",
+			"reconcile",
+			(form: FormBinding<typeof schema>) =>
+				act(() => form.array("rows").reconcile(["sam"], options)),
+			["sam"],
+		],
+		[
+			"generated remove",
+			() => fireEvent.click(rowAction(0, "Remove item 1")),
+			["sam"],
+		],
+		[
+			"generated move",
 			() => fireEvent.click(rowAction(1, "Move item 2 up")),
 			["sam", "alex"],
 		],
 	] as const)(
-		"keeps row issues after a generated %s when the schema reports the array issue first",
-		async (_action, act_, ids) => {
+		"keeps row issues after a %s when the schema reports the array issue first",
+		async (_action, run, ids) => {
 			const validationSchema = schema.superRefine((_values, context) => {
 				context.addIssue({
 					code: "custom",
@@ -259,7 +241,7 @@ describe("managed array reconciliation", () => {
 			})
 			const form = mount({}, true, validationSchema)
 			await act(() => form.api.trigger())
-			act_()
+			run(form)
 			expect(form.api.getValues().rows.map((row) => row.id)).toEqual(ids)
 			expect(
 				fieldErrorToIssues(
@@ -408,7 +390,10 @@ describe("managed array reconciliation", () => {
 				message: "Sam error",
 			}),
 		)
-		expect(form.array("rows").reconcile(["sam"], options)).toBe("cancelled")
+		expect(form.array("rows").reconcile(["sam"], options)).toStrictEqual({
+			committed: false,
+			result: "cancelled",
+		})
 		expect(form.api.getValues()).toEqual(initial)
 		expect(form.api.getFieldState("rows.1.name").error?.message).toBe(
 			"Sam error",

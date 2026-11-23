@@ -1,5 +1,5 @@
 import type { FieldValues } from "react-hook-form"
-
+import { errorMessage } from "./error-codes.js"
 import {
 	claimFeature,
 	type FormMiddlewareApi,
@@ -41,12 +41,7 @@ export function defineManagedFeature<Handle>(
 	const states = new WeakMap<object, ManagedFeatureState<Handle>>()
 	const feature = (api: FormMiddlewareApi<FieldValues>) => {
 		const capability = getValueCoordinatorCapability<FieldValues, unknown>(api)
-		claimFeature(
-			capability,
-			claimKey,
-			feature,
-			`A form can configure only one ${name} feature`,
-		)
+		claimFeature(capability, claimKey, feature, name)
 		const state = createState(capability)
 		states.set(capability, state)
 		return (next: FormMiddlewareNext) =>
@@ -68,7 +63,10 @@ export function defineManagedFeature<Handle>(
 				readFeatureClaim(capability, claimKey) !== feature
 			) {
 				throw new TypeError(
-					`This ${name} feature is not configured for the supplied form`,
+					errorMessage(
+						"FP326",
+						`This ${name} feature is not configured for the supplied form`,
+					),
 				)
 			}
 			state.attach?.(form)
@@ -89,7 +87,9 @@ export function createListenerSet(name: string): {
 	return {
 		subscribe(listener) {
 			if (typeof listener !== "function") {
-				throw new TypeError(`${name} listener must be a function`)
+				throw new TypeError(
+					errorMessage("FP327", `${name} listener must be a function`),
+				)
 			}
 			listeners.add(listener)
 			let subscribed = true

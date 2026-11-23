@@ -23,7 +23,8 @@ managed-update policy normalized by one exact form kit.
 _Avoid_: Form binding, inferred schema UI
 
 **Form binding**: The thin integration returned by `kit.useForm` that contains
-`form.api`, `form.update`, the fixed definition, and runtime context.
+`form.api`, `form.update`, the fixed definition, and runtime context. It keeps
+one object identity for the life of the hook.
 _Avoid_: Form store, Form Please runtime instance
 
 **Form Please Devtools**: An optional read-only development instrument that
@@ -36,8 +37,8 @@ _Avoid_: Form store, Redux DevTools
 as `form.api`. Its direct mutations bypass Form Please middleware.
 _Avoid_: Form Please command API
 
-**Managed value update**: A value update initiated by a generated control,
-generated array action, `form.update`, `form.array(path).reconcile`, or
+**Managed value update**: A value update initiated by a generated control, a
+custom field connected with `kit.useField`, a generated array action, `form.update`, `form.array(path).reconcile`, or
 feature restore, and therefore processed before it reaches the React Hook Form API. Every managed
 update uses the coordinator even when the form has no configured middleware.
 _Avoid_: Every React Hook Form update, raw API update

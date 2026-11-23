@@ -12,9 +12,11 @@
 - Docs examples and interactive components must use public package imports from
   `form-please`, not source imports or mocked APIs.
 - Author every definition and fragment with the builder factory
-  (`defineForm(schema, (ui) => [ui.field(...)])`). Never show the object form
-  (`{ ui: [...] }` with `kind` nodes) in pages, snippets, or components. Share
-  repeated UI with `defineFragment`, not with separate node lists.
+  (`defineForm(schema, (ui) => [ui.field(...)])`), the only source that the
+  library accepts. The version 2 object form (`{ ui: [...] }` with `kind`
+  nodes) appears only as the "Version 2" example in
+  `src/pages/upgrade-to-v3.mdx`. Share repeated UI with `defineFragment`, not
+  with separate node lists.
 - Do not add an OpenAI Sites worker, `.openai/hosting.json`, redirects, a custom
   domain, analytics, API routes, or a server runtime.
 - The overview and `/playground` share the scenario programs in

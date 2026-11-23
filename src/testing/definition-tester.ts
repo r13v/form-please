@@ -10,6 +10,7 @@ import {
 	resolveDefinition,
 	resolveHiddenFieldWrites,
 } from "../definition.js"
+import { errorMessage } from "../error-codes.js"
 import { createFieldOptionsResolution } from "../field-options.js"
 import { cloneFormValue } from "../form-value.js"
 import {
@@ -37,28 +38,13 @@ import {
 	createValueCoordinator,
 	type FormMiddleware,
 	type FormUpdateRecipe,
+	type FormUpdateResult,
 	type ValueTransaction,
 } from "../value-middleware.js"
 
 type DefinitionTypeData<Definition extends FormDefinition> =
-	Definition extends FormDefinition<
-		infer Schema,
-		infer Controls,
-		infer Context,
-		infer FieldOptions,
-		infer SectionOptions,
-		infer ArrayOptions,
-		infer Grid
-	>
-		? {
-				readonly arrayOptions: ArrayOptions
-				readonly context: Context
-				readonly controls: Controls
-				readonly fieldOptions: FieldOptions
-				readonly grid: Grid
-				readonly schema: Schema
-				readonly sectionOptions: SectionOptions
-			}
+	Definition extends FormDefinition<infer Schema, infer Kit>
+		? Kit & { readonly schema: Schema }
 		: never
 
 /** Editable values accepted by one concrete definition. */
@@ -285,7 +271,10 @@ export type ManagedDefinitionTransition<Definition extends FormDefinition> =
 					readonly transaction: undefined
 			  }
 		) & {
-			/** The value returned by the configured middleware chain. */
+			/**
+			 * The value that the middleware chain returned, also when the update
+			 * did not commit; `undefined` when the chain did not run.
+			 */
 			readonly result: unknown
 		}
 
@@ -378,7 +367,9 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 	options: DefinitionTesterOptions<Definition>,
 ): DefinitionTester<Definition> {
 	if (!isFieldValues(options.values)) {
-		throw new TypeError("Definition tester values must be an object")
+		throw new TypeError(
+			errorMessage("FP602", "Definition tester values must be an object"),
+		)
 	}
 	const initialValues = cloneFormValue(options.values)
 	const initialContext = (
@@ -405,14 +396,6 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 	const updates = definition as Definition & DefinitionUpdatePolicy<Definition>
 	state.inspection = createInspection(state.values, state.resolved)
 
-	let activeCommit:
-		| {
-				transaction?: ValueTransaction<
-					DefinitionTestValues<Definition>,
-					DefinitionTestContext<Definition>
-				>
-		  }
-		| undefined
 	const refresh = (): void => {
 		const nextResolved = resolveDefinition(
 			state.definition,
@@ -429,7 +412,6 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 		beforeUpdate: updates.beforeUpdate,
 		commit: (transaction) => {
 			state.values = transaction.nextValues as DefinitionTestValues<Definition>
-			if (activeCommit !== undefined) activeCommit.transaction = transaction
 			refresh()
 		},
 		getContext: () => state.context,
@@ -462,24 +444,19 @@ export function createDefinitionTester<Definition extends FormDefinition>(
 		return createTransition(before)
 	}
 	const runManaged = (
-		dispatch: () => unknown,
+		dispatch: () => FormUpdateResult<
+			DefinitionTestValues<Definition>,
+			DefinitionTestContext<Definition>
+		>,
 	): ManagedDefinitionTransition<Definition> => {
 		const before = state.inspection
-		const commit: NonNullable<typeof activeCommit> = {}
-		activeCommit = commit
-		try {
-			const result = dispatch()
-			const transition = createTransition(before)
-			return Object.freeze({
-				...transition,
-				...(commit.transaction === undefined
-					? { committed: false as const, transaction: undefined }
-					: { committed: true as const, transaction: commit.transaction }),
-				result,
-			})
-		} finally {
-			activeCommit = undefined
-		}
+		const update = dispatch()
+		const transition = createTransition(before)
+		const outcome = update.committed
+			? { ...update }
+			: { ...update, transaction: undefined }
+
+		return Object.freeze({ ...transition, ...outcome })
 	}
 	/** A generated control or array action that the UI could not start. */
 	const blockedTransition = (): ManagedDefinitionTransition<Definition> =>
@@ -592,15 +569,23 @@ function createInspection<Definition extends FormDefinition>(
 			const node = byId.get(id)
 			if (node !== undefined) return node
 			throw new TypeError(
-				`No resolved node with id "${id}". Available node ids: ${availableValues(
-					snapshots.map((candidate) => candidate.id),
-				)}`,
+				errorMessage(
+					"FP603",
+					`No resolved node with id "${id}". Available node ids: ${availableValues(
+						snapshots.map((candidate) => candidate.id),
+					)}`,
+				),
 			)
 		},
 		resolveOptions: async (path) => {
 			const field = selectField(path)
 			if (field.options === undefined) {
-				throw new TypeError(`Resolved field "${path}" does not define options`)
+				throw new TypeError(
+					errorMessage(
+						"FP604",
+						`Resolved field "${path}" does not define options`,
+					),
+				)
 			}
 			if (Array.isArray(field.options)) {
 				return field.options as readonly DefinitionTestOption<Definition>[]
@@ -685,15 +670,21 @@ function selectPathNode<
 	if (matches.length === 1) return matches[0] as Node
 	if (matches.length > 1) {
 		throw new TypeError(
-			`Multiple resolved ${kind} nodes use path "${path}". Select one by id: ${availableValues(
-				matches.map((node) => node.id),
-			)}`,
+			errorMessage(
+				"FP605",
+				`Multiple resolved ${kind} nodes use path "${path}". Select one by id: ${availableValues(
+					matches.map((node) => node.id),
+				)}`,
+			),
 		)
 	}
 	throw new TypeError(
-		`No resolved ${kind} at path "${path}". Available ${kind} paths: ${availableValues(
-			nodes.map((node) => node.path),
-		)}`,
+		errorMessage(
+			"FP606",
+			`No resolved ${kind} at path "${path}". Available ${kind} paths: ${availableValues(
+				nodes.map((node) => node.path),
+			)}`,
+		),
 	)
 }
 

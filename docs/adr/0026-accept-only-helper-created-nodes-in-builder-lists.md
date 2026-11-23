@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-26
+- Amended by: [ADR 0032](0032-accept-only-builder-callbacks-in-definitions.md)
 - Amends: [ADR 0021](0021-add-schema-bound-ui-builders.md)
 
 ## Context

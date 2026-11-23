@@ -24,42 +24,27 @@ const schema: StandardSchemaV1<OptionInput> = {
 	},
 }
 
-nativeFormKit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			// A field may intentionally expose only part of its schema union.
-			options: [{ value: "admin", label: "Administrator" }],
-		},
-		{
-			kind: "field",
-			path: "optionalRole",
-			control: "select",
-			props: { emptyOption: { label: "No role" } },
-			options: [
-				{
-					// @ts-expect-error Optional absence uses the dedicated empty option.
-					value: undefined,
-					label: "Invalid absence",
-				},
-			],
-		},
-		{
-			kind: "field",
-			path: "label",
-			control: "select",
-			// A plain string schema intentionally keeps arbitrary string options.
-			options: [{ value: "anything", label: "Any string" }],
-		},
-	],
-})
-
 nativeFormKit.defineForm(schema, (ui) => [
 	ui.field("role", {
 		control: "select",
+		// A field may intentionally expose only part of its schema union.
 		options: [{ value: "admin", label: "Administrator" }],
+	}),
+	ui.field("optionalRole", {
+		control: "select",
+		props: { emptyOption: { label: "No role" } },
+		options: [
+			{
+				// @ts-expect-error Optional absence uses the dedicated empty option.
+				value: undefined,
+				label: "Invalid absence",
+			},
+		],
+	}),
+	ui.field("label", {
+		control: "select",
+		// A plain string schema intentionally keeps arbitrary string options.
+		options: [{ value: "anything", label: "Any string" }],
 	}),
 ])
 
@@ -68,30 +53,13 @@ nativeFormKit.defineForm(schema, (ui) => [
 		control: "select",
 		options: [
 			{
-				// @ts-expect-error Builder option values retain the field union.
+				// @ts-expect-error Option values must belong to the schema field union.
 				value: "owner",
 				label: "Owner",
 			},
 		],
 	}),
 ])
-
-nativeFormKit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			options: [
-				{
-					// @ts-expect-error Option values must belong to the schema field union.
-					value: "owner",
-					label: "Owner",
-				},
-			],
-		},
-	],
-})
 
 type OptionContext = {
 	readonly exact: readonly {
@@ -105,17 +73,6 @@ type OptionContext = {
 }
 
 const contextualKit = nativeFormKit.forContext<OptionContext>()
-contextualKit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			options: ({ context }) => context.exact,
-		},
-	],
-})
-
 contextualKit.defineForm(schema, (ui) => [
 	ui.field("role", {
 		control: "select",
@@ -138,22 +95,10 @@ contextualKit.defineForm(schema, (ui) => [
 contextualKit.defineForm(schema, (ui) => [
 	ui.field("role", {
 		control: "select",
-		// @ts-expect-error Builder resolver data retains the schema field union.
+		// @ts-expect-error Resolved options must belong to the schema field union.
 		options: ({ context }) => context.broad,
 	}),
 ])
-
-contextualKit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			// @ts-expect-error Resolver data must retain the schema field union.
-			options: ({ context }) => context.broad,
-		},
-	],
-})
 
 type CustomOption = {
 	readonly id: OptionValue<string>
@@ -188,93 +133,73 @@ const customKit = createFormKit({
 	slots: {} as FormKitSlots,
 })
 
-customKit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "single",
-			options: [{ id: "member", label: "Member" }],
-		},
-		{
-			kind: "field",
-			path: "roles",
-			control: "multiple",
-			options: [
-				{ id: "admin", label: "Administrator" },
-				{
-					// @ts-expect-error Multi-option values use the array element union.
-					id: "owner",
-					label: "Owner",
-				},
-			],
-		},
-		{
-			kind: "field",
-			path: "role",
-			control: "unmarked",
-			// Values remain broad unless the control author opts in with OptionValue.
-			options: [{ id: "owner", label: "Owner" }],
-		},
-	],
-})
+customKit.defineForm(schema, (ui) => [
+	ui.field("role", {
+		control: "single",
+		options: [{ id: "member", label: "Member" }],
+	}),
+	ui.field("roles", {
+		control: "multiple",
+		options: [
+			{ id: "admin", label: "Administrator" },
+			{
+				// @ts-expect-error Multi-option values use the array element union.
+				id: "owner",
+				label: "Owner",
+			},
+		],
+	}),
+	ui.field("role", {
+		control: "unmarked",
+		// Values remain broad unless the control author opts in with OptionValue.
+		options: [{ id: "owner", label: "Owner" }],
+	}),
+])
 
 const muiKit = createMuiFormKit()
-muiKit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "role",
-			control: "select",
-			options: [
-				{
-					// @ts-expect-error MUI select options use the scalar field union.
-					value: "owner",
-					label: "Owner",
-				},
-			],
-		},
-		{
-			kind: "field",
-			path: "roles",
-			control: "select-multiple",
-			options: [
-				{
-					// @ts-expect-error MUI multi-select options use the element union.
-					value: "owner",
-					label: "Owner",
-				},
-			],
-		},
-		{
-			kind: "field",
-			path: "role",
-			control: "radio",
-			options: [
-				{
-					// @ts-expect-error MUI radio options use the scalar field union.
-					value: "owner",
-					label: "Owner",
-				},
-			],
-		},
-		{
-			kind: "field",
-			path: "role",
-			control: "autocomplete",
-			options: [
-				// @ts-expect-error MUI autocomplete options use the scalar field union.
-				"owner",
-			],
-		},
-		{
-			kind: "field",
-			path: "roles",
-			control: "autocomplete-multiple",
-			options: [
-				// @ts-expect-error MUI autocomplete options use the element union.
-				"owner",
-			],
-		},
-	],
-})
+muiKit.defineForm(schema, (ui) => [
+	ui.field("role", {
+		control: "select",
+		options: [
+			{
+				// @ts-expect-error MUI select options use the scalar field union.
+				value: "owner",
+				label: "Owner",
+			},
+		],
+	}),
+	ui.field("roles", {
+		control: "select-multiple",
+		options: [
+			{
+				// @ts-expect-error MUI multi-select options use the element union.
+				value: "owner",
+				label: "Owner",
+			},
+		],
+	}),
+	ui.field("role", {
+		control: "radio",
+		options: [
+			{
+				// @ts-expect-error MUI radio options use the scalar field union.
+				value: "owner",
+				label: "Owner",
+			},
+		],
+	}),
+	ui.field("role", {
+		control: "autocomplete",
+		options: [
+			// @ts-expect-error MUI autocomplete options use the scalar field union.
+			"owner",
+		],
+	}),
+	ui.field("roles", {
+		control: "autocomplete-multiple",
+		options: [
+			// @ts-expect-error MUI autocomplete options use the element union.
+			"owner",
+		],
+	}),
+])

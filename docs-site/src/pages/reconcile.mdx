@@ -55,6 +55,8 @@ are not guaranteed to survive that move.
 Reconcile rejects duplicate current keys, duplicate selected keys, and a created
 row with the wrong key before it changes values. A creation error also leaves
 values unchanged. An unchanged selection publishes no managed transaction.
+Reconcile returns the same `FormUpdateResult` as `form.update`: `committed` is
+`false` for an unchanged selection or a cancelled operation.
 
 The array must be mounted when you call reconcile. A hidden, unmounted, or
 application-owned array fails before values change. One call reconciles one

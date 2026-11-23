@@ -245,10 +245,17 @@ function createStoreHarness() {
 	} as unknown as FormBinding
 	const runtime: FormDiagnosticsRuntime = {
 		diagnosticTarget: target,
-		disabled: false,
 		formElement: null,
 		inputRefs: new Map(),
-		readOnly: false,
+		settings: {
+			getSnapshot: () => ({
+				context: undefined,
+				disabled: false,
+				errorDisplay: "all",
+				readOnly: false,
+			}),
+			subscribe: () => () => {},
+		},
 	}
 	const store = new FormPleaseDevtoolsStore(form, runtime)
 	return {

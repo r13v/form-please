@@ -13,42 +13,34 @@ const conditionalDefinition = nativeFormKit.defineForm(
 		role: z.enum(["member", "lead"]),
 		team: z.string(),
 	}),
-	{
-		ui: [
-			{
-				control: "select",
-				kind: "field",
-				label: "Mode",
-				options: [
-					{ label: "Single", value: "single" },
-					{ label: "Team", value: "team" },
-				],
-				path: "mode",
+	(ui) => [
+		ui.field("mode", {
+			control: "select",
+			label: "Mode",
+			options: [
+				{ label: "Single", value: "single" },
+				{ label: "Team", value: "team" },
+			],
+		}),
+		ui.field("role", {
+			control: "select",
+			label: "Role",
+			options: ({ values }) => {
+				if (values.mode === "team") {
+					return [
+						{ label: "Member", value: "member" },
+						{ label: "Lead", value: "lead" },
+					]
+				}
+				return [{ label: "Member", value: "member" }]
 			},
-			{
-				control: "select",
-				kind: "field",
-				label: "Role",
-				options: ({ values }) => {
-					if (values.mode === "team") {
-						return [
-							{ label: "Member", value: "member" },
-							{ label: "Lead", value: "lead" },
-						]
-					}
-					return [{ label: "Member", value: "member" }]
-				},
-				path: "role",
-			},
-			{
-				control: "text",
-				kind: "field",
-				label: "Team",
-				path: "team",
-				visible: ({ mode }) => mode === "team",
-			},
-		],
-	},
+		}),
+		ui.field("team", {
+			control: "text",
+			label: "Team",
+			visible: ({ mode }) => mode === "team",
+		}),
+	],
 )
 
 describe("devtools conditional-field integration", () => {

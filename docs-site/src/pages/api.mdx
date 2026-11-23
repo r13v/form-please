@@ -52,6 +52,13 @@ The root entry does not load the code of the devtools, history, persistence, or
 Material UI entries. An application that does not import an optional entry does
 not include its code in the bundle.
 
+`form-please/devtools` needs the optional peer dependencies `@hookform/devtools`
+and `@uiw/react-json-view`. Only this entry imports them:
+
+```sh
+npm install --save-dev @hookform/devtools @uiw/react-json-view
+```
+
 Mount `FormPleaseDevtools` only in development. See the [Devtools guide](/devtools)
 for its one-component integration and raw-data boundary.
 
@@ -73,9 +80,9 @@ executor.
 
 Each operation except `resolveOptions` returns a transition with `before`,
 `after`, and exact public node `changes`. Managed transitions also report
-`committed`, `transaction`, and the middleware `result`. `setValue` and the
-array actions return `committed: false` for a disabled, read-only, or hidden
-node. An array action with an index outside the array throws a `RangeError`.
+`committed`, `transaction`, and the `result` of the middleware chain, also
+for an update that does not commit. `setValue` and the array actions return
+`committed: false` and `result: undefined` for a disabled, read-only, or hidden node. An array action with an index outside the array throws a `RangeError`.
 Read [Test definitions](/testing) for complete examples
 and boundaries.
 
@@ -156,14 +163,16 @@ The returned kit has these members:
 | `defineForm` | Creates a typed and normalized form definition. |
 | `forContext` | Returns a type-only context view of the same kit. |
 | `useForm` | Creates a component-local form binding. |
-| `Form`, `Fields`, `Submit`, `AutoForm` | Render the form and its generated UI. |
+| `Form`, `Fields`, `ErrorSummary`, `Submit`, `AutoForm` | Render the form and its generated UI. |
+| `useField` | Connects a custom field to the binding of the surrounding `Form`. |
+| `useFormContext` | Returns the binding of the surrounding `Form`. |
 
 ### `defineFragment`
 
 `kit.defineFragment(schema, (ui) => [...])` returns a frozen fragment with the
 exact input schema at `fragment.schema` and placement methods at
-`fragment.fields`. The object form `defineFragment(schema, { ui })` remains
-supported. Fragment-authored resolvers receive the local fragment input. See
+`fragment.fields`. The second argument must be a builder function, as for
+`defineForm`. Fragment-authored resolvers receive the local fragment input. See
 [Reusable fragments](/definitions#reusable-fragments) for composition,
 context, and array examples.
 
@@ -289,9 +298,11 @@ form.
 
 ## `defineForm`
 
-`kit.defineForm(schema, source, options?)` validates, normalizes, and freezes a
-typed definition. The schema-bound `field`, `section`, `array`, and `render`
-helpers create ordinary nodes without requiring an authored `kind` property.
+`kit.defineForm(schema, (ui) => [...], options?)` validates, normalizes, and
+freezes a typed definition. The second argument must be a builder function.
+Another value, such as a `{ ui: [...] }` object, throws
+[`FP141`](/troubleshooting#fp141). The schema-bound `field`, `section`,
+`array`, and `render` helpers create the nodes.
 The schema must implement Standard Schema. Field paths and control values use
 the schema input type, before schema transformations.
 
@@ -305,7 +316,9 @@ they are not value resolvers.
 
 A builder list accepts only nodes from the helpers of its own scope and
 fragment placements. A root helper inside `array.children` causes a type
-error. Use the `{ ui }` object form to write nodes as objects.
+error. A hand-written node object causes a type error, and at runtime it throws
+[`FP119`](/troubleshooting#fp119). To create nodes from data, call the helpers
+in a loop.
 
 The optional third argument owns the complete managed-update policy:
 
@@ -355,7 +368,10 @@ item or a function that returns one. Form, Please clones the value before each
 insertion. Array paths use their current numeric index, while React keys use
 RHF's stable field-array ID.
 
-A render component inherits resolved interaction state:
+A render component inherits resolved interaction state. It also receives
+`pathPrefix`: the absolute path of the array item that contains the node, such
+as `"rows.2"`, or `""` at the form root. A custom field in an array row builds
+its absolute path from it, for example `` `${pathPrefix}.title` ``:
 
 ```tsx
 // [!include ~/snippets/api-reference.tsx:render-node]
@@ -381,9 +397,10 @@ controls.
 The method does not create or clone a registry. Its context type must extend
 the current kit context.
 
-`Form`, `AutoForm`, and `Submit` of a kit accept a binding of a narrower
-`forContext` view. A shared component can render `appKit.Submit` for a binding
-of type `FormBinding<Schema, Context>` with `Context extends AppContext`.
+`Form` and `AutoForm` of a kit accept a binding of a narrower `forContext`
+view, and `Submit` accepts an action of that binding. A shared component can
+render `appKit.Submit` for an action of a binding of type
+`FormBinding<Schema, Context>` with `Context extends AppContext`.
 `FormBinding` itself stays invariant in its context.
 
 ## `useForm`
@@ -393,7 +410,7 @@ of type `FormBinding<Schema, Context>` with `Context extends AppContext`.
 | Option | Requirement and effect |
 | --- | --- |
 | `defaultValues` | Required complete synchronous schema input, fixed for the hook lifetime. |
-| `context` | Required after `forContext<Context>()`; otherwise optional. An inline object with the same top-level values keeps the binding. Memoize nested objects and arrays. |
+| `context` | Required after `forContext<Context>()`; otherwise optional. A new object with the same top-level values does not change the context, and `form.context` keeps the first object. Memoize nested objects and arrays. |
 | `disabled` | Disables generated controls and native form submission. |
 | `readOnly` | Locks generated controls but does not disable submission. |
 | `mode` | Optional RHF validation mode. Defaults to `onSubmit`. |
@@ -463,7 +480,7 @@ A submit attempt runs these steps:
 4. If the schema passes, it runs `validate({ input, value })` of the selected action.
 5. If `validate` returns no issues, it runs `onSubmit({ value, input, form, submitter })`.
 
-A submit attempt while an action runs does nothing.
+A submit attempt while an action runs does not start a second submission.
 
 Because `validate` runs only after the schema passes, the user can see schema
 issues and action issues in two submit attempts. Action issues focus the first
@@ -500,6 +517,27 @@ error as an unhandled rejection. Catch an expected error inside `validate` or
 `error` to `null`. The React Hook Form
 `formState.isSubmitSuccessful` is `false` after a rejection.
 
+### Submit from code
+
+`form.submit(action?)` runs one action through the same steps as a native
+submit and `kit.Submit`. It resolves with a `FormSubmitResult`:
+
+| Result | Meaning |
+| --- | --- |
+| `{ accepted: true, action }` | The schema and `validate` passed, and `onSubmit` resolved. |
+| `{ accepted: false, action, reason: "invalid", issues }` | The schema or `validate` returned issues. `issues` contains them. |
+| `{ accepted: false, action, reason: "pending" }` | Another action was running. The call did nothing. |
+| `{ accepted: false, action, reason: "disabled" }` | The `disabled` option is set. The call did nothing. |
+| `{ accepted: false, action, reason: "failed", error }` | `onSubmit` rejected. `error` is the rejection, and `form.submission` keeps it too. |
+
+With named actions, pass an action from `form.actions`, for example
+`form.submit(form.actions.publish)`. TypeScript requires it, and an action of
+another form throws a `TypeError`. With the `onSubmit` shorthand, the argument
+is optional. `submitter` is `null`. The form element does not have to be
+mounted: the call validates the current values, but focus moves only to
+elements that exist. The promise rejects for an error that a native submit
+reports as an unhandled rejection.
+
 ### External issues
 
 `form.setIssues(issues, { focus })` replaces the external issues. Each
@@ -534,12 +572,20 @@ A binding contains these public fields:
 | --- | --- |
 | `api` | Unchanged typed RHF `UseFormReturn` for values, fields, validation, reset, and subscriptions. |
 | `definition` | Fixed definition captured during the first hook render. |
-| `context` | Current runtime context. |
-| `update(recipe)` | Apply one managed Immer recipe through value middleware. |
-| `actions` | Submit actions with stable identity for `kit.Submit action`. |
+| `context` | The context of the latest committed render, which generated UI uses. In the render that passes a new `context` option, it still returns the previous context; read your own variable in that render. A new object with the same top-level values keeps the first object. |
+| `update(recipe)` | Apply one managed Immer recipe through value middleware, and return a `FormUpdateResult`. |
+| `actions` | Submit actions with stable identity for `kit.Submit action` and `submit`. A form with `onSubmit` has one action, `actions.submit`. |
 | `submission` | External store with the running action name and the last `onSubmit` rejection. |
+| `submit(action?)` | Run one action and resolve with a `FormSubmitResult`. See [Submit from code](#submit-from-code). |
+| `fieldPaths(nodeId?)` | List the paths of the visible fields under one node, or of the whole form, for the current values and the committed `context`, `disabled`, and `readOnly`. |
 | `setIssues(issues, options)` | Replace the external issues and optionally move focus. |
 | `array(path)` | Select a mounted generated array. Its `reconcile` method selects rows. |
+
+The binding keeps one object identity for the life of the `kit.useForm` call.
+A change of `context`, `disabled`, `readOnly`, or `errorDisplay` updates the
+generated fields, `kit.Form`, and `kit.Submit`, but does not create a new
+binding. An effect or a memo that lists `form` as a dependency therefore does
+not run again for these changes. List the option itself instead.
 
 Form-wide interaction and focus bookkeeping remain private. Use `form.api` for
 raw RHF operations that deliberately bypass managed middleware.
@@ -612,8 +658,26 @@ exception after `next` does not roll it back.
 
 `form.update(recipe)` creates a managed transaction with source `update`. Its
 synchronous Immer recipe can mutate the draft or return a replacement, but not
-both. A no-op recipe creates no transaction. Redux middleware may replace the
-terminal return value, so `form.update` returns `unknown`.
+both. `form.update` and middleware `api.update` return a `FormUpdateResult`:
+
+- `{ committed: true, transaction, result }` when the update commits.
+  `transaction` is the final committed transaction.
+- `{ committed: false, result }` when the recipe changes nothing or when
+  middleware returns without `next`.
+
+`result` is the value that the middleware chain returns, for example a Promise
+of post-commit work or of an asynchronous check that cancelled the update. It
+is `undefined` when the chain does not run or returns nothing. Await `result`
+to wait for that work and to receive its rejection.
+
+```ts
+const outcome = form.update((draft) => {
+  draft.quantity = 2
+})
+if (outcome.committed) {
+  console.log(outcome.transaction.nextValues.quantity)
+}
+```
 
 Generated controls and `form.update` publish final values to RHF in one
 synchronous commit. A top-level key that contains a mounted generated array is
@@ -696,13 +760,53 @@ lifecycle rules, envelope encoding, migrations, conflicts, and adapters.
 | Component | Props and behavior |
 | --- | --- |
 | `kit.Form` | Requires a binding from the same kit. Accepts native form props except owned submit, reset, action, and validation props. |
-| `kit.Fields` | Renders the resolved definition. It renders optional children after generated fields. |
-| `kit.Submit` | Accepts button props except `type`, an `action` from `form.actions`, and a `binding`. Without `action`, it runs the `onSubmit` shorthand action. Inside `kit.Form`, `binding` and `action` must match the surrounding form. Outside `kit.Form`, `binding` or `action` selects the form, and the native `form` attribute must match the Form `id`. The configured submit slot always receives `type="submit"`. |
-| `kit.AutoForm` | Renders `Form`, the error summary, `Fields`, and then its children. |
+| `kit.Fields` | Renders the resolved definition. With `node`, it renders only the node with that ID and its children. It renders optional children after generated fields. |
+| `kit.ErrorSummary` | Renders the issues that no enabled generated input shows. An invalid submit focuses its first issue when no field takes focus. It has no props. |
+| `kit.Submit` | Accepts button props except `type`, and an `action` from `form.actions`. The `action` selects the form and types the `values` of a render function. Inside `kit.Form`, `action` is optional and must belong to the surrounding form; without it, `Submit` runs the `onSubmit` shorthand action. Outside `kit.Form`, `action` is required, for example `form.actions.submit`, and the native `form` attribute must match the Form `id`. The configured submit slot always receives `type="submit"`. |
+| `kit.AutoForm` | Renders `Form`, `ErrorSummary`, `Fields`, and then its children. |
 
-`Fields` must be a descendant of the matching `kit.Form`. `Submit` must be a
-descendant too, unless it has `binding` or `action`. `AutoForm` provides that
-form context automatically.
+`Fields` and `ErrorSummary` must be descendants of the matching `kit.Form`.
+`Submit` must be a descendant too, unless it has `action`.
+`AutoForm` provides that form context automatically.
+
+### Node IDs
+
+`kit.Fields node` and `form.fieldPaths(nodeId)` select a node by its ID:
+
+- A section or a render node has the ID that you give to `ui.section(id)` or
+  `ui.render(id)`.
+- A field has the ID `field:<path>` and an array has the ID `array:<path>`,
+  unless its options set `id`. The path is relative to the current array item.
+- A fragment placed with `at` adds `<at>:` before the explicit IDs of its nodes.
+  A fragment without `at` keeps them.
+- A node in an array row adds the absolute row path and a dot before its ID,
+  for example `rows.2.field:title` or `rows.2.items.0.details`.
+
+An unknown ID throws a `TypeError`. A row ID is known only while the row
+exists. A hidden node renders nothing, and `fieldPaths` returns `[]` for it.
+`fieldPaths` lists the fields in render order, with their absolute paths in
+array rows. It resolves the definition for the current values and the
+`context` of the latest committed render, so the node does not have to be
+mounted.
+
+### Custom fields and the form context
+
+`kit.useField(form, path)` connects a custom field to the binding of the
+surrounding `kit.Form`. TypeScript checks `path` against the schema input, and
+`value` has the type at that path. The result has `path`, `value`,
+`setValue`, `blur`, `input`, and `meta`, with the same shapes as `ControlProps`.
+`setValue` makes a managed update with the `control` source, as a generated
+control does. `input.ref` registers the element for error focus. The hook
+renders no label and no issues, and `input` has no `aria-describedby`; render
+`meta.displayErrors` and connect them yourself. A call outside a `kit.Form` of
+the kit, or with another binding, throws an error. TypeScript cannot check a path that
+you build at run time from `pathPrefix`, so type it as
+`FieldPath<FormInput<typeof schema>>` yourself.
+
+`kit.useFormContext<Schema>()` returns the binding of the surrounding
+`kit.Form`, so a nested component does not need the binding as a prop. A call
+outside a `kit.Form` of the kit throws an error. Use RHF hooks such as
+`useWatch` for value subscriptions.
 
 `Form` prevents native submission and connects the Form, Please submit wrapper
 to raw `form.api.handleSubmit`. A reset event calls `form.api.reset()`. It sets
@@ -711,6 +815,10 @@ to raw `form.api.handleSubmit`. A reset event calls `form.api.reset()`. It sets
 `Submit` becomes disabled while validation or any action runs. Its render
 function and slot receive `isPending`. It also follows
 the form-wide `disabled` option and its own `disabled` prop.
+
+The submit slot receives the submit state without the form values. A render
+function also receives `values` and renders again on each value change. Use a
+render function only when the button content depends on the values.
 
 Use RHF hooks and components directly when generated fields are only part of
 the screen. This example adds an application-owned field and watches generated
@@ -725,7 +833,9 @@ values:
 `useFormContext` therefore share the generated form's state. Application-owned
 fields must provide their own labels, descriptions, issue output, and focus
 behavior. Their paths must still exist in the definition schema, but they do
-not need a node in the definition.
+not need a node in the definition. A change through RHF bypasses the managed update hooks and
+middleware; use [`kit.useField`](#custom-fields-and-the-form-context) when the
+change must run them.
 
 ## Resource helpers
 

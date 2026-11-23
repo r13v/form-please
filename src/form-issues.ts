@@ -4,7 +4,7 @@ import {
 	get,
 	type UseFormReturn,
 } from "react-hook-form"
-
+import { errorMessage } from "./error-codes.js"
 import { areFormValuesEqual, cloneFormValue } from "./form-value.js"
 import {
 	formIssueErrorType,
@@ -81,7 +81,10 @@ export function createFormIssueStore(
 				)
 			) {
 				throw new TypeError(
-					"Action and external issues cannot use the reserved React Hook Form root path",
+					errorMessage(
+						"FP206",
+						"Action and external issues cannot use the reserved React Hook Form root path",
+					),
 				)
 			}
 			const values = getApi().getValues()

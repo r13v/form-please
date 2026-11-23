@@ -2,6 +2,7 @@ import type { FieldValues } from "react-hook-form"
 
 import type { FormBinding } from "../create-form-kit.js"
 import { registerFormDiagnosticFeature } from "../diagnostics.js"
+import { errorMessage } from "../error-codes.js"
 import {
 	areFormValuesEqual,
 	cloneFormValue,
@@ -12,6 +13,7 @@ import type { FormInput, StandardSchema } from "../types.js"
 import type {
 	FormMiddlewareApi,
 	FormMiddlewareNext,
+	FormUpdateResult,
 	ValueCoordinatorCapability,
 	ValueTransaction,
 	ValueTransactionSource,
@@ -232,7 +234,9 @@ class HistoryState<Input extends FieldValues, Context> {
 
 	async #seek(index: number): Promise<HistoryOperationResult> {
 		if (!Number.isSafeInteger(index)) {
-			throw new TypeError("History seek index must be an integer")
+			throw new TypeError(
+				errorMessage("FP401", "History seek index must be an integer"),
+			)
 		}
 		if (this.#operationInFlight) return "unavailable"
 		this.#adoptLiveBoundary()
@@ -261,9 +265,9 @@ class HistoryState<Input extends FieldValues, Context> {
 		this.#pendingRestore = pending
 		this.#operationInFlight = true
 
-		let dispatchResult: unknown
+		let update: FormUpdateResult<Input, Context>
 		try {
-			dispatchResult = this.#capability.restore(
+			update = this.#capability.restore(
 				() => cloneFormValue(target),
 				{ action, type: "history" },
 				{ keepFormState: true },
@@ -277,7 +281,7 @@ class HistoryState<Input extends FieldValues, Context> {
 		const outcome = pending.outcome ?? "cancelled"
 		this.#pendingRestore = undefined
 		try {
-			await dispatchResult
+			await update.result
 			return outcome
 		} finally {
 			this.#operationInFlight = false
@@ -399,30 +403,46 @@ function normalizeJournal<Input extends FieldValues>(
 	limit: number,
 ): NormalizedJournal<Input> {
 	if (input === null || typeof input !== "object" || Array.isArray(input)) {
-		throw new TypeError("History journal must be an object")
+		throw new TypeError(
+			errorMessage("FP402", "History journal must be an object"),
+		)
 	}
 	const source = input as Record<string, unknown>
 	if (source.version !== 1) {
 		throw new TypeError(
-			`Unsupported history journal version ${String(source.version)}`,
+			errorMessage(
+				"FP403",
+				`Unsupported history journal version ${String(source.version)}`,
+			),
 		)
 	}
 	if (!Array.isArray(source.entries) || source.entries.length === 0) {
-		throw new TypeError("History journal must contain at least one entry")
+		throw new TypeError(
+			errorMessage("FP404", "History journal must contain at least one entry"),
+		)
 	}
 	if (limit !== Number.POSITIVE_INFINITY && source.entries.length - 1 > limit) {
-		throw new TypeError("History journal exceeds the configured limit")
+		throw new TypeError(
+			errorMessage("FP405", "History journal exceeds the configured limit"),
+		)
 	}
 	if (
 		!Number.isSafeInteger(source.index) ||
 		(source.index as number) < 0 ||
 		(source.index as number) >= source.entries.length
 	) {
-		throw new TypeError("History journal index is outside its entries")
+		throw new TypeError(
+			errorMessage("FP406", "History journal index is outside its entries"),
+		)
 	}
 	for (const entry of source.entries) {
 		if (!isFormValueObject(entry)) {
-			throw new TypeError("History journal entries must be form value objects")
+			throw new TypeError(
+				errorMessage(
+					"FP407",
+					"History journal entries must be form value objects",
+				),
+			)
 		}
 	}
 	return {
@@ -437,7 +457,10 @@ function normalizeLimit(limit = 100): number {
 		(!Number.isSafeInteger(limit) || limit < 0)
 	) {
 		throw new TypeError(
-			"History limit must be a non-negative integer or Infinity",
+			errorMessage(
+				"FP408",
+				"History limit must be a non-negative integer or Infinity",
+			),
 		)
 	}
 	return limit
@@ -446,7 +469,10 @@ function normalizeLimit(limit = 100): number {
 function normalizeGroupWindow(groupWindow = 750): number {
 	if (!Number.isFinite(groupWindow) || groupWindow < 0) {
 		throw new TypeError(
-			"History groupWindow must be a finite non-negative number",
+			errorMessage(
+				"FP409",
+				"History groupWindow must be a finite non-negative number",
+			),
 		)
 	}
 	return groupWindow

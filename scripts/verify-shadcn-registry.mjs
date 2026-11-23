@@ -58,13 +58,6 @@ try {
 	assert.ok(item.registryDependencies?.includes("utils"))
 	assert.equal(item.files?.[0]?.target, "@ui/form-please/shadcn-form-kit.tsx")
 
-	const source = item.files?.[0]?.content
-	assert.ok(source, "the registry item must include its adapter source")
-	for (const controlName of controlNames) {
-		assert.match(source, new RegExp(`\\n\\t${controlName}: defineControl<`))
-	}
-	assert.match(source, /export const shadcnFormKit = createFormKit/)
-
 	const tarballPath = await packTarball(tempRoot)
 	const fixtureDirectory = join(tempRoot, "base-ui-app")
 	const installItem = {

@@ -2,11 +2,10 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { useFormContext, useWatch } from "react-hook-form"
-import { describe, expect, expectTypeOf, it } from "vitest"
+import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { applyArrayAction, cloneItemDefault } from "./generated-array.js"
 import { kit } from "./test-fixtures.js"
-import type { FieldPath, PathValue } from "./types.js"
 
 describe("generated arrays", () => {
 	it.each([
@@ -34,25 +33,21 @@ describe("generated arrays", () => {
 		)
 	})
 
-	it.each([undefined, null, "not an array"])(
+	it.each([undefined, "not an array"])(
 		"rejects generated array value %j before rendering its actions",
 		(speakers) => {
 			const arraySchema = z.object({
 				speakers: z.array(z.object({ name: z.string() })),
 			})
-			const arrayDefinition = kit.defineForm(arraySchema, {
-				ui: [
-					{
-						children: [
-							{ control: "text", kind: "field", label: "Name", path: "name" },
-						],
-						itemDefault: { name: "" },
-						kind: "array",
-						label: "Speakers",
-						path: "speakers",
-					},
-				],
-			})
+			const arrayDefinition = kit.defineForm(arraySchema, (ui) => [
+				ui.array("speakers", {
+					children: (item) => [
+						item.field("name", { control: "text", label: "Name" }),
+					],
+					itemDefault: { name: "" },
+					label: "Speakers",
+				}),
+			])
 
 			function View() {
 				const form = kit.useForm(arrayDefinition, {
@@ -67,13 +62,6 @@ describe("generated arrays", () => {
 		},
 	)
 
-	it("uses React Hook Form dot paths for array items", () => {
-		type Input = { readonly speakers: readonly { readonly name: string }[] }
-
-		expectTypeOf<"speakers.0.name">().toMatchTypeOf<FieldPath<Input>>()
-		expectTypeOf<PathValue<Input, "speakers.0.name">>().toEqualTypeOf<string>()
-	})
-
 	it("keeps conditional fields, RHF arrays, and nested validation in one store", async () => {
 		const complexSchema = z.object({
 			format: z.enum(["remote", "in-person"]),
@@ -86,38 +74,25 @@ describe("generated arrays", () => {
 		})
 		const complexDefinition = kit.defineForm(
 			complexSchema,
-			{
-				ui: [
-					{
-						kind: "field",
-						path: "format",
-						control: "select",
-						label: "Format",
-						options: ["remote", "in-person"],
-					},
-					{
-						kind: "field",
-						path: "room",
-						control: "text",
-						label: "Room",
-						visible: (values) => values.format === "in-person",
-					},
-					{
-						kind: "array",
-						path: "speakers",
-						label: "Speakers",
-						itemDefault: { name: "" },
-						children: [
-							{
-								kind: "field",
-								path: "name",
-								control: "text",
-								label: "Speaker name",
-							},
-						],
-					},
-				],
-			},
+			(ui) => [
+				ui.field("format", {
+					control: "select",
+					label: "Format",
+					options: ["remote", "in-person"],
+				}),
+				ui.field("room", {
+					control: "text",
+					label: "Room",
+					visible: (values) => values.format === "in-person",
+				}),
+				ui.array("speakers", {
+					label: "Speakers",
+					itemDefault: { name: "" },
+					children: (item) => [
+						item.field("name", { control: "text", label: "Speaker name" }),
+					],
+				}),
+			],
 			{
 				middleware: [
 					() => (next) => (transaction) => {

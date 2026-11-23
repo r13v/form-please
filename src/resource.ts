@@ -1,3 +1,4 @@
+import { errorMessage } from "./error-codes.js"
 import type {
 	UiResolver,
 	UiResolverDetails,
@@ -152,7 +153,10 @@ function matchResourceWithArguments<
 		default: {
 			const unsupported: never = resource
 			throw new TypeError(
-				`Unsupported resource status "${String((unsupported as { readonly status?: unknown }).status)}"`,
+				errorMessage(
+					"FP140",
+					`Unsupported resource status "${String((unsupported as { readonly status?: unknown }).status)}"`,
+				),
 			)
 		}
 	}

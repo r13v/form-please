@@ -1,3 +1,4 @@
+import { errorMessage } from "./error-codes.js"
 import type { FieldOptionsResolver } from "./types.js"
 
 /** The shared immutable empty option collection. */
@@ -35,7 +36,9 @@ export function createFieldOptionsResolution(
 	signal: AbortSignal,
 ): FieldOptionsRun {
 	if (typeof source !== "function") {
-		throw new TypeError("Field options source must be a resolver")
+		throw new TypeError(
+			errorMessage("FP138", "Field options source must be a resolver"),
+		)
 	}
 	const tracker = createTracker()
 	return {
@@ -166,7 +169,7 @@ function readOptionArray(
 	const options = direct ?? value
 	if (!Array.isArray(options)) {
 		throw new FieldOptionsContractError(
-			"Field options resolvers must return an array",
+			errorMessage("FP139", "Field options resolvers must return an array"),
 		)
 	}
 	let changed = false

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import {
 	formDiagnosticNow,
@@ -55,7 +55,9 @@ export function useFieldOptions(
 	>()
 	const activeRef = useRef<ActiveRun | undefined>(undefined)
 	const latestRef = useRef({ context, values })
-	latestRef.current = { context, values }
+	useLayoutEffect(() => {
+		latestRef.current = { context, values }
+	})
 
 	useEffect(() => {
 		const active = activeRef.current
@@ -143,14 +145,14 @@ export function useFieldOptions(
 		const load = async (): Promise<void> => {
 			try {
 				const options = await run.resolve()
-				if (active.stale || controller.signal.aborted) return
+				if (active.stale) return
 				if (reloadIfInputsChanged()) return
 				setResolved(options)
 				finishOptionsDiagnostic(active, "fulfilled", {
 					optionCount: options.length,
 				})
 			} catch (error) {
-				if (active.stale || controller.signal.aborted) return
+				if (active.stale) return
 				if (reloadIfInputsChanged()) return
 				setResolved(emptyFieldOptions)
 				if (error instanceof FieldOptionsContractError) {

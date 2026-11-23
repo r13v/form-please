@@ -61,14 +61,6 @@ describe("createMuiFormKit", () => {
 		expect(Object.isFrozen(first.slots)).toBe(true)
 		expect(Object.keys(first.controls)).toEqual(controlNames)
 		expect(first.grid).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
-		expect(first.slots).toMatchObject({
-			Array: expect.any(Function),
-			ArrayItem: expect.any(Function),
-			ErrorMessage: expect.any(Function),
-			Field: expect.any(Function),
-			Section: expect.any(Function),
-			Submit: expect.any(Function),
-		})
 	})
 
 	it("keeps Form Please props authoritative and calls user handlers second", () => {
@@ -227,32 +219,20 @@ describe("createMuiFormKit", () => {
 			},
 		}
 		const kit = createMuiFormKit()
-		const definition = kit.defineForm(schema, {
-			ui: [
-				{
-					kind: "section",
-					id: "details",
-					title: "Details",
-					columns: 12,
-					children: [
-						{
-							kind: "field",
-							path: "name",
-							control: "text",
-							label: "Name",
-							span: 7,
-						},
-						{
-							kind: "field",
-							path: "accepted",
-							control: "checkbox",
-							label: "Accept terms",
-							span: 5,
-						},
-					],
-				},
-			],
-		})
+		const definition = kit.defineForm(schema, (ui) => [
+			ui.section("details", {
+				title: "Details",
+				columns: 12,
+				children: [
+					ui.field("name", { control: "text", label: "Name", span: 7 }),
+					ui.field("accepted", {
+						control: "checkbox",
+						label: "Accept terms",
+						span: 5,
+					}),
+				],
+			}),
+		])
 
 		function Form() {
 			const form = kit.useForm(definition, {

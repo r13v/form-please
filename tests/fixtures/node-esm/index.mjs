@@ -18,9 +18,9 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
-const definition = kit.defineForm(schema, {
-	ui: [{ kind: "field", path: "name", control: "text" }],
-})
+const definition = kit.defineForm(schema, (ui) => [
+	ui.field("name", { control: "text" }),
+])
 
 if (definition.schema !== schema || typeof kit.useForm !== "function") {
 	throw new Error("ESM root entry did not expose the form kit")
@@ -59,4 +59,17 @@ if (
 	) !== 42
 ) {
 	throw new Error("ESM matchResource returned the wrong branch")
+}
+
+// The devtools packages are optional peers that this fixture does not install.
+// The root entry works without them; only the devtools entry needs them.
+const devtoolsImport = await import("form-please/devtools").then(
+	() => undefined,
+	(error) => error,
+)
+if (
+	devtoolsImport?.code !== "ERR_MODULE_NOT_FOUND" ||
+	!String(devtoolsImport.message).includes("@hookform/devtools")
+) {
+	throw new Error("ESM devtools entry did not require its optional peers")
 }

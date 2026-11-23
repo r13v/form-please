@@ -9,11 +9,11 @@ import {
 	type FormBinding,
 	type FormFragment,
 	type FormKitSlots,
+	type FormKitTypesOf,
 	type FormMiddleware,
 	type FormSubmitDetails,
 	type FormUpdateRecipe,
 	type PathValue,
-	type UiNode,
 	useSnapshot,
 	type ValueTransaction,
 } from "../../src/index.js"
@@ -127,7 +127,11 @@ const handleSubmit = ({
 	submitter?.click()
 }
 
-const slots = {} as FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
+const slots = {} as FormKitSlots<{
+	readonly fieldOptions: FieldOptions
+	readonly sectionOptions: SectionOptions
+	readonly arrayOptions: ArrayOptions
+}>
 const baseKit = createFormKit({
 	controls: {
 		text: defineControl<string>({ component: () => null }),
@@ -176,10 +180,13 @@ kit.defineForm(arrayPathSchema, (ui) => [
 	}),
 ])
 
-// @ts-expect-error Builder lists accept only helper nodes and fragment placements.
 kit.defineForm(arrayPathSchema, () => [
+	// @ts-expect-error Builder lists accept only helper nodes and fragment placements.
 	{ kind: "render", id: "literal", component: () => null },
 ])
+
+// @ts-expect-error A definition accepts only a builder callback, not a { ui } object.
+kit.defineForm(arrayPathSchema, { ui: [] })
 
 type AddressInput = {
 	readonly city: string
@@ -201,40 +208,26 @@ const addressSchema: StandardSchemaV1<AddressInput> & {
 	},
 }
 const addressKit = baseKit.forContext<AddressContext>()
-const addressFragment = addressKit.defineFragment(addressSchema, {
-	ui: [
-		{
-			kind: "section",
-			id: "address",
-			columns: 2,
-			slotOptions: { bordered: true },
-			children: [
-				{
-					kind: "field",
-					path: "street",
-					control: "text",
-					slotOptions: { tone: "quiet" },
-					label: (address, { context }) =>
-						`${context.locale}: ${address.street}`,
-				},
-				{
-					kind: "field",
-					path: "city",
-					control: "select",
-					options: ["Paris"],
-				},
-			],
-		},
-	],
-})
+const addressFragment = addressKit.defineFragment(addressSchema, (ui) => [
+	ui.section("address", {
+		columns: 2,
+		slotOptions: { bordered: true },
+		children: [
+			ui.field("street", {
+				control: "text",
+				slotOptions: { tone: "quiet" },
+				label: (address, { context }) => `${context.locale}: ${address.street}`,
+			}),
+			ui.field("city", { control: "select", options: ["Paris"] }),
+		],
+	}),
+])
+// @ts-expect-error A fragment accepts only a builder callback, not a { ui } object.
+addressKit.defineFragment(addressSchema, { ui: [] })
 addressFragment.schema.marker satisfies "address"
 addressFragment satisfies FormFragment<
 	typeof addressSchema,
-	typeof baseKit.controls,
-	AddressContext,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions
+	FormKitTypesOf<typeof addressKit>
 >
 
 type FragmentHostInput = {
@@ -250,16 +243,6 @@ type FragmentHostInput = {
 	}[]
 	readonly shippingAddress: AddressInput & { readonly id: string }
 }
-
-function assertOrdinaryNodeKinds(
-	node: UiNode<FragmentHostInput, typeof baseKit.controls, Context>,
-) {
-	node.kind satisfies "array" | "field" | "render" | "section"
-	if (node.kind === "array" || node.kind === "section") {
-		node.children[0]?.kind satisfies "array" | "field" | "render" | "section"
-	}
-}
-void assertOrdinaryNodeKinds
 
 const fragmentHostSchema: StandardSchemaV1<FragmentHostInput> = {
 	"~standard": {
@@ -288,58 +271,33 @@ kit.defineForm(fragmentHostSchema, (ui) => [
 	}),
 ])
 
-kit.defineForm(fragmentHostSchema, {
-	ui: [
-		addressFragment.fields({ at: "shippingAddress" }),
-		{
-			kind: "array",
-			path: "addresses",
-			itemDefault: { city: "", street: "" },
-			children: [addressFragment.fields()],
-		},
-		{
-			kind: "array",
-			path: "recipients",
-			itemDefault: { address: { city: "", street: "" }, name: "" },
-			children: [
-				{ kind: "field", path: "name", control: "text" },
-				addressFragment.fields({ at: "address" }),
-			],
-		},
-	],
-})
+kit.defineForm(fragmentHostSchema, () => [
+	addressFragment.fields({ at: "shippingAddress" }),
+])
 
-kit.defineForm(fragmentHostSchema, {
-	ui: [
-		// @ts-expect-error A fragment path must exist in the current scope.
-		addressFragment.fields({ at: "missingAddress" }),
-	],
-})
+kit.defineForm(fragmentHostSchema, () => [
+	// @ts-expect-error A fragment path must exist in the current scope.
+	addressFragment.fields({ at: "missingAddress" }),
+])
 
-kit.defineForm(fragmentHostSchema, {
-	ui: [
-		// @ts-expect-error Optional objects cannot satisfy a required fragment input.
-		addressFragment.fields({ at: "optionalAddress" }),
-	],
-})
+kit.defineForm(fragmentHostSchema, () => [
+	// @ts-expect-error Optional objects cannot satisfy a required fragment input.
+	addressFragment.fields({ at: "optionalAddress" }),
+])
 
-kit.defineForm(fragmentHostSchema, {
-	ui: [
-		// @ts-expect-error Every fragment field must be structurally compatible.
-		addressFragment.fields({ at: "incompatibleAddress" }),
-	],
-})
+kit.defineForm(fragmentHostSchema, () => [
+	// @ts-expect-error Every fragment field must be structurally compatible.
+	addressFragment.fields({ at: "incompatibleAddress" }),
+])
 
 const privilegedFragment = baseKit
 	.forContext<Context & { readonly tenant: string }>()
-	.defineFragment(addressSchema, { ui: [] })
+	.defineFragment(addressSchema, () => [])
 
-kit.defineForm(fragmentHostSchema, {
-	ui: [
-		// @ts-expect-error The host context must satisfy the fragment context.
-		privilegedFragment.fields({ at: "shippingAddress" }),
-	],
-})
+kit.defineForm(fragmentHostSchema, () => [
+	// @ts-expect-error The host context must satisfy the fragment context.
+	privilegedFragment.fields({ at: "shippingAddress" }),
+])
 
 type BadgeContext = {
 	readonly badge: ReactElement
@@ -358,89 +316,37 @@ baseKit.forContext<BadgeContext>().defineForm(schema, (ui) => [
 	}),
 ])
 
-const definition = kit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "localized",
-			props: { prefix: "Dr" },
-			slotOptions: { tone: "strong" },
-			label: (values, { context }) => {
-				const label = `${context.locale}: ${values.profile.country}`
-				// @ts-expect-error Resolvers receive deeply readonly schema input.
-				values.profile.country = "FR"
-				// @ts-expect-error Resolver context is deeply readonly.
-				context.permissions.push("admin")
-				return label
-			},
-		},
-		{
-			kind: "section",
-			id: "profile",
-			slotOptions: { bordered: true },
-			children: [
-				{
-					kind: "field",
-					path: "profile.country",
-					control: "select",
-					options: ["DE", "FR"],
-				},
-			],
-		},
-		{
-			kind: "array",
-			path: "speakers",
-			slotOptions: { dense: true },
-			itemDefault: { name: "", sessions: [] },
-			label: (values) => `${values.speakers.length} speakers`,
-			children: [
-				{ kind: "field", path: "name", control: "text" },
-				{
-					kind: "array",
-					path: "sessions",
-					itemDefault: { title: "" },
-					children: [{ kind: "field", path: "title", control: "text" }],
-				},
-			],
-		},
-	],
-})
-
-const builderDefinition = kit.defineForm(schema, (ui) => [
+const definition = kit.defineForm(schema, (ui) => [
 	ui.field("name", {
 		control: "localized",
+		props: { prefix: "Dr" },
+		slotOptions: { tone: "strong" },
 		label: (values, { context }) => {
 			const label = `${context.locale}: ${values.profile.country}`
-			// @ts-expect-error Builder resolvers receive readonly schema input.
+			// @ts-expect-error Resolvers receive deeply readonly schema input.
 			values.profile.country = "FR"
-			// @ts-expect-error Builder resolver context is deeply readonly.
+			// @ts-expect-error Resolver context is deeply readonly.
 			context.permissions.push("admin")
 			return label
 		},
-		props: { prefix: "Dr" },
-		slotOptions: { tone: "strong" },
 	}),
 	ui.section("profile", {
-		children: [
-			ui.field("profile.country", {
-				control: "select",
-				options: ["DE", "FR"],
-			}),
-		],
 		slotOptions: { bordered: true },
+		children: [
+			ui.field("profile.country", { control: "select", options: ["DE", "FR"] }),
+		],
 	}),
 	ui.array("speakers", {
-		children: (speaker) => [
-			speaker.field("name", { control: "text" }),
-			speaker.array("sessions", {
-				children: (session) => [session.field("title", { control: "text" })],
-				itemDefault: { title: "" },
-			}),
-		],
+		slotOptions: { dense: true },
 		itemDefault: { name: "", sessions: [] },
 		label: (values) => `${values.speakers.length} speakers`,
-		slotOptions: { dense: true },
+		children: (item) => [
+			item.field("name", { control: "text" }),
+			item.array("sessions", {
+				itemDefault: { title: "" },
+				children: (nested) => [nested.field("title", { control: "text" })],
+			}),
+		],
 	}),
 	ui.render("summary", {
 		component: () => null,
@@ -448,8 +354,6 @@ const builderDefinition = kit.defineForm(schema, (ui) => [
 			values.name.length > 0 && context.permissions.length > 0,
 	}),
 ])
-
-builderDefinition satisfies typeof definition
 
 kit.defineForm(schema, (ui) => [
 	// @ts-expect-error Required control props remain required in builders.
@@ -464,14 +368,6 @@ kit.defineForm(schema, (ui) => [
 ])
 
 kit.defineForm(schema, (ui) => [
-	ui.field("name", {
-		control: "text",
-		// @ts-expect-error Builder field options have no valuePolicy.
-		valuePolicy: "preserve",
-	}),
-])
-
-kit.defineForm(schema, (ui) => [
 	ui.array("speakers", {
 		children: (speaker) => [
 			speaker.array("sessions", {
@@ -482,28 +378,8 @@ kit.defineForm(schema, (ui) => [
 				itemDefault: { title: "" },
 			}),
 		],
-		// @ts-expect-error Array defaults must still match the item type.
+		// @ts-expect-error Array defaults must match the item type.
 		itemDefault: { name: "" },
-	}),
-])
-
-const builderAddressFragment = addressKit.defineFragment(
-	addressSchema,
-	(ui) => [
-		ui.field("street", {
-			control: "text",
-			label: (address, { context }) => `${context.locale}: ${address.street}`,
-		}),
-	],
-)
-
-builderAddressFragment.schema.marker satisfies "address"
-
-kit.defineForm(fragmentHostSchema, (ui) => [
-	addressFragment.fields({ at: "shippingAddress" }),
-	ui.array("addresses", {
-		children: () => [addressFragment.fields()],
-		itemDefault: { city: "", street: "" },
 	}),
 ])
 
@@ -520,27 +396,23 @@ const middleware: FormMiddleware<Input, Context> =
 		return next(transaction.patches)
 	}
 
-const managedDefinition = kit.defineForm(
-	schema,
-	{ ui: [] },
-	{
-		beforeUpdate(draft, transaction) {
-			draft.profile.country = "FR"
-			transaction.nextValues.profile.country satisfies string
-			transaction.context.locale satisfies string
-			// @ts-expect-error The original proposal remains readonly.
-			transaction.nextValues.profile.country = "DE"
-			if (transaction.source.type === "control") return false
-		},
-		afterUpdate(transaction) {
-			transaction.nextValues.profile.country satisfies string
-			transaction.context.permissions satisfies readonly string[]
-			// @ts-expect-error The committed transaction remains readonly.
-			transaction.context.permissions.push("admin")
-		},
-		middleware: [middleware],
+const managedDefinition = kit.defineForm(schema, () => [], {
+	beforeUpdate(draft, transaction) {
+		draft.profile.country = "FR"
+		transaction.nextValues.profile.country satisfies string
+		transaction.context.locale satisfies string
+		// @ts-expect-error The original proposal remains readonly.
+		transaction.nextValues.profile.country = "DE"
+		if (transaction.source.type === "control") return false
 	},
-)
+	afterUpdate(transaction) {
+		transaction.nextValues.profile.country satisfies string
+		transaction.context.permissions satisfies readonly string[]
+		// @ts-expect-error The committed transaction remains readonly.
+		transaction.context.permissions.push("admin")
+	},
+	middleware: [middleware],
+})
 
 const replaceName: FormUpdateRecipe<Input> = (draft): void => {
 	draft.name = "Grace"
@@ -569,8 +441,7 @@ function useTypedBinding() {
 	const updateResult = form.update((draft) => {
 		draft.profile.country = "FR"
 	})
-	updateResult satisfies unknown
-	// @ts-expect-error Redux middleware may replace the terminal result.
+	// @ts-expect-error form.update returns a FormUpdateResult, not the transaction.
 	const transaction: ValueTransaction<Input, Context> = updateResult
 	void transaction
 	return form
@@ -591,51 +462,13 @@ void kit.extend
 // @ts-expect-error There is no second or compatibility runtime on the kit.
 void kit.tf
 
-kit.defineForm(schema, {
-	ui: [
-		// @ts-expect-error Required control props cannot be omitted.
-		{
-			kind: "field",
-			path: "name",
-			control: "select",
-		},
-	],
-})
-
-kit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			// @ts-expect-error A number control cannot bind to a string path.
-			control: "number",
-		},
-	],
-})
-
-kit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			// @ts-expect-error Field nodes have no valuePolicy; hidden fields preserve values.
-			valuePolicy: "preserve",
-		},
-	],
-})
-
-kit.defineForm(schema, {
-	ui: [
-		{
-			kind: "array",
-			path: "speakers",
-			// @ts-expect-error Array defaults must match the item type.
-			itemDefault: { name: "" },
-			children: [],
-		},
-	],
-})
+kit.defineForm(schema, (ui) => [
+	ui.field("name", {
+		control: "text",
+		// @ts-expect-error Field nodes have no valuePolicy; hidden fields preserve values.
+		valuePolicy: "preserve",
+	}),
+])
 
 type _NestedPath =
 	"speakers.0.sessions.0.title" extends FieldPath<Input> ? true : false
@@ -649,6 +482,6 @@ type _BracketValue = PathValue<Input, "speakers[0].name">
 
 const primitiveSchema = {} as StandardSchemaV1<string>
 // @ts-expect-error RHF form roots must be objects.
-kit.defineForm(primitiveSchema, { ui: [] })
+kit.defineForm(primitiveSchema, () => [])
 // @ts-expect-error Fragment schema inputs must also be objects.
-kit.defineFragment(primitiveSchema, { ui: [] })
+kit.defineFragment(primitiveSchema, () => [])

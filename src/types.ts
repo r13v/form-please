@@ -167,6 +167,12 @@ export type ControlProps<
 			readonly options: readonly Option[]
 		})
 
+/** The managed field contract that `kit.useField` returns: the control props without the definition-owned parts. */
+export type UseFieldResult<Value> = Pick<
+	ControlProps<Value>,
+	"path" | "value" | "setValue" | "blur" | "input" | "meta"
+>
+
 /** A private key that carries control type information without runtime data. */
 declare const controlTypes: unique symbol
 /** Type information retained by a control definition for inference. */
@@ -333,12 +339,14 @@ export type FieldOptionsSource<Option, Input = unknown, Context = unknown> =
 	| FieldOptionsResolver<Option, Input, Context>
 /** Content that a form definition can place in labels and descriptions. */
 export type ReactUiContent = ReactElement | string
-/** Interaction state supplied to a custom render node. */
+/** Interaction state and scope supplied to a custom render node. */
 export type RenderNodeProps = {
 	/** Whether an ancestor or the form disables this node. */
 	readonly disabled: boolean
 	/** Whether an ancestor or the form makes this node read-only. */
 	readonly readOnly: boolean
+	/** The absolute path of the array item that contains this node, such as `"rows.2"`, or `""` at the form root. */
+	readonly pathPrefix: string
 }
 /** A component inserted directly into the generated form tree. */
 export type RenderNodeComponent = ComponentType<RenderNodeProps>
@@ -390,8 +398,12 @@ type CompatibleControlName<
 				: never
 }[ControlName<Controls>]
 
-/** The kit-level type contracts shared by every node of one form kit. */
-type KitTypes = {
+/**
+ * The type contracts of one form kit, by name. Every public type that depends
+ * on a kit takes this bag, for example `FormDefinition<Schema, Kit>`. Read the
+ * bag of an existing kit with `FormKitTypesOf<typeof kit>`.
+ */
+export type FormKitTypes = {
 	/** The registered control definitions. */
 	readonly controls: ControlDefinitionRegistry
 	/** The runtime context supplied to resolvers and controls. */
@@ -405,27 +417,9 @@ type KitTypes = {
 	/** The allowed column counts and spans. */
 	readonly grid: number
 }
-/** Bundles the kit-level type parameters of a public type into `KitTypes`. */
-type KitTypesOf<
-	Controls extends ControlDefinitionRegistry,
-	Context,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Grid extends number,
-> = {
-	readonly controls: Controls
-	readonly context: Context
-	readonly fieldOptions: FieldOptions
-	readonly sectionOptions: SectionOptions
-	readonly arrayOptions: ArrayOptions
-	readonly grid: Grid
-}
 
-/** Properties shared by all field nodes before path and control selection. */
-type FieldNodeBase<Root, Kit extends KitTypes> = {
-	/** Identifies this node as a field. */
-	readonly kind: "field"
+/** Builder options shared by all fields before path and control selection. */
+type FieldBaseOptions<Root, Kit extends FormKitTypes> = {
 	/** Overrides the stable node ID derived from the path. */
 	readonly id?: string
 	/** Provides the field label or a resolver that computes it. */
@@ -449,15 +443,13 @@ type FieldNodeBase<Root, Kit extends KitTypes> = {
 	/** Overrides the form error display for this field. */
 	readonly errorDisplay?: Resolvable<ErrorDisplay, Root, Kit["context"]>
 }
-/** Builds a field node for one path and its compatible controls. */
-type FieldNodeForPath<
+/** Builder options for a field at one path: one compatible control with its props and selectable options. */
+type FieldBuilderOptions<
 	Root,
 	Scope,
-	Kit extends KitTypes,
+	Kit extends FormKitTypes,
 	Path extends FieldPath<Scope>,
-> = FieldNodeBase<Root, Kit> & {
-	/** The field path relative to the current array scope. */
-	readonly path: Path
+> = FieldBaseOptions<Root, Kit> & {
 	/** Keeps, resets, or replaces the value when a managed update hides the field. */
 	readonly whenHidden?: Resolvable<
 		WhenHidden<PathValue<Scope, Path>> | undefined,
@@ -503,35 +495,8 @@ type FieldNodeForPath<
 					})
 	}[CompatibleControlName<Scope, Kit["controls"], Kit["context"], Path>]
 
-/** Creates the union of valid field nodes in the current scope. */
-type FieldNodeInScope<Root, Scope, Kit extends KitTypes> = {
-	[Path in FieldPath<Scope>]: FieldNodeForPath<Root, Scope, Kit, Path>
-}[FieldPath<Scope>]
-
-/** A typed field node at the form root. */
-export type FieldNode<
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	Context = unknown,
-	FieldOptions = never,
-	Grid extends number = DefaultGridValue,
-> = FieldNodeInScope<
-	Input,
-	Input,
-	KitTypesOf<Controls, Context, FieldOptions, never, never, Grid>
->
-
-/** A section that groups child nodes in the current path scope. */
-type SectionNodeInScope<
-	Root,
-	Scope,
-	Kit extends KitTypes,
-	AllowFragments extends boolean = false,
-> = {
-	/** Identifies this node as a section. */
-	readonly kind: "section"
-	/** A stable ID that is unique within the current scope. */
-	readonly id: string
+/** Builder options for a section whose children stay in the current path scope. */
+type SectionBuilderOptions<Root, Scope, Kit extends FormKitTypes> = {
 	/** Provides the section heading or a resolver that computes it. */
 	readonly title?: Resolvable<ReactUiContent, Root, Kit["context"]>
 	/** Provides supporting content for the section. */
@@ -550,31 +515,9 @@ type SectionNodeInScope<
 	readonly columns?: Resolvable<Kit["grid"], Root, Kit["context"]>
 	/** Sets the section span in its parent grid. */
 	readonly span?: Resolvable<Kit["grid"] | "full", Root, Kit["context"]>
-	/** Nodes rendered inside the section. */
-	readonly children: readonly UiNodeInScope<Root, Scope, Kit, AllowFragments>[]
+	/** Nodes created by helpers in the current path scope. */
+	readonly children: BuiltNodeList<Root, Scope, Kit>
 }
-
-/** A typed section node at the form root. */
-export type SectionNode<
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	Context = unknown,
-	FieldOptions = never,
-	SectionOptions = never,
-	ArrayOptions = never,
-	Grid extends number = DefaultGridValue,
-> = SectionNodeInScope<
-	Input,
-	Input,
-	KitTypesOf<
-		Controls,
-		Context,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Grid
-	>
->
 
 /** Extracts the item type from an object-array path. */
 type ArrayItem<
@@ -588,20 +531,15 @@ type ArrayItem<
 		? Item
 		: never
 	: never
-/** Builds an array node for one path and its item scope. */
-type ArrayNodeForPath<
+/** Builder options for an array at one path; its children use helpers bound to the item scope. */
+type ArrayBuilderOptions<
 	Root,
 	Scope,
-	Kit extends KitTypes,
+	Kit extends FormKitTypes,
 	Path extends ArrayFieldPath<Scope>,
-	AllowFragments extends boolean,
 > = {
-	/** Identifies this node as an array. */
-	readonly kind: "array"
 	/** Overrides the stable node ID derived from the path. */
 	readonly id?: string
-	/** The object-array path relative to the current array scope. */
-	readonly path: Path
 	/** Provides the array label or a resolver that computes it. */
 	readonly label?: Resolvable<ReactUiContent, Root, Kit["context"]>
 	/** Provides supporting content for the array. */
@@ -622,75 +560,31 @@ type ArrayNodeForPath<
 	readonly errorDisplay?: Resolvable<ErrorDisplay, Root, Kit["context"]>
 	/** A new item value or a factory that creates one for each append action. */
 	readonly itemDefault: ArrayItem<Scope, Path> | (() => ArrayItem<Scope, Path>)
-	/** Nodes rendered for each array item. */
-	readonly children: readonly UiNodeInScope<
-		Root,
-		ArrayItem<Scope, Path>,
-		Kit,
-		AllowFragments
-	>[]
+	/** Builds the nodes rendered for each array item. */
+	readonly children: (
+		item: UiBuilder<Root, ArrayItem<Scope, Path>, Kit>,
+	) => BuiltNodeList<Root, ArrayItem<Scope, Path>, Kit>
 }
 
-/** Creates the union of valid array nodes in the current scope. */
-type ArrayNodeInScope<
-	Root,
-	Scope,
-	Kit extends KitTypes,
-	AllowFragments extends boolean = false,
-> = {
-	[Path in ArrayFieldPath<Scope>]: ArrayNodeForPath<
-		Root,
-		Scope,
-		Kit,
-		Path,
-		AllowFragments
-	>
-}[ArrayFieldPath<Scope>]
-
-/** A typed object-array node at the form root. */
-export type ArrayNode<
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	Context = unknown,
-	FieldOptions = never,
-	SectionOptions = never,
-	ArrayOptions = never,
-	Grid extends number = DefaultGridValue,
-> = ArrayNodeInScope<
-	Input,
-	Input,
-	KitTypesOf<
-		Controls,
-		Context,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Grid
-	>
->
-
-/** A custom component node in the generated form tree. */
-export type RenderNode<Input, Context = unknown> = {
-	/** Identifies this node as custom rendered content. */
-	readonly kind: "render"
-	/** A stable ID that is unique within the current scope. */
-	readonly id: string
+/** Builder options for a custom component node. */
+type RenderBuilderOptions<Root, Context> = {
 	/** The React component rendered for this node. */
 	readonly component: RenderNodeComponent
 	/** Controls whether the component is rendered. */
-	readonly visible?: Resolvable<boolean, Input, Context>
+	readonly visible?: Resolvable<boolean, Root, Context>
 	/** Supplies disabled state to the component and its descendants. */
-	readonly disabled?: Resolvable<boolean, Input, Context>
+	readonly disabled?: Resolvable<boolean, Root, Context>
 	/** Supplies read-only state to the component and its descendants. */
-	readonly readOnly?: Resolvable<boolean, Input, Context>
+	readonly readOnly?: Resolvable<boolean, Root, Context>
 }
 
 /** A private key that carries fragment placement type information. */
 declare const fragmentPlacementTypes: unique symbol
 /**
  * An opaque fragment placement accepted only in a compatible path scope.
- * Keeps the kit contracts as separate parameters, because `Context` is
- * contravariant here while the other contracts are covariant.
+ * Takes the kit contracts as separate parameters, not a kit type bag, because
+ * `Context` is contravariant here while the other contracts are covariant. A
+ * bag parameter would make the whole bag invariant.
  */
 type FormFragmentPlacement<
 	Input,
@@ -702,8 +596,6 @@ type FormFragmentPlacement<
 	Grid extends number,
 	At extends string | undefined,
 > = {
-	/** Keeps ordinary node discriminants contextually typed and diagnostic. */
-	readonly kind?: never
 	readonly [fragmentPlacementTypes]: {
 		/** The relative object path selected by this placement. */
 		readonly at: At
@@ -723,22 +615,6 @@ type FormFragmentPlacement<
 		readonly grid: Grid
 	}
 }
-/** A fragment placement for one input and object path of a bundled kit contract. */
-type KitFragmentPlacement<
-	Input,
-	Kit extends KitTypes,
-	At extends string | undefined,
-> = FormFragmentPlacement<
-	Input,
-	Kit["controls"],
-	Kit["context"],
-	Kit["fieldOptions"],
-	Kit["sectionOptions"],
-	Kit["arrayOptions"],
-	Kit["grid"],
-	At
->
-
 /** Paths whose values are non-array objects that can host a fragment. */
 type FragmentObjectPath<Scope> = {
 	[Path in FieldPath<Scope>]: IsAny<PathValue<Scope, Path>> extends true
@@ -751,45 +627,38 @@ type FragmentObjectPath<Scope> = {
 }[FieldPath<Scope>]
 
 /** Fragment placements compatible with the current form or array-item scope. */
-type FragmentPlacementInScope<Scope, Kit extends KitTypes> =
-	| KitFragmentPlacement<Scope, Kit, undefined>
+type FragmentPlacementInScope<Scope, Kit extends FormKitTypes> =
+	| FormFragmentPlacement<
+			Scope,
+			Kit["controls"],
+			Kit["context"],
+			Kit["fieldOptions"],
+			Kit["sectionOptions"],
+			Kit["arrayOptions"],
+			Kit["grid"],
+			undefined
+	  >
 	| {
-			[Path in FragmentObjectPath<Scope>]: KitFragmentPlacement<
+			[Path in FragmentObjectPath<Scope>]: FormFragmentPlacement<
 				PathValue<Scope, Path>,
-				Kit,
+				Kit["controls"],
+				Kit["context"],
+				Kit["fieldOptions"],
+				Kit["sectionOptions"],
+				Kit["arrayOptions"],
+				Kit["grid"],
 				Path
 			>
 	  }[FragmentObjectPath<Scope>]
 
-/**
- * A valid UI node in a form or nested array scope. While authoring,
- * `AllowFragments` also accepts opaque fragment placements at every depth.
- */
-type UiNodeInScope<
-	Root,
-	Scope,
-	Kit extends KitTypes,
-	AllowFragments extends boolean = false,
-> =
-	| (AllowFragments extends true ? FragmentPlacementInScope<Scope, Kit> : never)
-	| ArrayNodeInScope<Root, Scope, Kit, AllowFragments>
-	| FieldNodeInScope<Root, Scope, Kit>
-	| RenderNode<Root, Kit["context"]>
-	| SectionNodeInScope<Root, Scope, Kit, AllowFragments>
-
-/** Removes authoring keys from every member of a node union. */
-type OmitNodeKeys<Node, Keys extends PropertyKey> = Node extends unknown
-	? Omit<Node, Keys>
-	: never
-
 /** A private key that carries the builder scope of a helper-created node. */
 declare const builtNodeScope: unique symbol
 /**
- * Marks a node created by a builder helper for one path scope and kit contract.
- * Builder lists accept this brand instead of the full node union, so each
- * helper checks its own options once and list membership stays cheap.
+ * An opaque node created by a builder helper for one path scope and kit.
+ * Builder lists accept only this brand and fragment placements, so each helper
+ * checks its own options once and list membership stays cheap.
  */
-type BuiltNode<Root, Scope, Kit extends KitTypes> = {
+type BuiltNode<Root, Scope, Kit extends FormKitTypes> = {
 	readonly [builtNodeScope]: {
 		/** Makes the scope contract invariant so nodes cannot cross scopes. */
 		readonly scope: (types: [Root, Scope, Kit]) => [Root, Scope, Kit]
@@ -797,145 +666,47 @@ type BuiltNode<Root, Scope, Kit extends KitTypes> = {
 }
 
 /** Helper-created nodes and fragment placements accepted in one builder scope. */
-type BuiltNodeList<Root, Scope, Kit extends KitTypes> = readonly (
+type BuiltNodeList<Root, Scope, Kit extends FormKitTypes> = readonly (
 	| BuiltNode<Root, Scope, Kit>
 	| FragmentPlacementInScope<Scope, Kit>
 )[]
 
 /** Schema-bound helpers that create UI nodes in one path scope. */
-type UiBuilder<Root, Scope, Kit extends KitTypes> = {
+type UiBuilder<Root, Scope, Kit extends FormKitTypes> = {
 	/** Creates a field node at a compatible path. */
 	readonly field: <const Path extends FieldPath<Scope>>(
 		path: Path,
-		options: OmitNodeKeys<
-			FieldNodeForPath<Root, Scope, Kit, Path>,
-			"kind" | "path"
-		>,
-	) => FieldNodeForPath<Root, Scope, Kit, Path> & BuiltNode<Root, Scope, Kit>
+		options: FieldBuilderOptions<Root, Scope, Kit, Path>,
+	) => BuiltNode<Root, Scope, Kit>
 	/** Creates a section node whose children stay in the current path scope. */
 	readonly section: (
 		id: string,
-		options: OmitNodeKeys<
-			SectionNodeInScope<Root, Scope, Kit, true>,
-			"children" | "id" | "kind"
-		> & {
-			/** Nodes created by helpers in the current path scope. */
-			readonly children: BuiltNodeList<Root, Scope, Kit>
-		},
-	) => SectionNodeInScope<Root, Scope, Kit, true> & BuiltNode<Root, Scope, Kit>
+		options: SectionBuilderOptions<Root, Scope, Kit>,
+	) => BuiltNode<Root, Scope, Kit>
 	/** Creates an array node and supplies helpers bound to its item scope. */
 	readonly array: <const Path extends ArrayFieldPath<Scope>>(
 		path: Path,
-		options: OmitNodeKeys<
-			ArrayNodeForPath<Root, Scope, Kit, Path, true>,
-			"children" | "kind" | "path"
-		> & {
-			/** Builds the nodes rendered for each array item. */
-			readonly children: (
-				item: UiBuilder<Root, ArrayItem<Scope, Path>, Kit>,
-			) => BuiltNodeList<Root, ArrayItem<Scope, Path>, Kit>
-		},
-	) => ArrayNodeForPath<Root, Scope, Kit, Path, true> &
-		BuiltNode<Root, Scope, Kit>
+		options: ArrayBuilderOptions<Root, Scope, Kit, Path>,
+	) => BuiltNode<Root, Scope, Kit>
 	/** Creates a custom render node. */
 	readonly render: (
 		id: string,
-		options: OmitNodeKeys<RenderNode<Root, Kit["context"]>, "id" | "kind">,
-	) => RenderNode<Root, Kit["context"]> & BuiltNode<Root, Scope, Kit>
+		options: RenderBuilderOptions<Root, Kit["context"]>,
+	) => BuiltNode<Root, Scope, Kit>
 }
 
 /** Builds schema-owned UI content with helpers bound to the root path scope. */
 export type FormDefinitionBuilder<
 	Schema extends StandardSchema,
-	Controls extends ControlDefinitionRegistry,
-	Context,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Grid extends number,
+	Kit extends FormKitTypes,
 > = (
-	ui: UiBuilder<
-		FormInput<Schema>,
-		FormInput<Schema>,
-		KitTypesOf<
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid
-		>
-	>,
-) => BuiltNodeList<
-	FormInput<Schema>,
-	FormInput<Schema>,
-	KitTypesOf<
-		Controls,
-		Context,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Grid
-	>
->
-
-/** Any typed node that a form definition can contain at its root. */
-export type UiNode<
-	Input,
-	Controls extends ControlDefinitionRegistry,
-	Context = unknown,
-	FieldOptions = never,
-	SectionOptions = never,
-	ArrayOptions = never,
-	Grid extends number = DefaultGridValue,
-> = UiNodeInScope<
-	Input,
-	Input,
-	KitTypesOf<
-		Controls,
-		Context,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Grid
-	>
->
-
-/** User-authored UI content accepted by `defineForm` and `defineFragment`. */
-export type FormDefinitionSource<
-	Schema extends StandardSchema,
-	Controls extends ControlDefinitionRegistry,
-	Context,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Grid extends number,
-> = {
-	/** The ordered nodes rendered by `Fields` and `AutoForm`. */
-	readonly ui: readonly UiNodeInScope<
-		FormInput<Schema>,
-		FormInput<Schema>,
-		KitTypesOf<
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid
-		>,
-		true
-	>[]
-}
+	ui: UiBuilder<FormInput<Schema>, FormInput<Schema>, Kit>,
+) => BuiltNodeList<FormInput<Schema>, FormInput<Schema>, Kit>
 
 /** A reusable schema-owned UI tree created by one exact form kit. */
 export type FormFragment<
 	Schema extends StandardSchema = StandardSchema,
-	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
-	Context = unknown,
-	FieldOptions = unknown,
-	SectionOptions = unknown,
-	ArrayOptions = unknown,
-	Grid extends number = number,
+	Kit extends FormKitTypes = FormKitTypes,
 > = {
 	/** The original concrete schema used to type and compose this fragment. */
 	readonly schema: Schema
@@ -943,12 +714,12 @@ export type FormFragment<
 	readonly fields: {
 		(): FormFragmentPlacement<
 			FormInput<Schema>,
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid,
+			Kit["controls"],
+			Kit["context"],
+			Kit["fieldOptions"],
+			Kit["sectionOptions"],
+			Kit["arrayOptions"],
+			Kit["grid"],
 			undefined
 		>
 		<const At extends string>(options: {
@@ -956,12 +727,12 @@ export type FormFragment<
 			readonly at: At
 		}): FormFragmentPlacement<
 			FormInput<Schema>,
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid,
+			Kit["controls"],
+			Kit["context"],
+			Kit["fieldOptions"],
+			Kit["sectionOptions"],
+			Kit["arrayOptions"],
+			Kit["grid"],
 			At
 		>
 	}
@@ -1020,39 +791,23 @@ type DefaultFormDefinitionUpdatePolicy<
 /** A schema, normalized UI tree, and managed-update policy owned by one form kit. */
 export type FormDefinition<
 	Schema extends StandardSchema = StandardSchema,
-	Controls extends ControlDefinitionRegistry = ControlDefinitionRegistry,
-	Context = unknown,
-	FieldOptions = unknown,
-	SectionOptions = unknown,
-	ArrayOptions = unknown,
-	Grid extends number = number,
+	Kit extends FormKitTypes = FormKitTypes,
 	Updates extends
 		AnyFormDefinitionUpdatePolicy = DefaultFormDefinitionUpdatePolicy<
 		Schema,
-		Context
+		Kit["context"]
 	>,
 > = {
 	/** The Standard Schema validator for form input and submit output. */
 	readonly schema: Schema
 	/** The allowed column counts and spans for this definition. */
-	readonly grid: readonly Grid[]
+	readonly grid: readonly Kit["grid"][]
 	/** The normalized root UI nodes in render order. */
 	readonly ui: readonly NormalizedNode[]
 	/** All normalized nodes in depth-first order. */
 	readonly nodes: readonly NormalizedNode[]
 	/** Phantom type data used to preserve the owning kit contract. */
-	readonly [definitionTypes]?: {
-		/** The control registry that accepts this definition. */
-		readonly controls: Controls
-		/** The runtime context required by this definition. */
-		readonly context: Context
-		/** The field slot configuration type. */
-		readonly fieldOptions: FieldOptions
-		/** The section slot configuration type. */
-		readonly sectionOptions: SectionOptions
-		/** The array slot configuration type. */
-		readonly arrayOptions: ArrayOptions
-	}
+	readonly [definitionTypes]?: Kit
 } & Updates
 
 /** A structural element that receives Form Please data attributes. */
@@ -1190,14 +945,10 @@ type SubmitButtonProps = Omit<
 	/** The runtime-owned native button type. */
 	readonly type: "submit"
 }
-/** Live form state and button props supplied to a submit slot or render function. */
-export type SubmitSlotProps<
-	Schema extends StandardSchema = StandardSchema<Record<string, unknown>>,
-> = {
+/** Live submit state and button props supplied to the kit submit slot. */
+export type SubmitSlotProps = {
 	/** Native button props with runtime-owned submit and disabled values. */
 	readonly buttonProps: SubmitButtonProps
-	/** The current deeply readonly editable form values. */
-	readonly values: DeepReadonly<FormInput<Schema>>
 	/** Whether any submit action of the form is running. */
 	readonly isPending: boolean
 	/** Whether the form is running its submit handler. */
@@ -1207,18 +958,30 @@ export type SubmitSlotProps<
 	/** Whether the form can submit now: not validating and not submitting. */
 	readonly canSubmit: boolean
 }
-/** Structural components used by a form kit. */
+/** Submit state and the current values supplied to a `kit.Submit` render function. */
+export type SubmitRenderProps<
+	Schema extends StandardSchema = StandardSchema<Record<string, unknown>>,
+> = SubmitSlotProps & {
+	/** The current deeply readonly editable form values. */
+	readonly values: DeepReadonly<FormInput<Schema>>
+}
+/** Structural components used by a form kit, typed by the slot options of a kit type bag. */
 export type FormKitSlots<
-	FieldOptions = never,
-	SectionOptions = never,
-	ArrayOptions = never,
+	Kit extends Pick<
+		FormKitTypes,
+		"arrayOptions" | "fieldOptions" | "sectionOptions"
+	> = {
+		readonly fieldOptions: never
+		readonly sectionOptions: never
+		readonly arrayOptions: never
+	},
 > = {
 	/** Renders the wrapper, label, description, control, and errors for a field. */
-	readonly Field: ComponentType<FieldSlotProps<FieldOptions>>
+	readonly Field: ComponentType<FieldSlotProps<Kit["fieldOptions"]>>
 	/** Renders a section and its child layout. */
-	readonly Section: ComponentType<SectionSlotProps<SectionOptions>>
+	readonly Section: ComponentType<SectionSlotProps<Kit["sectionOptions"]>>
 	/** Renders an object array and its append action. */
-	readonly Array: ComponentType<ArraySlotProps<ArrayOptions>>
+	readonly Array: ComponentType<ArraySlotProps<Kit["arrayOptions"]>>
 	/** Renders one object-array item and its item actions. */
 	readonly ArrayItem: ComponentType<ArrayItemSlotProps>
 	/** Renders one validation issue. */

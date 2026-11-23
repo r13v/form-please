@@ -7,6 +7,8 @@
 		"build": "next build"
 	},
 	"dependencies": {
+		"@hookform/devtools": "4.4.0",
+		"@uiw/react-json-view": "2.0.0-alpha.43",
 		"next": "16.2.12",
 		"react": "19.2.8",
 		"react-dom": "19.2.8",

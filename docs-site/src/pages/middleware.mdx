@@ -53,7 +53,7 @@ from `useEffect`. The hook has these advantages:
 | Rule location | A component. | The form definition. |
 | Tests | Render the component. | Use the [definition tester](/testing) without React. |
 
-The hooks run for generated controls, generated arrays, `form.update`, history
+The hooks run for generated controls, `kit.useField` fields, generated arrays, `form.update`, history
 restores, and persistence restores. They do not run for `defaultValues`, resets,
 or direct `form.api` calls. See
 [Changes that run the rules](#changes-that-run-the-rules).
@@ -146,7 +146,7 @@ Hooks and middleware handle these entry points:
 
 | Entry point | `transaction.source.type` |
 | --- | --- |
-| Generated control change | `control` |
+| Generated control change and `setValue` of `kit.useField` | `control` |
 | Generated array add, remove, or move, and `form.array(path).reconcile` | `array` |
 | `form.update(recipe)` | `update` |
 | History undo, redo, seek, or import | `history` |
@@ -200,7 +200,7 @@ Hooks and middleware receive one `ValueTransaction`.
 | `previousValues` | Values before the managed proposal. |
 | `nextValues` | Values produced by the current patches. |
 | `patches` | Authoritative Immer `add`, `remove`, and `replace` operations. |
-| `source` | The generated control, generated array action, `form.update`, or optional feature restore. |
+| `source` | The generated control or `kit.useField` field, generated array action, `form.update`, or optional feature restore. |
 | `context` | Current deeply readonly runtime context for the form binding. |
 
 Control sources contain a typed `path`. Array sources contain a typed `path`
@@ -227,7 +227,7 @@ definition tester creates its middleware chain.
 | Method | Result |
 | --- | --- |
 | `api.getValues()` | Read the current RHF values as a deeply readonly TypeScript view. |
-| `api.update(recipe)` | Start a new managed update when no transaction is active. |
+| `api.update(recipe)` | Start a new managed update when no transaction is active. It returns the same `FormUpdateResult` as `form.update`. |
 
 Call `api.getValues()` after synchronous `next` to read the committed result
 from downstream middleware. The returned value is not an independent snapshot.
@@ -250,8 +250,19 @@ The chain makes one ordered pass. It does not rerun middleware when a later
 middleware adds a patch. It does not calculate a dependency fixed point.
 
 Any middleware can replace the value returned by `next`. Therefore,
-`FormMiddlewareNext` and `form.update` return `unknown`. Do not use that return
-value as a commit result unless the complete chain defines that convention.
+`FormMiddlewareNext` returns `unknown`. `form.update` and `api.update` return a
+`FormUpdateResult`:
+
+- `committed: true` with the final `transaction` and the `result` that the
+  outermost middleware returns. A middleware that starts post-commit work can
+  return its Promise, and the caller reads it from `result`.
+- `committed: false` with the `result` of the chain when middleware cancels
+  the transaction, or with `result: undefined` when the recipe changes nothing.
+  A middleware that cancels after an asynchronous check can return the Promise
+  of that check, and the caller receives its rejection from `result`.
+
+Read `committed` to know whether values changed. Read `result` only when the
+complete chain defines what it contains.
 
 ### Generated arrays
 

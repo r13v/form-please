@@ -20,9 +20,9 @@ const schema: StandardSchema<Input> = {
 		},
 	},
 }
-const definition = kit.defineForm(schema, {
-	ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
-})
+const definition = kit.defineForm(schema, (ui) => [
+	ui.field("name", { control: "text", label: "Name" }),
+])
 
 export function ClientForm() {
 	const form = kit.useForm(definition, { defaultValues: { name: "Ada" } })
