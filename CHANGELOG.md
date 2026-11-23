@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.0.1](https://github.com/r13v/form-please/compare/v3.0.0...v3.0.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* do not render field options beside inputs that did not produce them ([#63](https://github.com/r13v/form-please/issues/63)) ([c875442](https://github.com/r13v/form-please/commit/c8754424c93743c9f7e2890c362169afdac12891))
+
 ## [3.0.0](https://github.com/r13v/form-please/compare/v2.1.0...v3.0.0) (2026-11-23)
 
 
