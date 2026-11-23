@@ -134,6 +134,14 @@ test("prefixMarkdownLinks adds the base path to root-relative links", () => {
 		),
 		"[History](/form-please/examples/history) and [Submitter](/form-please/workflows#understand-submitter)",
 	)
+	assert.equal(
+		prefixMarkdownLinks("[Lookalike](/form-pleased)", basePath),
+		"[Lookalike](/form-please/form-pleased)",
+	)
+	assert.equal(
+		prefixMarkdownLinks("![Logo](/brand/logo.png)", basePath),
+		"![Logo](/form-please/brand/logo.png)",
+	)
 })
 
 test("prefixMarkdownLinks maps /index to the site root", () => {
@@ -166,20 +174,6 @@ test("prefixMarkdownLinks keeps links that need no base path", () => {
 	]) {
 		assert.equal(prefixMarkdownLinks(markdown, basePath), markdown)
 	}
-})
-
-test("prefixMarkdownLinks prefixes a path that only starts like the base path", () => {
-	assert.equal(
-		prefixMarkdownLinks("[Lookalike](/form-pleased)", basePath),
-		"[Lookalike](/form-please/form-pleased)",
-	)
-})
-
-test("prefixMarkdownLinks prefixes image links", () => {
-	assert.equal(
-		prefixMarkdownLinks("![Logo](/brand/logo.png)", basePath),
-		"![Logo](/form-please/brand/logo.png)",
-	)
 })
 
 test("prefixMarkdownLinks skips inline code", () => {

@@ -54,10 +54,8 @@ export function jobRuns(
 }
 
 /**
- * Asserts every step in `sequence` is present and that they appear in that
- * order. The presence check matters: `indexOf` reports -1 for a missing step,
- * and -1 compares less than every valid index, so a bare ordering comparison
- * passes once the step it guards is deleted.
+ * Asserts that each step of `sequence` is present and in that order. Without
+ * the presence check, a deleted step has index -1 and still sorts first.
  */
 export function expectRunOrder(
 	runs: readonly string[],

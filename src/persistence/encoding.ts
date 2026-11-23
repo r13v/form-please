@@ -1,5 +1,7 @@
 type PathSegment = string | number
 
+import { errorMessage } from "../error-codes.js"
+
 /** A value that can cross a JSON storage boundary. */
 export type JsonValue =
 	| null
@@ -87,7 +89,10 @@ export async function decodePersistenceEnvelope(
 	if (!migrated) return Object.freeze({ migrated: false, value: decoded })
 	if (options.migrate === undefined) {
 		throw new TypeError(
-			`Persisted form data version ${envelope.version} requires a migration to version ${options.version}`,
+			errorMessage(
+				"FP501",
+				`Persisted form data version ${envelope.version} requires a migration to version ${options.version}`,
+			),
 		)
 	}
 	return Object.freeze({
@@ -101,21 +106,36 @@ export function normalizePersistenceCodecs(
 ): readonly PersistenceCodec[] {
 	if (codecs === undefined) return Object.freeze([])
 	if (!Array.isArray(codecs)) {
-		throw new TypeError("Persistence codecs must be an array")
+		throw new TypeError(
+			errorMessage("FP502", "Persistence codecs must be an array"),
+		)
 	}
 	const tags = new Set<string>()
 	return Object.freeze(
 		codecs.map((codec, index) => {
 			if (typeof codec !== "object" || codec === null) {
 				throw new TypeError(
-					`Persistence codec at index ${index} must be an object`,
+					errorMessage(
+						"FP503",
+						`Persistence codec at index ${index} must be an object`,
+					),
 				)
 			}
 			if (typeof codec.tag !== "string" || codec.tag.length === 0) {
-				throw new TypeError("Persistence codec tags must be non-empty strings")
+				throw new TypeError(
+					errorMessage(
+						"FP504",
+						"Persistence codec tags must be non-empty strings",
+					),
+				)
 			}
 			if (tags.has(codec.tag)) {
-				throw new TypeError(`Duplicate persistence codec tag "${codec.tag}"`)
+				throw new TypeError(
+					errorMessage(
+						"FP505",
+						`Duplicate persistence codec tag "${codec.tag}"`,
+					),
+				)
 			}
 			if (
 				typeof codec.canEncode !== "function" ||
@@ -123,7 +143,10 @@ export function normalizePersistenceCodecs(
 				typeof codec.decode !== "function"
 			) {
 				throw new TypeError(
-					`Persistence codec "${codec.tag}" must define canEncode, encode, and decode`,
+					errorMessage(
+						"FP506",
+						`Persistence codec "${codec.tag}" must define canEncode, encode, and decode`,
+					),
 				)
 			}
 			tags.add(codec.tag)
@@ -140,11 +163,16 @@ export function normalizePersistenceCodecs(
 function readEnvelope(input: JsonValue): PersistenceEnvelope {
 	const envelope = readObject(input, "Persistence envelope")
 	if (envelope.protocol !== FORM_PERSISTENCE_PROTOCOL) {
-		throw new TypeError("Unsupported persistence protocol identifier")
+		throw new TypeError(
+			errorMessage("FP507", "Unsupported persistence protocol identifier"),
+		)
 	}
 	if (envelope.protocolVersion !== FORM_PERSISTENCE_PROTOCOL_VERSION) {
 		throw new TypeError(
-			`Unsupported persistence protocol version ${String(envelope.protocolVersion)}`,
+			errorMessage(
+				"FP508",
+				`Unsupported persistence protocol version ${String(envelope.protocolVersion)}`,
+			),
 		)
 	}
 	const version = envelope.version
@@ -154,11 +182,16 @@ function readEnvelope(input: JsonValue): PersistenceEnvelope {
 		version < 0
 	) {
 		throw new TypeError(
-			"Persistence application version must be a non-negative integer",
+			errorMessage(
+				"FP509",
+				"Persistence application version must be a non-negative integer",
+			),
 		)
 	}
 	if (!("payload" in envelope)) {
-		throw new TypeError("Persistence envelope is missing its payload")
+		throw new TypeError(
+			errorMessage("FP510", "Persistence envelope is missing its payload"),
+		)
 	}
 	return envelope as unknown as PersistenceEnvelope
 }
@@ -305,7 +338,10 @@ async function decodeNode(
 			const codec = codecs.find((candidate) => candidate.tag === node.tag)
 			if (codec === undefined) {
 				throw new TypeError(
-					`Unknown persistence codec tag "${node.tag}" at ${pathLabel(path)}`,
+					errorMessage(
+						"FP511",
+						`Unknown persistence codec tag "${node.tag}" at ${pathLabel(path)}`,
+					),
 				)
 			}
 			try {
@@ -334,10 +370,12 @@ function assertJsonValue(
 		}
 		if (typeof candidate === "number" && Number.isFinite(candidate)) return
 		if (typeof candidate !== "object") {
-			throw new TypeError(`${label} must be JSON`)
+			throw new TypeError(errorMessage("FP512", `${label} must be JSON`))
 		}
 		if (ancestors.has(candidate)) {
-			throw new TypeError(`${label} must be acyclic JSON`)
+			throw new TypeError(
+				errorMessage("FP513", `${label} must be acyclic JSON`),
+			)
 		}
 		ancestors.add(candidate)
 		try {
@@ -347,7 +385,7 @@ function assertJsonValue(
 			}
 			const prototype = Object.getPrototypeOf(candidate)
 			if (prototype !== Object.prototype && prototype !== null) {
-				throw new TypeError(`${label} must be JSON`)
+				throw new TypeError(errorMessage("FP512", `${label} must be JSON`))
 			}
 			for (const item of Object.values(candidate)) visit(item)
 		} finally {
@@ -362,14 +400,17 @@ function readObject(
 	label: string,
 ): Record<string, JsonValue> {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
-		throw new TypeError(`${label} must be an object`)
+		throw new TypeError(errorMessage("FP514", `${label} must be an object`))
 	}
 	return value as Record<string, JsonValue>
 }
 
 function unsupported(path: readonly PathSegment[], kind: string): TypeError {
 	return new TypeError(
-		`Unsupported persistence value at ${pathLabel(path)}: ${kind}`,
+		errorMessage(
+			"FP515",
+			`Unsupported persistence value at ${pathLabel(path)}: ${kind}`,
+		),
 	)
 }
 
@@ -384,12 +425,18 @@ function codecFailure(
 		operation === "canEncode"
 			? `canEncode failed for value at ${pathLabel(path)}`
 			: `failed to ${operation} value at ${pathLabel(path)}`
-	return new TypeError(`Persistence codec "${tag}" ${action}`, { cause })
+	return new TypeError(
+		errorMessage("FP516", `Persistence codec "${tag}" ${action}`),
+		{ cause },
+	)
 }
 
 function malformed(path: readonly PathSegment[]): TypeError {
 	return new TypeError(
-		`Malformed encoded persistence value at ${pathLabel(path)}`,
+		errorMessage(
+			"FP517",
+			`Malformed encoded persistence value at ${pathLabel(path)}`,
+		),
 	)
 }
 

@@ -55,11 +55,12 @@ export function ContactForm() {
 ```
 
 Render submit content with live typed values and state by passing a function to
-`kit.Submit`. The required `binding` types the values and must match the
-surrounding form; the button is yours:
+`kit.Submit`. The required `action` types the values and must belong to the
+surrounding form; `form.actions.submit` is the action of `onSubmit`. The button
+is yours:
 
 ```tsx
-<kit.Submit binding={form}>
+<kit.Submit action={form.actions.submit}>
 	{({ buttonProps, values, isDirty, canSubmit }) => (
 		<button {...buttonProps} disabled={!canSubmit || !isDirty}>
 			Save {values.name}
@@ -110,6 +111,8 @@ and the unchanged `form.api` for direct composition. `kit.Form` supplies
   may instead be an async function of `{ values, context, signal }`.
 - Fragment resolvers receive their local deeply readonly fragment input and
   minimum context.
+- `defineForm` and `defineFragment` accept only a builder function. Each node
+  comes from a builder helper or a fragment placement.
 - Use definition-owned `beforeUpdate` and `afterUpdate` for one managed update
   rule shared by every binding of that definition.
   Use value middleware and `form.update` when independent policies or dependent

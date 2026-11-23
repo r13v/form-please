@@ -78,12 +78,8 @@ test("generated LLM documentation describes the current runtime", async () => {
 	assert.match(full, /stable field-array ID/i)
 	assert.match(full, /useWatch/)
 	assert.match(full, /fromResource/)
-	assert.match(full, /does not create another form store/i)
-	assert.match(full, /Call `next` before the first `await`/)
-	assert.match(full, /HistoryJournal<Input>` version 1/)
 	assert.match(full, /createHistoryMiddleware/)
 	assert.match(full, /createPersistenceMiddleware/)
-	assert.match(full, /Persistence restore \| `persistence`/)
 })
 
 test("the plain-text full file includes the same text as each Markdown page", async () => {

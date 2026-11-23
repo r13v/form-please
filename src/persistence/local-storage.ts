@@ -1,3 +1,4 @@
+import { errorMessage } from "../error-codes.js"
 import type { JsonValue } from "./encoding.js"
 import type { FormPersistenceAdapter } from "./persistence.js"
 
@@ -12,7 +13,9 @@ export function createLocalStorageAdapter(
 	getStorage: () => PersistenceStorage,
 ): FormPersistenceAdapter {
 	if (typeof getStorage !== "function") {
-		throw new TypeError("localStorage adapter requires a storage getter")
+		throw new TypeError(
+			errorMessage("FP521", "localStorage adapter requires a storage getter"),
+		)
 	}
 	return Object.freeze({
 		async load(key) {

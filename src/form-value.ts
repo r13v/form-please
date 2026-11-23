@@ -1,3 +1,5 @@
+import { errorMessage } from "./error-codes.js"
+
 /** Clones editable form data while preserving browser-owned leaf values. */
 export function cloneFormValue<Value>(value: Value): Value {
 	const ancestors = new WeakSet<object>()
@@ -7,10 +9,6 @@ export function cloneFormValue<Value>(value: Value): Value {
 			const result = new RegExp(current.source, current.flags)
 			result.lastIndex = current.lastIndex
 			return result as Current
-		}
-		if (typeof Blob !== "undefined" && current instanceof Blob) return current
-		if (typeof FileList !== "undefined" && current instanceof FileList) {
-			return current
 		}
 		if (
 			!(
@@ -24,7 +22,7 @@ export function cloneFormValue<Value>(value: Value): Value {
 		}
 
 		if (ancestors.has(current))
-			throw new TypeError("Form values must be acyclic")
+			throw new TypeError(errorMessage("FP301", "Form values must be acyclic"))
 		ancestors.add(current)
 		try {
 			if (current instanceof Set) {
@@ -57,7 +55,7 @@ export function areFormValuesEqual(left: unknown, right: unknown): boolean {
 		compare: () => boolean,
 	): boolean => {
 		if (leftAncestors.has(leftValue) || rightAncestors.has(rightValue)) {
-			throw new TypeError("Form values must be acyclic")
+			throw new TypeError(errorMessage("FP301", "Form values must be acyclic"))
 		}
 		leftAncestors.add(leftValue)
 		rightAncestors.add(rightValue)

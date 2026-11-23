@@ -2,6 +2,7 @@ import type { FieldValues } from "react-hook-form"
 
 import type { FormBinding } from "../create-form-kit.js"
 import { registerFormDiagnosticFeature } from "../diagnostics.js"
+import { errorMessage } from "../error-codes.js"
 import {
 	areFormValuesEqual,
 	cloneFormValue,
@@ -12,6 +13,7 @@ import type { StandardSchema } from "../types.js"
 import type {
 	FormMiddlewareApi,
 	FormMiddlewareNext,
+	FormUpdateResult,
 	ValueCoordinatorCapability,
 	ValueTransaction,
 	ValueTransactionSource,
@@ -140,7 +142,12 @@ export function retainPersistenceHook(
 ): () => void {
 	const retain = hookRetainers.get(persistence)
 	if (retain === undefined) {
-		throw new TypeError("usePersistence requires a package persistence handle")
+		throw new TypeError(
+			errorMessage(
+				"FP522",
+				"usePersistence requires a package persistence handle",
+			),
+		)
 	}
 	return retain()
 }
@@ -231,7 +238,10 @@ class PersistenceState<Input extends FieldValues, Context> {
 		if (this.#unsubscribe !== undefined) return
 		if (this.#api === undefined) {
 			throw new TypeError(
-				"Persistence operations require a current Form Please form handle",
+				errorMessage(
+					"FP523",
+					"Persistence operations require a current Form Please form handle",
+				),
 			)
 		}
 		this.#unsubscribe = this.#api.subscribe({
@@ -299,7 +309,9 @@ class PersistenceState<Input extends FieldValues, Context> {
 				return Promise.resolve(this.#restoreResult)
 			}
 			return Promise.reject(
-				new TypeError("Persistence restore cannot run after start"),
+				new TypeError(
+					errorMessage("FP524", "Persistence restore cannot run after start"),
+				),
 			)
 		}
 		if (this.#snapshot.phase === "conflict") {
@@ -350,7 +362,9 @@ class PersistenceState<Input extends FieldValues, Context> {
 				version: this.#options.version,
 			})
 			if (!isFormValueObject(decoded.value)) {
-				throw new TypeError("Persisted form input must be an object")
+				throw new TypeError(
+					errorMessage("FP525", "Persisted form input must be an object"),
+				)
 			}
 		} catch (error) {
 			this.#failRestore(error)
@@ -362,11 +376,14 @@ class PersistenceState<Input extends FieldValues, Context> {
 		const pending: PendingRestore<Input> = { target }
 		this.#pendingRestore = pending
 		this.#suppressValueEvents++
-		let dispatchResult: unknown
+		let update: FormUpdateResult<Input, Context> = {
+			committed: false,
+			result: undefined,
+		}
 		let dispatchError: unknown
 		let dispatchFailed = false
 		try {
-			dispatchResult = this.#capability.restore(
+			update = this.#capability.restore(
 				() => cloneFormValue(target),
 				{
 					action: "restore",
@@ -400,7 +417,7 @@ class PersistenceState<Input extends FieldValues, Context> {
 			throw dispatchError
 		}
 		try {
-			await dispatchResult
+			await update.result
 		} catch (error) {
 			this.#reportError(error, "restore")
 			if (outcome === undefined) this.#setRestoreFailure(error)
@@ -450,7 +467,12 @@ class PersistenceState<Input extends FieldValues, Context> {
 	#start(): void {
 		this.#ensureSubscribed()
 		if (this.#snapshot.phase === "restoring") {
-			throw new TypeError("Persistence cannot start while restore is running")
+			throw new TypeError(
+				errorMessage(
+					"FP526",
+					"Persistence cannot start while restore is running",
+				),
+			)
 		}
 		if (this.#snapshot.phase === "active") return
 		const saveCurrent =
@@ -464,7 +486,9 @@ class PersistenceState<Input extends FieldValues, Context> {
 
 	async #flush(): Promise<void> {
 		if (this.#snapshot.phase !== "active") {
-			throw new TypeError("Persistence flush requires active persistence")
+			throw new TypeError(
+				errorMessage("FP527", "Persistence flush requires active persistence"),
+			)
 		}
 		this.#cancelTimer()
 		await this.#queueSave(true)
@@ -473,7 +497,10 @@ class PersistenceState<Input extends FieldValues, Context> {
 	async #clear(): Promise<void> {
 		if (this.#snapshot.phase === "restoring") {
 			throw new TypeError(
-				"Persistence clear cannot run while restore is running",
+				errorMessage(
+					"FP528",
+					"Persistence clear cannot run while restore is running",
+				),
 			)
 		}
 		this.#cancelTimer()
@@ -622,7 +649,9 @@ function normalizeOptions(
 	options: CreatePersistenceOptions,
 ): NormalizedOptions {
 	if (typeof options !== "object" || options === null) {
-		throw new TypeError("Persistence options must be an object")
+		throw new TypeError(
+			errorMessage("FP529", "Persistence options must be an object"),
+		)
 	}
 	if (
 		typeof options.adapter !== "object" ||
@@ -632,26 +661,43 @@ function normalizeOptions(
 		typeof options.adapter.remove !== "function"
 	) {
 		throw new TypeError(
-			"Persistence adapter must define load, save, and remove",
+			errorMessage(
+				"FP530",
+				"Persistence adapter must define load, save, and remove",
+			),
 		)
 	}
 	if (typeof options.key !== "string" || options.key.length === 0) {
-		throw new TypeError("Persistence key must be a non-empty string")
+		throw new TypeError(
+			errorMessage("FP531", "Persistence key must be a non-empty string"),
+		)
 	}
 	if (!Number.isSafeInteger(options.version) || options.version < 0) {
-		throw new TypeError("Persistence version must be a non-negative integer")
+		throw new TypeError(
+			errorMessage(
+				"FP532",
+				"Persistence version must be a non-negative integer",
+			),
+		)
 	}
 	const saveDelay = options.saveDelay ?? 500
 	if (!Number.isFinite(saveDelay) || saveDelay < 0) {
 		throw new TypeError(
-			"Persistence saveDelay must be a finite non-negative number",
+			errorMessage(
+				"FP533",
+				"Persistence saveDelay must be a finite non-negative number",
+			),
 		)
 	}
 	if (options.migrate !== undefined && typeof options.migrate !== "function") {
-		throw new TypeError("Persistence migrate must be a function")
+		throw new TypeError(
+			errorMessage("FP534", "Persistence migrate must be a function"),
+		)
 	}
 	if (options.onError !== undefined && typeof options.onError !== "function") {
-		throw new TypeError("Persistence onError must be a function")
+		throw new TypeError(
+			errorMessage("FP535", "Persistence onError must be a function"),
+		)
 	}
 	return Object.freeze({
 		adapter: options.adapter,

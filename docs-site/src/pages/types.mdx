@@ -28,7 +28,8 @@ Start with these types in application code:
 | Type form state and `defaultValues`. | `FormInput<Schema>` |
 | Type a successful submit result. | `FormOutput<Schema>` |
 | Accept a valid field name. | `FieldPath<Value>` |
-| Type a reusable form fragment. | `FormFragment<Schema, Controls, ...>` |
+| Name the types of a form kit. | `FormKitTypesOf<typeof kit>` |
+| Type a definition or a fragment by hand. | `FormDefinition<Schema, Kit>`, `FormFragment<Schema, Kit>` |
 | Type a custom control component. | `ControlProps<Value, OwnProps, Context, Option>` |
 | Type form-local value middleware. | `FormMiddleware<Input, Context>` |
 
@@ -81,33 +82,45 @@ generic when its value type must stay linked to the selected path. The
 
 ## Definition and UI types
 
-`kit.defineForm()` accepts a UI tree plus an optional managed-update policy and
-returns a normalized `FormDefinition`. Let the call infer the type for a
-definition that stays in one file.
+`kit.defineForm()` accepts a builder function plus an optional managed-update
+policy and returns a normalized `FormDefinition`. Let the call infer the type
+for a definition that stays in one file.
 
-The factory builder types each node from the schema and kit. The tree needs
-no type annotation:
+The builder types each node from the schema and kit. The tree needs no type
+annotation:
 
 ```tsx
 // [!include ~/snippets/types-guide.tsx:ui-types]
 ```
 
-The node types below carry the schema input, control registry, context, slot
-configuration, selectable options, and grid values through the complete tree.
-Use `defineFragment` instead of a separate node list to share UI.
+The builder helpers return opaque nodes. A builder list accepts only nodes
+that a helper of the same scope created and fragment placements, so the
+package exports no node types. Use `defineFragment` to share UI.
+
+### Kit type bag
+
+Each type that depends on a form kit takes one kit type bag instead of one
+generic parameter per contract. The bag is an object type that names each
+contract: `controls`, `context`, `fieldOptions`, `sectionOptions`,
+`arrayOptions`, and `grid`. `createFormKit` infers the bag, and
+`FormKitTypesOf` reads it from a kit:
+
+```ts
+// [!include ~/snippets/types-guide.tsx:kit-types]
+```
+
+`forContext<Context>()` returns a kit whose bag has the new `context`. Read
+the bag from the kit that defines the form.
 
 | Type | Purpose |
 | --- | --- |
-| `UiNode<Input, Controls, ...>` | Union of ordinary field, section, array, and render source nodes. |
-| `FieldNode<Input, Controls, ...>` | Field node with compatible paths, controls, props, and selectable options. |
-| `SectionNode<Input, Controls, ...>` | Section node with typed child nodes. |
-| `ArrayNode<Input, Controls, ...>` | Array node for one non-nullable object-array path. |
-| `RenderNode<Input, Context>` | React component node with resolved interaction state. |
-| `FormFragment<Schema, Controls, ...>` | Schema-owned UI fragment created by `defineFragment`. |
+| `FormKitTypes` | The shape of a kit type bag. Every bag satisfies it. |
+| `FormKitTypesOf<typeof kit>` | Reads the bag of a form kit. |
+| `FormDefinition<Schema, Kit>` | The normalized, readonly result of `defineForm`: the schema, grid, and normalized nodes. Do not create this object manually. |
+| `FormFragment<Schema, Kit>` | Schema-owned UI fragment created by `defineFragment`. |
 
-`FormDefinition<Schema, Controls, ...>` is the normalized, readonly result of
-`defineForm`. It contains the schema, grid, and normalized nodes. Do not create
-this object manually. Its generic parameters preserve the kit contracts.
+`Schema` and `Kit` default to the widest types, so `FormDefinition` with no
+arguments accepts a definition of any kit.
 
 ### Resolver types
 
@@ -141,8 +154,9 @@ infers its grid union from `createFormKit({ grid })`.
 ### Render-node types
 
 `RenderNodeComponent` is a React component that receives
-`RenderNodeProps`. The props contain only `disabled` and `readOnly`. Use
-`RenderNode<Input, Context>` to type the complete node.
+`RenderNodeProps`. The props contain `disabled`, `readOnly`, and `pathPrefix`.
+`pathPrefix` is the absolute path of the array item that contains the node,
+such as `"rows.2"`, or `""` at the form root.
 
 ## Control types
 
@@ -157,6 +171,7 @@ control. The context type controls which form kits can use it.
 | Type | Purpose |
 | --- | --- |
 | `ControlProps<Value, OwnProps, Context, Option>` | Props passed to a custom control component. |
+| `UseFieldResult<Value>` | `path`, `value`, `setValue`, `blur`, `input`, and `meta` from `kit.useField`: the control props without the definition-owned parts. |
 | `ControlDefinition<Value, OwnProps, Context, Option>` | Typed control returned by `defineControl`. |
 | `DefineControlInput<Value, OwnProps, Context, Option>` | Input object accepted by `defineControl`. |
 | `OptionValue<Value>` | Marks a control option value for narrowing to the selected schema input path. |
@@ -197,8 +212,8 @@ component-local form instance.
 
 | Type | Purpose |
 | --- | --- |
-| `FormKit<Controls, ...>` | Kit methods, components, controls, slots, grid, and context contract. |
-| `CreateFormKitOptions<Controls, ...>` | Options accepted by `createFormKit`. |
+| `FormKit<Kit>` | Kit methods, components, controls, slots, grid, and context contract for a kit type bag. |
+| `CreateFormKitOptions<Kit>` | Options accepted by `createFormKit`. `Kit` is a kit type bag without `context`. |
 | `DefineFormOptions<Schema, Context>` | Definition-owned `beforeUpdate`, ordered middleware, and `afterUpdate`. |
 | `FormDefinitionUpdatePolicy<Schema, Context>` | Normalized readonly managed-update policy stored by a definition. |
 | `UseFormOptions<Schema, Context>` | `defaultValues`, context, flags, validation modes, and submit handler. |
@@ -209,9 +224,10 @@ component-local form instance.
 | `FormAction<Schema, Context, Name>` | A bound action from `form.actions`. |
 | `FormSubmission<Name>` | External store of the running action and the last `onSubmit` rejection. |
 | `FormSubmissionSnapshot<Name>` | `{ action, error }` snapshot of `FormSubmission`. `error` is `{ value }` or `null`. |
+| `FormSubmitResult<Name>` | Result of `form.submit`: `{ accepted: true, action }`, or `{ accepted: false, action, reason }` with `issues` for `"invalid"` and `error` for `"failed"`. |
 | `FormIssueInput<Schema>` | An issue with a typed optional path for `validate` and `setIssues`. |
 | `SetIssuesOptions<Schema>` | The `focus` option of `setIssues`. |
-| `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, current context, submit actions, submission store, `setIssues`, and `array`. |
+| `FormBinding<Schema, Context>` | Raw RHF API, managed `update`, fixed definition, current context, submit actions, submission store, `submit`, `fieldPaths`, `setIssues`, and `array`. |
 | `FormProps<Schema, Context>` | Props for `kit.Form`. |
 
 `AutoFormProps<Schema, Context>` is currently the same contract as
@@ -220,8 +236,8 @@ component-local form instance.
 
 Use `form.api` from `FormBinding` for unchanged React Hook Form operations. Use
 `form.update` for a managed value transaction. The other public fields are the
-fixed `definition`, the current `context`, `actions`, `submission`,
-`setIssues`, and `array`. Read [`FormBinding` on the API
+fixed `definition`, the current `context`, `actions`, `submission`, `submit`,
+`fieldPaths`, `setIssues`, and `array`. Read [`FormBinding` on the API
 page](/api#formbinding) for their behavior.
 
 ### Managed value types
@@ -232,6 +248,7 @@ managed update:
 | Type | Purpose |
 | --- | --- |
 | `FormUpdateRecipe<Input>` | Synchronous Immer recipe accepted by `form.update` and middleware `api.update`. |
+| `FormUpdateResult<Input, Context>` | Result of `form.update` and `api.update`: `{ committed: true, transaction, result }` or `{ committed: false, result }`. `result` is the value that the middleware chain returns, or `undefined` when the chain does not run. |
 | `FormMiddleware<Input, Context>` | Redux-shaped middleware for one form binding. |
 | `FormMiddlewareApi<Input>` | Read current values or start a later managed update. |
 | `FormMiddlewareNext` | Forward authoritative patches to the next middleware or terminal. |
@@ -239,9 +256,10 @@ managed update:
 | `ValueTransactionSource<Input>` | Discriminated source for a control, array action, `form.update`, or optional feature restore. |
 | `ValuePatch` | Readonly Immer operation with a segment-array path. |
 
-Middleware can replace the terminal return value. Therefore, `form.update` and
-`FormMiddlewareNext` return `unknown`. Read [Value middleware](/middleware) for
-runtime rules and examples.
+Middleware can replace the terminal return value. Therefore,
+`FormMiddlewareNext` returns `unknown`, and `FormUpdateResult` keeps that value
+in `result`. Read [Value middleware](/middleware) for runtime rules and
+examples.
 
 ### Managed value history types
 
@@ -313,9 +331,10 @@ Import definition testing types from `form-please/testing`:
 
 ## Slot and structure types
 
-`FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>` describes the six
-required slot components. The three option generics set the corresponding
-`slotOptions` prop types.
+`FormKitSlots<Kit>` describes the six required slot components. It reads
+`fieldOptions`, `sectionOptions`, and `arrayOptions` from a kit type bag and
+sets the corresponding `slotOptions` prop types. A bag with only these three
+properties is enough. Without an argument, the slots take no slot options.
 
 ```tsx
 // [!include ~/snippets/types-guide.tsx:slot-types]
@@ -329,11 +348,17 @@ required slot components. The three option generics set the corresponding
 | `ArrayItemSlotProps` | `ArrayItem` slot. |
 | `ErrorMessageSlotProps` | `ErrorMessage` slot. |
 
-`SubmitSlotProps<Schema>` types the `Submit` slot and typed render functions. It
-provides `buttonProps`, deeply readonly input `values`, `isPending`,
-`isSubmitting`, `isDirty`, and `canSubmit`
+`SubmitSlotProps` types the `Submit` slot. It provides `buttonProps`,
+`isPending`, `isSubmitting`, `isDirty`, and `canSubmit`
 (`!isPending && !isValidating && !isSubmitting`). `isPending` is `true` while
-any submit action of the form runs.
+any submit action of the form runs. The slot does not receive the form values,
+so a `kit.Submit` with static children does not render again when a value
+changes.
+
+`SubmitRenderProps<Schema>` types the render function of `kit.Submit`. It adds
+the deeply readonly input `values` to `SubmitSlotProps`. A render function
+renders again on each value change. A `kit.Submit` with a render function
+requires `action`, and the form of that action types `values`.
 
 ### Shared structure types
 

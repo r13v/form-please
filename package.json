@@ -4,8 +4,12 @@
 	"description": "Build forms with ease",
 	"type": "module",
 	"license": "MIT",
-	"engines": {
-		"node": ">=24"
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=24",
+			"onFail": "error"
+		}
 	},
 	"files": [
 		"dist",
@@ -119,6 +123,7 @@
 	},
 	"scripts": {
 		"bench:middleware": "vitest bench src/value-middleware.bench.ts --run",
+		"bench:resolve": "vitest bench src/definition.bench.ts --run",
 		"build": "tsdown",
 		"check": "biome check .",
 		"check:fix": "biome check --write .",
@@ -158,7 +163,9 @@
 	"peerDependencies": {
 		"@emotion/react": "^11.14.0",
 		"@emotion/styled": "^11.14.1",
+		"@hookform/devtools": "^4.4.0",
 		"@mui/material": "^9.0.0",
+		"@uiw/react-json-view": "^2.0.0-alpha.43",
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0",
 		"react-hook-form": "^7.81.0"
@@ -170,22 +177,26 @@
 		"@emotion/styled": {
 			"optional": true
 		},
+		"@hookform/devtools": {
+			"optional": true
+		},
 		"@mui/material": {
+			"optional": true
+		},
+		"@uiw/react-json-view": {
 			"optional": true
 		}
 	},
 	"dependencies": {
-		"@babel/runtime": "7.29.7",
-		"@hookform/devtools": "4.4.0",
 		"@standard-schema/spec": "1.1.0",
-		"@uiw/react-json-view": "2.0.0-alpha.43",
-		"immer": "11.1.15"
+		"immer": "^11.1.15"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/cli": "0.18.5",
 		"@biomejs/biome": "2.5.5",
 		"@emotion/react": "11.14.0",
 		"@emotion/styled": "11.14.1",
+		"@hookform/devtools": "4.4.0",
 		"@mui/material": "9.2.0",
 		"@playwright/test": "1.62.0",
 		"@testing-library/react": "16.3.2",
@@ -193,6 +204,7 @@
 		"@types/node": "26.1.2",
 		"@types/react": "19.3.0",
 		"@types/react-dom": "19.3.0",
+		"@uiw/react-json-view": "2.0.0-alpha.43",
 		"jsdom": "30.0.0",
 		"knip": "6.29.0",
 		"lefthook": "2.1.10",

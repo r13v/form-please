@@ -61,7 +61,8 @@ A managed result includes:
   make;
 - the final committed `transaction`, including effective patches and values,
   or `undefined` when `committed` is false;
-- the middleware `result`;
+- the `result` of the middleware chain, also when `committed` is false, or
+  `undefined` when the chain does not run;
 - the definition `before`, `after`, and exact `changes`.
 
 The tester creates one independent middleware chain from the definition and

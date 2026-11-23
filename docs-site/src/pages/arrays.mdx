@@ -96,8 +96,23 @@ The same definition produces these paths at runtime:
 | `title` | `speakers.2.sessions.0.title` |
 
 Generated paths use RHF dot notation for array indexes. `FieldPath`,
-`ArrayFieldPath`, and `PathValue` use the same syntax. Generated arrays contain
-object rows; use one custom control for a primitive array value.
+`ArrayFieldPath`, and `PathValue` use the same syntax.
+
+## Edit a list of primitive values
+
+An array node accepts only an array of objects, because each generated row is
+an RHF field array row. `ArrayFieldPath` rejects a path such as `tags` with the
+type `string[]`. For a list of strings, numbers, or other primitive values, use
+one field whose control value is the complete array:
+
+```tsx
+// [!include ~/snippets/arrays-guide.tsx:primitive-list]
+```
+
+The control replaces the complete array with each `setValue`, so each edit is
+one managed update. The Standard Schema still validates each item. For a list
+of values from a fixed set, use a multiple-select control, such as
+`select-multiple` of the Material UI preset.
 
 ## Validate arrays and rows
 

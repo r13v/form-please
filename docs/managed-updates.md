@@ -2,12 +2,13 @@
 
 Every managed update goes through the form-local coordinator, also when the form has no middleware. The coordinator does not keep live values; RHF stays the only owner of form state. The coordinator is `createValueCoordinator` in `src/value-middleware.ts`; the RHF commit is in `src/managed-commit.ts`. The guarantees for users (sources, lifecycle order, `next` rules, errors, validation timing): `docs-site/src/pages/middleware.mdx`.
 
-ADRs: `docs/adr/0016-coordinate-managed-value-updates-before-react-hook-form.md` (coordinator before RHF), `docs/adr/0017-add-managed-update-hooks-around-middleware.md` (hooks), `docs/adr/0025-move-managed-update-policy-to-form-definitions.md` (policy in the definition), `docs/adr/0027-reset-hidden-field-values-in-managed-updates.md` (`whenHidden`).
+ADRs: `docs/adr/0016-coordinate-managed-value-updates-before-react-hook-form.md` (coordinator before RHF), `docs/adr/0017-add-managed-update-hooks-around-middleware.md` (hooks), `docs/adr/0025-move-managed-update-policy-to-form-definitions.md` (policy in the definition), `docs/adr/0027-reset-hidden-field-values-in-managed-updates.md` (`whenHidden`), `docs/adr/0029-return-a-commit-result-from-managed-updates.md` (update result).
 
 ## Coordinator rules
 
 - The policy (middleware, `beforeUpdate`, `afterUpdate`) is fixed with the definition, and each binding initializes its own middleware chain. Callbacks therefore read binding data from `transaction.context`, never from a React closure.
 - The coordinator derives `nextValues` from the forwarded patches, so middleware cannot commit values that the patches do not produce.
+- A dispatch returns `FormUpdateResult`. `committed` and `transaction` come from the commit record of the active dispatch, never from the middleware return value, because any middleware can replace that value. The middleware return value passes through unchanged as `result` in both variants, so a Promise of a chain that did not commit still reaches the caller.
 - `form.api`, initial values and reset bypass the coordinator on purpose: `form.api` is the unchanged RHF API, for the cases in which an application wants raw RHF behaviour.
 
 ## Commit to RHF

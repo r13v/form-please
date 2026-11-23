@@ -262,6 +262,26 @@ describe("createDefinitionTester", () => {
 		expect(tester.values).toEqual(initialValues)
 	})
 
+	it("returns the middleware result of an update that did not commit", () => {
+		const holdMiddleware: FormMiddleware<Values, Context> = () => () => () =>
+			"held"
+		const tester = createDefinitionTester(
+			defineTestForm({ middleware: [holdMiddleware] }),
+			{ context: { canEdit: true, locale: "en" }, values: initialValues },
+		)
+
+		const update = tester.update((draft) => {
+			draft.taxId = "manual"
+		})
+
+		expect(update).toMatchObject({
+			committed: false,
+			result: "held",
+			transaction: undefined,
+		})
+		expect(tester.values).toEqual(initialValues)
+	})
+
 	it("distinguishes context rerenders from managed updates", () => {
 		const sources: string[] = []
 		const configuredDefinition = defineTestForm({

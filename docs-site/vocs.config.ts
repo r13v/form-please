@@ -223,6 +223,7 @@ export default defineConfig({
 			items: [
 				{ text: "FAQs", link: "/faqs" },
 				{ text: "Troubleshooting", link: "/troubleshooting" },
+				{ text: "Upgrade to 3.0", link: "/upgrade-to-v3" },
 				{ text: "Upgrade to 2.0", link: "/upgrade-to-v2" },
 			],
 		},

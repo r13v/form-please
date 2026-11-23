@@ -32,9 +32,10 @@ const kit = createFormKit({
 	controls: createNativeControls(),
 	slots: createDefaultSlots(),
 })
-const definitionSource = {
-	ui: [{ control: "text", kind: "field", label: "Name", path: "name" }],
-} as const
+/** Builds the UI that every persistence form in this file shares. */
+const buildDefinition: Parameters<typeof kit.defineForm<typeof schema>>[1] = (
+	ui,
+) => [ui.field("name", { control: "text", label: "Name" })]
 
 describe("persistence React Hook Form integration", () => {
 	it("restores once in Strict Mode and publishes the current snapshot", async () => {
@@ -48,7 +49,7 @@ describe("persistence React Hook Form integration", () => {
 			key: "profile",
 			version: 1,
 		})
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			middleware: [feature],
 		})
 		let persistence!: UsePersistenceResult
@@ -100,7 +101,7 @@ describe("persistence React Hook Form integration", () => {
 			onError,
 			version: 1,
 		})
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			middleware: [feature],
 		})
 		let persistence!: UsePersistenceResult
@@ -134,7 +135,7 @@ describe("persistence React Hook Form integration", () => {
 			key: "profile",
 			version: 1,
 		})
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			middleware: [feature],
 		})
 		let form!: FormBinding<typeof schema>
@@ -211,7 +212,7 @@ describe("persistence React Hook Form integration", () => {
 				saveDelay: 50,
 				version: 1,
 			})
-			const definition = kit.defineForm(schema, definitionSource, {
+			const definition = kit.defineForm(schema, buildDefinition, {
 				middleware: [feature],
 			})
 			let form!: FormBinding<typeof schema>
@@ -270,7 +271,7 @@ describe("persistence React Hook Form integration", () => {
 			key: "profile",
 			version: 1,
 		})
-		const definition = kit.defineForm(schema, definitionSource, {
+		const definition = kit.defineForm(schema, buildDefinition, {
 			middleware: [feature],
 		})
 		let form!: FormBinding<typeof schema>
@@ -306,7 +307,7 @@ describe("persistence React Hook Form integration", () => {
 				saveDelay: 50,
 				version: 1,
 			})
-			const definition = kit.defineForm(schema, definitionSource, {
+			const definition = kit.defineForm(schema, buildDefinition, {
 				middleware: [feature],
 			})
 			let activeSubscriptions = 0

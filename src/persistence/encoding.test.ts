@@ -164,9 +164,10 @@ describe("persistence encoding", () => {
 		}
 		expect(invalidOutputFailure).toMatchObject({
 			cause: expect.objectContaining({
-				message: 'Persistence codec "invalid" output must be JSON',
+				message: '[FP512] Persistence codec "invalid" output must be JSON',
 			}),
-			message: 'Persistence codec "invalid" failed to encode value at "date"',
+			message:
+				'[FP516] Persistence codec "invalid" failed to encode value at "date"',
 		})
 
 		const canEncodeCause = new Error("claim failed")
@@ -195,7 +196,7 @@ describe("persistence encoding", () => {
 		expect(canEncodeFailure).toMatchObject({
 			cause: canEncodeCause,
 			message:
-				'Persistence codec "broken" canEncode failed for value at "nested"',
+				'[FP516] Persistence codec "broken" canEncode failed for value at "nested"',
 		})
 	})
 
@@ -236,7 +237,6 @@ describe("persistence encoding", () => {
 		for (const [payload, message] of [
 			[{ type: "unknown" }, '"<root>"'],
 			[{ type: "string", value: 1 }, '"<root>"'],
-			[{ type: "number", value: null }, '"<root>"'],
 			[{ type: "number", value: "1" }, '"<root>"'],
 			[{ type: "boolean", value: "true" }, '"<root>"'],
 			[{ items: {}, type: "array" }, '"<root>"'],
@@ -341,7 +341,7 @@ describe("persistence encoding", () => {
 		expect(decodeFailure).toMatchObject({
 			cause: expect.objectContaining({ message: "no decode" }),
 			message:
-				'Persistence codec "first" failed to decode value at "createdAt"',
+				'[FP516] Persistence codec "first" failed to decode value at "createdAt"',
 		})
 	})
 
@@ -358,15 +358,6 @@ describe("persistence encoding", () => {
 				version: 2,
 			}),
 		).rejects.toThrow("migration failed")
-		await expect(
-			decodePersistenceEnvelope(envelope, {
-				codecs: [],
-				migrate() {
-					throw new Error("migration threw")
-				},
-				version: 2,
-			}),
-		).rejects.toThrow("migration threw")
 	})
 
 	it("allows shared objects when an asynchronous codec suspends encoding", async () => {

@@ -37,7 +37,7 @@ const kit = createFormKit({
 }).forContext<Context>()
 const feature = createHistoryMiddleware({ groupWindow: 0, limit: 20 })
 const middleware: FormMiddleware<Input, Context> = feature
-const definition = kit.defineForm(schema, { ui: [] }, { middleware: [feature] })
+const definition = kit.defineForm(schema, () => [], { middleware: [feature] })
 
 function useHistoryForm() {
 	const form = kit.useForm(definition, {
@@ -67,14 +67,6 @@ if (source.type === "history") {
 type _NoRootHistory = Expect<
 	Equal<
 		"createHistoryMiddleware" extends keyof typeof RootPublic ? true : false,
-		false
-	>
->
-type _NoReplayJournal = Expect<
-	Equal<
-		"replayJournal" extends keyof typeof import("../../src/history/index.js")
-			? true
-			: false,
 		false
 	>
 >

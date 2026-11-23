@@ -17,7 +17,7 @@ describe("form focus and error summary", () => {
 				},
 			},
 		}
-		const summaryDefinition = kit.defineForm(formSchema, { ui: [] })
+		const summaryDefinition = kit.defineForm(formSchema, () => [])
 
 		function View() {
 			const form = kit.useForm(summaryDefinition, {
@@ -45,22 +45,10 @@ describe("form focus and error summary", () => {
 			message: z.string().min(1, "Enter the hidden message"),
 			group: z.object({ root: z.string().min(1, "Enter the nested root") }),
 		})
-		const metadataDefinition = kit.defineForm(metadataSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "message",
-					control: "text",
-					visible: false,
-				},
-				{
-					kind: "field",
-					path: "group.root",
-					control: "text",
-					visible: false,
-				},
-			],
-		})
+		const metadataDefinition = kit.defineForm(metadataSchema, (ui) => [
+			ui.field("message", { control: "text", visible: false }),
+			ui.field("group.root", { control: "text", visible: false }),
+		])
 
 		function View() {
 			const form = kit.useForm(metadataDefinition, {
@@ -88,16 +76,9 @@ describe("form focus and error summary", () => {
 		const rootSchema = z.object({
 			root: z.object({ name: z.string().min(1, "Enter the root name") }),
 		})
-		const rootDefinition = kit.defineForm(rootSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "root.name",
-					control: "text",
-					label: "Root name",
-				},
-			],
-		})
+		const rootDefinition = kit.defineForm(rootSchema, (ui) => [
+			ui.field("root.name", { control: "text", label: "Root name" }),
+		])
 		const onSubmit = vi.fn()
 
 		function View() {
@@ -127,30 +108,22 @@ describe("form focus and error summary", () => {
 			mode: z.enum(["hide", "show"]),
 			second: z.string().min(1, "Enter second"),
 		})
-		const conditionalDefinition = kit.defineForm(conditionalSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "first",
-					control: "text",
-					label: "First conditional field",
-					visible: (values) => values.mode === "show",
-				},
-				{
-					kind: "field",
-					path: "mode",
-					control: "select",
-					label: "Conditional mode",
-					options: ["hide", "show"],
-				},
-				{
-					kind: "field",
-					path: "second",
-					control: "text",
-					label: "Second conditional field",
-				},
-			],
-		})
+		const conditionalDefinition = kit.defineForm(conditionalSchema, (ui) => [
+			ui.field("first", {
+				control: "text",
+				label: "First conditional field",
+				visible: (values) => values.mode === "show",
+			}),
+			ui.field("mode", {
+				control: "select",
+				label: "Conditional mode",
+				options: ["hide", "show"],
+			}),
+			ui.field("second", {
+				control: "text",
+				label: "Second conditional field",
+			}),
+		])
 
 		function View() {
 			const form = kit.useForm(conditionalDefinition, {
@@ -181,23 +154,14 @@ describe("form focus and error summary", () => {
 			first: z.string().min(1, "Enter first"),
 			second: z.string().min(1, "Enter second"),
 		})
-		const disabledDefinition = kit.defineForm(disabledSchema, {
-			ui: [
-				{
-					kind: "field",
-					path: "first",
-					control: "text",
-					label: "Disabled invalid field",
-					disabled: true,
-				},
-				{
-					kind: "field",
-					path: "second",
-					control: "text",
-					label: "Focusable invalid field",
-				},
-			],
-		})
+		const disabledDefinition = kit.defineForm(disabledSchema, (ui) => [
+			ui.field("first", {
+				control: "text",
+				label: "Disabled invalid field",
+				disabled: true,
+			}),
+			ui.field("second", { control: "text", label: "Focusable invalid field" }),
+		])
 
 		function View() {
 			const form = kit.useForm(disabledDefinition, {

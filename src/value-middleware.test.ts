@@ -10,9 +10,19 @@ import {
 	type BeforeUpdateResult,
 	createValueCoordinator,
 	type FormMiddleware,
+	type FormUpdateResult,
 	getValueCoordinatorCapability,
 	type ValueTransaction,
 } from "./value-middleware.js"
+
+/** Narrows an update result to the committed variant or fails the test. */
+function expectCommitted<Input extends Values, Context>(
+	update: FormUpdateResult<Input, Context>,
+) {
+	if (!update.committed) throw new Error("Expected a committed update")
+
+	return update
+}
 
 type Values = {
 	quantity: number
@@ -65,11 +75,15 @@ describe("value middleware coordinator", () => {
 			publish: (event) => events.push(event),
 		})
 
-		const result = harness.coordinator.update((draft) => {
-			draft.quantity = 3
-		})
+		const update = expectCommitted(
+			harness.coordinator.update((draft) => {
+				draft.quantity = 3
+			}),
+		)
+		const { result } = update
 
 		expect(result).toBeInstanceOf(Promise)
+		expect(update.transaction.nextValues.quantity).toBe(3)
 		expect(harness.getValues().quantity).toBe(3)
 		expect(
 			events
@@ -123,14 +137,18 @@ describe("value middleware coordinator", () => {
 		]
 		const harness = createHarness(middleware)
 
-		const result = harness.coordinator.update((draft) => {
-			draft.quantity = 3
-		}) as ValueTransaction<Values>
+		const { result, transaction } = expectCommitted(
+			harness.coordinator.update((draft) => {
+				draft.quantity = 3
+			}),
+		)
 
 		expect(order).toEqual(["first:before", "second:6", "first:after"])
 		expect(harness.getValues()).toMatchObject({ quantity: 3, total: 6 })
-		expect(result.nextValues).toMatchObject({ quantity: 3, total: 6 })
-		expect(result.source).toEqual({ type: "update" })
+		expect(transaction.nextValues).toMatchObject({ quantity: 3, total: 6 })
+		expect(transaction.source).toEqual({ type: "update" })
+		// The outer middleware returns what the terminal returned.
+		expect(result).toBe(transaction)
 	})
 
 	it("lets middleware cancel a proposal without publishing partial values", () => {
@@ -143,7 +161,7 @@ describe("value middleware coordinator", () => {
 			harness.coordinator.update((draft) => {
 				draft.quantity = 9
 			}),
-		).toBe("cancelled")
+		).toStrictEqual({ committed: false, result: "cancelled" })
 		expect(harness.getValues().quantity).toBe(1)
 		expect(harness.commit).not.toHaveBeenCalled()
 		expect(afterUpdate).not.toHaveBeenCalled()
@@ -233,20 +251,20 @@ describe("value middleware coordinator", () => {
 			harness.coordinator.update((draft) => {
 				draft.quantity = 3
 			}),
-		).toBeUndefined()
+		).toEqual({ committed: false })
 		cancel = false
 		expect(
 			harness.coordinator.update((draft) => {
 				draft.quantity = 4
 			}),
-		).toBeUndefined()
+		).toEqual({ committed: false })
 		expect(
 			harness.coordinator.update(() => ({
 				items: harness.getValues().items,
 				quantity: 5,
 				total: 2,
 			})),
-		).toBeUndefined()
+		).toEqual({ committed: false })
 
 		expect(entered).not.toHaveBeenCalled()
 		expect(afterUpdate).not.toHaveBeenCalled()
@@ -360,11 +378,14 @@ describe("value middleware coordinator", () => {
 			},
 		)
 
+		const update = expectCommitted(
+			harness.coordinator.update((draft) => {
+				draft.quantity = 2
+			}),
+		)
 		let failure: unknown
 		try {
-			await harness.coordinator.update((draft) => {
-				draft.quantity = 2
-			})
+			await update.result
 		} catch (error) {
 			failure = error
 		}
@@ -386,7 +407,9 @@ describe("value middleware coordinator", () => {
 			},
 		])
 
-		expect(harness.coordinator.update(() => undefined)).toBeUndefined()
+		expect(harness.coordinator.update(() => undefined)).toEqual({
+			committed: false,
+		})
 		expect(entered).not.toHaveBeenCalled()
 		expect(harness.commit).not.toHaveBeenCalled()
 	})
@@ -476,12 +499,14 @@ describe("value middleware coordinator", () => {
 			afterUpdate,
 		})
 
-		const result = harness.coordinator.update((draft) => {
-			draft.quantity = 5
-		}) as ValueTransaction<Values>
+		const { transaction } = expectCommitted(
+			harness.coordinator.update((draft) => {
+				draft.quantity = 5
+			}),
+		)
 
-		expect(result.patches).toEqual([])
-		expect(result.nextValues).toEqual(result.previousValues)
+		expect(transaction.patches).toEqual([])
+		expect(transaction.nextValues).toEqual(transaction.previousValues)
 		expect(harness.getValues()).toMatchObject({ quantity: 1 })
 		expect(harness.commit).toHaveBeenCalledOnce()
 		expect(afterUpdate).toHaveBeenCalledOnce()
@@ -515,16 +540,18 @@ describe("value middleware coordinator", () => {
 			},
 		)
 
-		const result = harness.coordinator.update(() => ({
-			items: [],
-			note: "kept",
-			quantity: 4,
-			total: 8,
-		})) as ValueTransaction<Values>
+		const { transaction } = expectCommitted(
+			harness.coordinator.update(() => ({
+				items: [],
+				note: "kept",
+				quantity: 4,
+				total: 8,
+			})),
+		)
 
 		// An unchanged primitive is dropped, while a replaced object identity is
 		// still published because the coordinator compares keys with Object.is.
-		expect(result.patches).toEqual([
+		expect(transaction.patches).toEqual([
 			{ op: "replace", path: ["items"], value: [] },
 			{ op: "replace", path: ["quantity"], value: 4 },
 			{ op: "replace", path: ["total"], value: 99 },
@@ -566,14 +593,20 @@ describe("value middleware coordinator", () => {
 		attachValueCoordinatorCapability(host, harness.coordinator)
 		const capability = getValueCoordinatorCapability<Values>(host)
 
-		const result = capability.restore(
-			() => ({ items: [], quantity: 4, total: 0 }),
-			{ action: "undo", type: "history" },
-			{ keepFormState: true },
-		) as ValueTransaction<Values>
+		const { transaction } = expectCommitted(
+			capability.restore(
+				() => ({ items: [], quantity: 4, total: 0 }),
+				{ action: "undo", type: "history" },
+				{ keepFormState: true },
+			),
+		)
 
-		expect(result.source).toEqual({ action: "undo", type: "history" })
-		expect(result.nextValues).toEqual({ items: [], quantity: 4, total: 12 })
+		expect(transaction.source).toEqual({ action: "undo", type: "history" })
+		expect(transaction.nextValues).toEqual({
+			items: [],
+			quantity: 4,
+			total: 12,
+		})
 		expect(sources).toEqual([{ action: "undo", type: "history" }])
 		expect(harness.getValues()).toEqual({ items: [], quantity: 4, total: 12 })
 		expect(harness.commit).not.toHaveBeenCalled()
@@ -620,27 +653,48 @@ describe("value middleware coordinator", () => {
 			},
 		])
 
-		await harness.coordinator.update((draft) => {
-			draft.quantity = 2
-		})
+		const update = expectCommitted(
+			harness.coordinator.update((draft) => {
+				draft.quantity = 2
+			}),
+		)
+		const nested = (await update.result) as FormUpdateResult<Values>
 
+		expect(nested.committed).toBe(true)
 		expect(harness.getValues()).toMatchObject({ quantity: 2, total: 8 })
 		expect(harness.commit).toHaveBeenCalledTimes(2)
 	})
 
 	it("rejects a deferred next before it can commit stale previous values", async () => {
+		const events: FormDiagnosticEvent[] = []
 		const harness = createHarness([
 			() => (next) => async (transaction) => {
 				await Promise.resolve()
 				return next(transaction.patches)
 			},
 		])
+		const capability = getValueCoordinatorCapability(harness.coordinator)
+		const detach = attachFormDiagnosticSink(capability, {
+			publish: (event) => events.push(event),
+		})
 
-		await expect(
-			harness.coordinator.update((draft) => {
-				draft.quantity = 3
+		const outcome = harness.coordinator.update((draft) => {
+			draft.quantity = 3
+		})
+
+		// The caller receives the Promise of the chain that did not commit.
+		expect(outcome.committed).toBe(false)
+		await expect(outcome.result).rejects.toThrow("must call next synchronously")
+		await vi.waitFor(() =>
+			expect(events.at(-1)).toMatchObject({
+				error: expect.objectContaining({
+					message: expect.stringContaining("must call next synchronously"),
+				}),
+				outcome: "rejected",
+				phase: "settled",
 			}),
-		).rejects.toThrow("must call next synchronously")
+		)
+		detach()
 		expect(harness.getValues().quantity).toBe(1)
 		expect(harness.commit).not.toHaveBeenCalled()
 	})

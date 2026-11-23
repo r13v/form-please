@@ -1,6 +1,6 @@
 import { type FieldError, type FieldValues, get } from "react-hook-form"
+import { errorMessage } from "./error-codes.js"
 import type { FormIssueStore } from "./form-issues.js"
-
 import {
 	areFormValuesEqual,
 	cloneFormValue,
@@ -10,19 +10,20 @@ import { getMutableArrayValue } from "./generated-array.js"
 import { remapArraySchemaIssues } from "./standard-schema-resolver.js"
 import type { DeepReadonly } from "./types.js"
 import type {
+	FormUpdateResult,
 	ValueCoordinator,
 	ValueTransactionCommit,
 } from "./value-middleware.js"
 
 /** A typed managed operation for one generated object array. */
-export type FormArray<Item> = {
+export type FormArray<Item, Input extends FieldValues, Context> = {
 	reconcile<Key extends string | number>(
 		keys: readonly Key[],
 		options: {
 			readonly key: (row: DeepReadonly<Item>) => Key
 			readonly create: (key: Key) => Item
 		},
-	): unknown
+	): FormUpdateResult<Input, Context>
 }
 
 /** Public RHF operations supplied by the mounted generated array. */
@@ -79,39 +80,50 @@ export function reconcileGeneratedArray(
 		readonly key: (row: unknown) => string | number
 		readonly create: (key: string | number) => unknown
 	},
-): unknown {
+): FormUpdateResult<FieldValues> {
 	const operations = mountedArrays.get(form.api.control)?.get(path)
 	if (operations === undefined) {
 		throw new TypeError(
-			`Reconcile requires a mounted generated array at "${path}"`,
+			errorMessage(
+				"FP305",
+				`Reconcile requires a mounted generated array at "${path}"`,
+			),
 		)
 	}
 	const previousValues = form.api.getValues()
 	const rows = getMutableArrayValue(previousValues, path)
 	const selected = new Set(keys)
 	if (selected.size !== keys.length) {
-		throw new TypeError("Reconcile selected keys must be unique")
+		throw new TypeError(
+			errorMessage("FP306", "Reconcile selected keys must be unique"),
+		)
 	}
 	const currentKeys = rows.map(options.key)
 	const existing = new Map<string | number, number>()
 	for (const [index, key] of currentKeys.entries()) {
 		if (typeof key !== "string" && typeof key !== "number") {
-			throw new TypeError("Reconcile keys must be strings or numbers")
+			throw new TypeError(
+				errorMessage("FP307", "Reconcile keys must be strings or numbers"),
+			)
 		}
 		if (existing.has(key))
-			throw new TypeError("Reconcile current keys must be unique")
+			throw new TypeError(
+				errorMessage("FP308", "Reconcile current keys must be unique"),
+			)
 		existing.set(key, index)
 	}
 	if (
 		keys.length === rows.length &&
 		keys.every((key, index) => Object.is(key, currentKeys[index]))
 	) {
-		return undefined
+		return { committed: false, result: undefined }
 	}
 	const indexes = new Map<number, number>()
 	const nextRows = keys.map((key, index) => {
 		if (typeof key !== "string" && typeof key !== "number") {
-			throw new TypeError("Reconcile keys must be strings or numbers")
+			throw new TypeError(
+				errorMessage("FP307", "Reconcile keys must be strings or numbers"),
+			)
 		}
 		const previousIndex = existing.get(key)
 		if (previousIndex !== undefined) {
@@ -126,7 +138,10 @@ export function reconcileGeneratedArray(
 			!Object.is(options.key(row), key)
 		) {
 			throw new TypeError(
-				"Reconcile create must return an object with the requested key",
+				errorMessage(
+					"FP309",
+					"Reconcile create must return an object with the requested key",
+				),
 			)
 		}
 		return row
@@ -147,7 +162,10 @@ export function reconcileGeneratedArray(
 					)
 				) {
 					throw new TypeError(
-						"Reconcile middleware cannot change the selected array keys or order",
+						errorMessage(
+							"FP310",
+							"Reconcile middleware cannot change the selected array keys or order",
+						),
 					)
 				}
 				for (const [index, row] of nextRows.entries()) {
@@ -223,7 +241,10 @@ export function assertMountedArrayStructures(
 			continue
 		}
 		throw new TypeError(
-			`A managed update cannot change the number of rows of the mounted generated array "${path}". Use its array actions or form.array(path).reconcile.`,
+			errorMessage(
+				"FP311",
+				`A managed update cannot change the number of rows of the mounted generated array "${path}". Use its array actions or form.array(path).reconcile.`,
+			),
 		)
 	}
 }
@@ -291,7 +312,10 @@ function assertNestedArraysUnchanged(proposed: unknown, actual: unknown): void {
 	if (Array.isArray(proposed) || Array.isArray(actual)) {
 		if (!areFormValuesEqual(proposed, actual)) {
 			throw new TypeError(
-				"Reconcile middleware cannot change nested array values",
+				errorMessage(
+					"FP312",
+					"Reconcile middleware cannot change nested array values",
+				),
 			)
 		}
 		return

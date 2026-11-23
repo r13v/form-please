@@ -24,14 +24,14 @@ At the end, the workflow will provide:
 ## Keep each state with its owner
 
 Use the Standard Schema for submitted domain input. Use React state for the
-current workflow screen. Pass the screen through form context when a definition
-must change field visibility.
+current workflow screen. Put the fields of each screen in one definition
+section, and let the definition decide which screens are visible.
 
 | State | Owner |
 | --- | --- |
 | Editable domain input | React Hook Form (RHF) and the Standard Schema |
 | Current screen and navigation history | Application state or the router |
-| Screen visibility | Form context and definition resolvers |
+| Screen fields and visibility | Definition sections and their `visible` resolvers |
 | Draft storage | `form-please/persistence` and the application adapter |
 | Requests and confirmation receipts | Application request state |
 
@@ -59,16 +59,25 @@ Copy this complete controller and example into application code:
 | `form` | Uses the existing Form, Please binding and RHF API. |
 | `screen` | Reads the current application-owned screen. |
 | `setScreen` | Changes the external screen state. |
-| `steps` | Defines labels, typed paths, and optional conditions. |
+| `steps` | Defines labels and the definition node of each screen. |
 
-Each `paths` value must be a `FieldPath<FormInput<Schema>>`. TypeScript rejects
-a misspelled path before the application runs. The `when` function reads the
-current input and includes or removes a conditional screen.
+Each step names the ID of one definition section in `node`. The controller
+reads the paths of a step from `form.fieldPaths(node)`. The call returns the
+visible field paths under that node for the current values and context, also
+while the node is not rendered. The page renders the current step with
+`kit.Fields node={node}`. One ID therefore selects both the fields that the
+step validates and the fields that it shows, and the two lists cannot drift.
 
-`when` changes navigation only. Express the same conditional requirement in
-the Standard Schema so a hidden screen cannot block final submission. If a
-condition can hide the active screen, let the application choose the next
-external `screen`; that fallback is a product-navigation decision.
+A step is visible while its section shows at least one field. The
+`organization` section has a `visible` resolver, so its screen leaves the
+progress when the checkbox is cleared. A review step has no `node` and renders
+every field.
+
+A `visible` resolver changes navigation only. Express the same conditional
+requirement in the Standard Schema so a hidden screen cannot block final
+submission. If a condition can hide the active screen, let the application
+choose the next external `screen`; that fallback is a product-navigation
+decision.
 
 The hook returns these operations and values:
 
@@ -78,12 +87,21 @@ The hook returns these operations and values:
 | `back()` | Opens the previous visible screen without validation. |
 | `validateCurrent()` | Validates the current screen without navigation on success. |
 | `validateAllAndFocusFirstInvalid()` | Validates all visible paths, opens the first invalid screen, and focuses its first invalid field. |
-| `visibleSteps` | Contains the steps that satisfy their current conditions. |
+| `visibleSteps` | Contains the steps that have visible fields, and the review step. |
 | `progress` | Contains `current`, `total`, and integer `percent` values. |
 
 The controller uses `form.api.trigger`. It does not create another validator.
 Keep conditional rules in the Standard Schema, and give navigable issues a
 field path. A form-level issue without a path cannot identify a screen.
+
+**Publish** calls `form.submit()`. The call runs the same submission as a
+native submit and resolves with a `FormSubmitResult`. When the result has the
+reason `"invalid"`, the controller opens the first invalid screen.
+
+The library does not include a stepper. A headless stepper, such as
+[Stepperize](https://www.stepperize.com/docs/v9/react/forms/react-hook-form),
+can own the flow, the history, and the URL, and call `form.fieldPaths` and
+`form.submit` in the same way.
 
 ### Try the workflow
 

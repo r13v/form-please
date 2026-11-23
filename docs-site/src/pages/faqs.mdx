@@ -93,7 +93,9 @@ resolvers small and free of side effects.
 Use the API on `form.api`. This API is the typed React Hook Form instance that
 owns the editable state.
 
-Use `register`, `Controller`, or `useController` for custom fields. Use
+Use `kit.useField` for a custom field whose changes must run the managed
+update hooks and middleware. `register`, `Controller`, and `useController`
+also work for custom fields, but bypass them. Use
 `useWatch`, `useFormState`, or `useFieldArray` for derived and array UI. Keep
 generated and manual UI inside the same `kit.Form`; it provides RHF
 `FormProvider` automatically.

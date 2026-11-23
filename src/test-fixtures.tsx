@@ -122,14 +122,6 @@ export const kit = createFormKit({
 	},
 })
 
-export const definition = kit.defineForm(schema, {
-	ui: [
-		{
-			kind: "field",
-			path: "name",
-			control: "text",
-			label: "Name",
-			required: true,
-		},
-	],
-})
+export const definition = kit.defineForm(schema, (ui) => [
+	ui.field("name", { control: "text", label: "Name", required: true }),
+])

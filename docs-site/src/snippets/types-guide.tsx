@@ -15,8 +15,10 @@ import {
 	type ErrorMessageSlotProps,
 	type FieldPath,
 	type FormBinding,
+	type FormDefinition,
 	type FormInput,
 	type FormKitSlots,
+	type FormKitTypesOf,
 	type FormOutput,
 	type FormPleaseStyle,
 	type OptionValue,
@@ -92,6 +94,16 @@ const profileDefinition = profileKit.defineForm(profileSchema, (ui) => [
 	}),
 ])
 // [!endregion ui-types]
+
+// [!region kit-types]
+type ProfileKit = FormKitTypesOf<typeof profileKit>
+// { controls: ...; context: ProfileContext; fieldOptions: never;
+//   sectionOptions: never; arrayOptions: never; grid: 1 | 2 | 3 | 4 }
+
+type ProfileDefinition = FormDefinition<typeof profileSchema, ProfileKit>
+
+const exportedDefinition: ProfileDefinition = profileDefinition
+// [!endregion kit-types]
 
 type MoneyProps = {
 	readonly min?: number
@@ -258,7 +270,13 @@ const kitOptions = {
 	controls,
 	slots,
 	grid: [1, 2, 4],
-} satisfies CreateFormKitOptions<typeof controls>
+} satisfies CreateFormKitOptions<{
+	controls: typeof controls
+	fieldOptions: never
+	sectionOptions: never
+	arrayOptions: never
+	grid: 1 | 2 | 4
+}>
 
 const customKit = createFormKit(kitOptions)
 

@@ -18,6 +18,7 @@ Form, Please has no form store, reducer, command model, server protocol or valid
 - The managed-update coordinator proposes a change and commits it to RHF. It keeps no live values. `managed-updates.md` owns its contract, and `docs/adr/0016-coordinate-managed-value-updates-before-react-hook-form.md` gives the reason.
 - Managed value history keeps independent input snapshots for navigation only.
 - Form persistence encodes and transports the current editable input only.
+- The form runtime of each `kit.useForm` call keeps the options that can change and the submission state, not form values; see `form-binding-and-submission.md` § Form runtime.
 - Form Please Devtools only reads. It adds no middleware and keeps no state that the form reads back.
 
 A new feature that needs per-form state is a managed feature and does not add state to the form binding; see `managed-features.md`.
@@ -33,7 +34,7 @@ Default slots, native controls and presets use the core modules. They do not def
 `tests/package/build-output.test.ts` checks these rules on the built output. Read it for the exact assertions.
 
 - The root entry reaches RHF and Immer. It must not reach devtools code, `@hookform/devtools`, `@uiw/react-json-view`, Material UI, history code or persistence code. The bundle guarantee for users: `docs-site/src/pages/api.mdx`.
-- Only `form-please/devtools` reaches the RHF DevTools and the JSON viewer. These packages are direct dependencies, so the rule above is what keeps them out of an application that does not use devtools.
+- Only `form-please/devtools` reaches the RHF DevTools and the JSON viewer. These packages are optional peers for this reason; `docs/adr/0033-make-devtools-packages-optional-peers.md` gives the decision. The fixtures `tests/fixtures/node-esm` and `tests/fixtures/node-cjs` load the root entry without them.
 - Only `form-please/preset-mui` reaches Material UI. Material UI and Emotion are optional peers for this reason; `docs/adr/0013-ship-material-ui-as-an-opt-in-preset.md` gives the decision.
 - `form-please/history` and `form-please/persistence` reach React and the coordinator. They do not import RHF directly; they change values only through the coordinator.
 - Immer is a direct dependency because the coordinator produces Immer patches for every managed update.

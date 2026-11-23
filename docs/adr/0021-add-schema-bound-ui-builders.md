@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-11
-- Amended by: [ADR 0026](0026-accept-only-helper-created-nodes-in-builder-lists.md)
+- Amended by: [ADR 0026](0026-accept-only-helper-created-nodes-in-builder-lists.md), [ADR 0032](0032-accept-only-builder-callbacks-in-definitions.md)
 
 ## Context
 

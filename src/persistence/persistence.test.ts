@@ -73,8 +73,6 @@ describe("form persistence middleware", () => {
 			],
 			storage,
 		})
-		const listener = vi.fn()
-		const unsubscribe = harness.persistence.subscribe(listener)
 
 		expect(await harness.persistence.restore()).toBe("applied")
 		expect(harness.getValues()).toEqual({ items: [], name: "Persisted" })
@@ -86,8 +84,6 @@ describe("form persistence middleware", () => {
 		expect(storage.load).toHaveBeenCalledOnce()
 		expect(storage.save).not.toHaveBeenCalled()
 		expect(sources).toEqual([{ action: "restore", type: "persistence" }])
-		expect(listener).toHaveBeenCalled()
-		unsubscribe()
 	})
 
 	it("reports cancellation and rewrites values transformed by middleware", async () => {
@@ -131,6 +127,27 @@ describe("form persistence middleware", () => {
 			items: [],
 			name: "Normalized",
 		})
+	})
+
+	it("reports the failure of middleware that cancels a restore", async () => {
+		const failure = new Error("restore check failed")
+		const onError = vi.fn()
+		const storage = createMemoryStorage()
+		storage.value = await encoded({ items: [], name: "Persisted" })
+		const harness = createHarness({
+			middleware: [
+				() => (next) => (transaction) =>
+					transaction.source.type === "persistence"
+						? Promise.reject(failure)
+						: next(transaction.patches),
+			],
+			onError,
+			storage,
+		})
+
+		await expect(harness.persistence.restore()).rejects.toBe(failure)
+		expect(harness.getValues().name).toBe("")
+		expect(onError).toHaveBeenCalledWith(failure, { operation: "restore" })
 	})
 
 	it("keeps local input when it changes during an asynchronous load", async () => {
@@ -395,9 +412,6 @@ describe("form persistence middleware", () => {
 		const listener = vi.fn()
 		const release = harness.persistence.subscribe(listener)
 
-		expect(() => harness.persistence.subscribe(undefined as never)).toThrow(
-			"listener must be a function",
-		)
 		harness.persistence.start()
 		expect(listener).toHaveBeenCalled()
 

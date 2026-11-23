@@ -5,6 +5,7 @@ import {
 	createElement,
 	memo,
 	type ReactNode,
+	useCallback,
 	useLayoutEffect,
 	useMemo,
 	useRef,
@@ -24,6 +25,7 @@ import {
 } from "./array-reconcile.js"
 import { assertNever } from "./assert-never.js"
 import {
+	findResolvedNode,
 	type ResolvedArrayNode,
 	type ResolvedDefinition,
 	type ResolvedFieldNode,
@@ -35,12 +37,9 @@ import {
 	hasFormDiagnosticSink,
 	publishFormDiagnosticEvent,
 } from "./diagnostics.js"
-import { useFormId, useRuntimeForm } from "./form-context.js"
-import type {
-	RuntimeForm,
-	RuntimeSlotOptions,
-	RuntimeSlots,
-} from "./form-kit-types.js"
+import { useFormId } from "./form-context.js"
+import type { RuntimeSlotOptions, RuntimeSlots } from "./form-kit-types.js"
+import type { FormRuntime, FormSettings } from "./form-runtime.js"
 import {
 	type ArrayAction,
 	applyArrayAction,
@@ -64,8 +63,10 @@ import type {
 	StandardSchema,
 	StructuralNodeName,
 	StructuralRootProps,
+	UseFieldResult,
 } from "./types.js"
 import { useFieldOptions } from "./use-field-options.js"
+import { useSnapshot } from "./use-snapshot.js"
 import type {
 	ValueTransaction,
 	ValueTransactionSource,
@@ -77,62 +78,107 @@ export function ResolvedFields({
 	controls,
 	slots,
 	values,
+	node,
 	children,
 }: {
-	/** Private runtime form data. */
-	readonly form: RuntimeForm
-	/** Controls available to resolved field nodes. */
+	readonly form: FormRuntime
 	readonly controls: ControlDefinitionRegistry
-	/** Structural components used by generated nodes. */
 	readonly slots: RuntimeSlots
 	/** Current React Hook Form input values. */
 	readonly values: unknown
+	/** The ID of the one node to render; all root nodes render without it. */
+	readonly node?: string
 	/** Content rendered after the generated fields. */
 	readonly children?: ReactNode
 }) {
-	const previous = useRef<ResolvedDefinition | undefined>(undefined)
-	const resolutionDuration = useRef<number | undefined>(undefined)
-	const resolved = useMemo(() => {
-		const observed = hasFormDiagnosticSink(form.diagnosticTarget)
-		const startedAt = observed ? formDiagnosticNow() : undefined
-		const next = resolveDefinition(
-			form.definition,
-			values as FormInput<StandardSchema>,
-			form.context,
-			{ disabled: form.disabled, readOnly: form.readOnly },
-			previous.current,
-		)
-		previous.current = next
-		form.resolved = next
-		resolutionDuration.current =
-			startedAt === undefined ? undefined : formDiagnosticNow() - startedAt
-		return next
-	}, [form, values])
-	useLayoutEffect(() => {
-		if (!hasFormDiagnosticSink(form.diagnosticTarget)) return
-		publishFormDiagnosticEvent(form.diagnosticTarget, {
-			...(resolutionDuration.current === undefined
-				? {}
-				: { duration: resolutionDuration.current }),
-			kind: "definition",
-			resolved,
-			time: formDiagnosticNow(),
-		})
-	}, [form, resolved])
+	const settings = useSnapshot(form.settings)
+	const resolution = resolveForRender(form, values, settings)
+	useLayoutEffect(() => publishResolution(form, resolution), [form, resolution])
+	const { resolved } = resolution
+	const rendered =
+		node === undefined ? resolved.ui : [findResolvedNode(resolved, node)]
+
 	return (
 		<>
-			{resolved.ui.map((node) => (
+			{rendered.map((child) => (
 				<MemoizedGeneratedNode
 					controls={controls}
 					form={form}
-					key={node.id}
-					node={node}
+					key={child.id}
+					node={child}
 					slots={slots}
 				/>
 			))}
 			{children}
 		</>
 	)
+}
+
+/** One resolution of the definition for its exact inputs. */
+type Resolution = {
+	readonly values: unknown
+	readonly settings: FormSettings
+	readonly resolved: ResolvedDefinition
+	readonly duration: number | undefined
+}
+
+/**
+ * The latest resolution of each runtime. Every `kit.Fields` of a form receives
+ * the same values object, so one entry serves all of them. A render that React
+ * discards leaves an entry that is still correct for its own inputs.
+ */
+const latestResolutions = new WeakMap<FormRuntime, Resolution>()
+
+/** Returns the resolution for the values and settings of this render. */
+function resolveForRender(
+	form: FormRuntime,
+	values: unknown,
+	settings: FormSettings,
+): Resolution {
+	const cached = latestResolutions.get(form)
+	const isCurrent =
+		cached !== undefined &&
+		cached.values === values &&
+		cached.settings === settings
+	if (isCurrent) return cached
+
+	const observed = hasFormDiagnosticSink(form.diagnosticTarget)
+	const startedAt = observed ? formDiagnosticNow() : undefined
+	// The committed result only lends references to unchanged nodes.
+	const resolved = resolveDefinition(
+		form.definition,
+		values as FormInput<StandardSchema>,
+		settings.context,
+		{ disabled: settings.disabled, readOnly: settings.readOnly },
+		form.resolved,
+	)
+	const resolution = {
+		values,
+		settings,
+		resolved,
+		duration:
+			startedAt === undefined ? undefined : formDiagnosticNow() - startedAt,
+	}
+	latestResolutions.set(form, resolution)
+
+	return resolution
+}
+
+/** Commits one resolution to the runtime and devtools once; call it from a layout effect. */
+function publishResolution(
+	form: FormRuntime,
+	{ duration, resolved }: Resolution,
+): void {
+	if (form.resolved === resolved) return
+
+	form.resolved = resolved
+	if (!hasFormDiagnosticSink(form.diagnosticTarget)) return
+	publishFormDiagnosticEvent(form.diagnosticTarget, {
+		...(duration === undefined ? {} : { duration }),
+		kind: "definition",
+		resolved,
+		time: formDiagnosticNow(),
+	})
 }
 
 /** Selects and renders the component for one resolved node. */
@@ -142,13 +188,9 @@ function GeneratedNode({
 	slots,
 	node,
 }: {
-	/** Private runtime form data. */
-	readonly form: RuntimeForm
-	/** Controls available to resolved field nodes. */
+	readonly form: FormRuntime
 	readonly controls: ControlDefinitionRegistry
-	/** Structural components used by this node. */
 	readonly slots: RuntimeSlots
-	/** The resolved node to render. */
 	readonly node: ResolvedNode
 }): ReactNode {
 	if (!node.visible) {
@@ -202,6 +244,7 @@ function GeneratedNode({
 			return createElement(node.component, {
 				disabled: node.disabled,
 				readOnly: node.readOnly,
+				pathPrefix: node.itemPath,
 			})
 		default:
 			return assertNever(node, "Unsupported resolved node")
@@ -210,27 +253,29 @@ function GeneratedNode({
 
 const MemoizedGeneratedNode = memo(GeneratedNode)
 
-/** Connects one resolved field node to its control and structural slot. */
-function GeneratedField({
-	form,
-	controls,
-	slots,
-	node,
-}: {
-	/** Private runtime form data. */
-	readonly form: RuntimeForm
-	/** Controls available to the field node. */
-	readonly controls: ControlDefinitionRegistry
-	/** Structural components used by the field. */
-	readonly slots: RuntimeSlots
-	/** The resolved field node. */
-	readonly node: ResolvedFieldNode
-}) {
-	const path = node.path
+/** The managed field contract and the issue IDs of one field path. */
+type FieldControl = {
+	/** The props that `kit.useField` returns and that a generated control receives. */
+	readonly control: UseFieldResult<unknown>
+	/** The DOM ID of the input. */
+	readonly inputId: string
+	/** The DOM IDs of the displayed issues, in display order. */
+	readonly errorIds: readonly string[]
+}
+
+/**
+ * Connects one field path to React Hook Form and the coordinator. Generated
+ * fields and `kit.useField` share it, so a custom field registers, reads
+ * issues and dispatches managed updates exactly like a generated control. The
+ * input has no `aria-describedby`: only the caller knows which elements it renders.
+ */
+export function useFieldControl(
+	form: FormRuntime,
+	path: string,
+	nodeErrorDisplay?: ErrorDisplay,
+): FieldControl {
 	const inputId = createDomId(useFormId(), path)
-	const descriptionId =
-		node.description === undefined ? undefined : `${inputId}-description`
-	const Slot = slots.Field as ComponentType<FieldSlotProps<unknown>>
+	const { errorDisplay } = useSnapshot(form.settings)
 	const { field, fieldState, formState } = useController({
 		control: form.api.control,
 		name: path,
@@ -245,74 +290,118 @@ function GeneratedField({
 		path,
 		inputId,
 		showErrors,
-		node.errorDisplay ?? form.errorDisplay,
+		nodeErrorDisplay ?? errorDisplay,
 	)
+	const blurRef = useRef(field.onBlur)
+	useLayoutEffect(() => {
+		blurRef.current = field.onBlur
+	})
+	const blur = useRef(() => blurRef.current()).current
+	const { ref: fieldRef, value } = field
+	const input = useMemo(
+		() => ({
+			id: inputId,
+			name: path,
+			ref(element: HTMLElement | null) {
+				fieldRef(element)
+				if (element === null) {
+					form.inputRefs.delete(path)
+				} else {
+					form.inputRefs.set(path, element)
+				}
+			},
+		}),
+		[fieldRef, form, inputId, path],
+	)
+	const meta = useMemo(
+		() => ({
+			dirty,
+			touched,
+			validating,
+			errors,
+			displayErrors,
+			invalid: displayErrors.length > 0,
+		}),
+		[dirty, displayErrors, errors, touched, validating],
+	)
+	const setValue = useCallback(
+		(nextValue: unknown) =>
+			form.dispatch((draft) => set(draft, path, nextValue), {
+				path,
+				type: "control",
+			}),
+		[form, path],
+	)
+	const control = useMemo(
+		() => ({ path, value, setValue, blur, input, meta }),
+		[blur, input, meta, path, setValue, value],
+	)
+
+	return { control, inputId, errorIds }
+}
+
+/** Connects one resolved field node to its control and structural slot. */
+function GeneratedField({
+	form,
+	controls,
+	slots,
+	node,
+}: {
+	readonly form: FormRuntime
+	readonly controls: ControlDefinitionRegistry
+	readonly slots: RuntimeSlots
+	readonly node: ResolvedFieldNode
+}) {
+	const path = node.path
+	const domId = createDomId(useFormId(), path)
+	const descriptionId =
+		node.description === undefined ? undefined : `${domId}-description`
+	const Slot = slots.Field as ComponentType<FieldSlotProps<unknown>>
+	const { context } = useSnapshot(form.settings)
+	const { control, inputId, errorIds } = useFieldControl(
+		form,
+		path,
+		node.errorDisplay,
+	)
+	// The field slot renders the description and the issues, so only a
+	// generated control references their IDs.
 	const describedBy = useMemo(
 		() => joinIds([descriptionId, ...errorIds]),
 		[descriptionId, errorIds],
 	)
-	const blurRef = useRef(field.onBlur)
-	blurRef.current = field.onBlur
-	const blur = useRef(() => blurRef.current()).current
 	const resolvedOptions = useFieldOptions(
 		node.options,
 		node.optionValues,
-		form.context,
+		context,
 		{ path, target: form.diagnosticTarget },
 	)
-	const control = controls[String(node.control)]
-	const Control = control.component as ComponentType<
+	const Control = controls[String(node.control)].component as ComponentType<
 		ControlProps<unknown, unknown, unknown> & {
 			readonly options?: readonly unknown[]
 		}
 	>
-	const { ref: fieldRef, value } = field
 
-	return useMemo(
-		() => (
+	return useMemo(() => {
+		const { meta } = control
+
+		return (
 			<Slot
 				control={
 					<Control
+						{...control}
+						input={
+							describedBy === undefined
+								? control.input
+								: { ...control.input, "aria-describedby": describedBy }
+						}
 						props={node.props ?? {}}
-						context={form.context}
+						context={context}
 						disabled={node.disabled}
-						input={{
-							id: inputId,
-							name: path,
-							ref(element) {
-								fieldRef(element)
-								if (element === null) {
-									form.inputRefs.delete(path)
-								} else {
-									form.inputRefs.set(path, element)
-								}
-							},
-							...(describedBy === undefined
-								? {}
-								: { "aria-describedby": describedBy }),
-						}}
-						meta={{
-							dirty,
-							touched,
-							validating,
-							errors,
-							displayErrors,
-							invalid: displayErrors.length > 0,
-						}}
 						{...(node.options === undefined
 							? {}
 							: { options: resolvedOptions })}
-						path={path}
 						readOnly={node.readOnly}
 						required={node.required === true}
-						value={value}
-						blur={blur}
-						setValue={(nextValue) =>
-							form.dispatch((draft) => set(draft, path, nextValue), {
-								path,
-								type: "control",
-							})
-						}
 					/>
 				}
 				description={node.description}
@@ -320,7 +409,7 @@ function GeneratedField({
 					descriptionId === undefined ? {} : { id: descriptionId }
 				}
 				disabled={node.disabled}
-				errors={renderErrors(displayErrors, errorIds, slots, path)}
+				errors={renderErrors(meta.displayErrors, errorIds, slots, path)}
 				label={node.label}
 				labelProps={{ htmlFor: inputId, id: `${inputId}-label` }}
 				readOnly={node.readOnly}
@@ -328,36 +417,28 @@ function GeneratedField({
 				rootProps={structuralProps("field", {
 					...node,
 					path,
-					invalid: displayErrors.length > 0,
-					dirty,
-					touched,
-					validating,
+					invalid: meta.invalid,
+					dirty: meta.dirty,
+					touched: meta.touched,
+					validating: meta.validating,
 				})}
 				slotOptions={node.slotOptions as RuntimeSlotOptions}
 			/>
-		),
-		[
-			Control,
-			Slot,
-			blur,
-			describedBy,
-			descriptionId,
-			dirty,
-			displayErrors,
-			errorIds,
-			errors,
-			fieldRef,
-			form,
-			inputId,
-			node,
-			path,
-			resolvedOptions,
-			slots,
-			touched,
-			validating,
-			value,
-		],
-	)
+		)
+	}, [
+		Control,
+		Slot,
+		context,
+		control,
+		describedBy,
+		descriptionId,
+		errorIds,
+		inputId,
+		node,
+		path,
+		resolvedOptions,
+		slots,
+	])
 }
 
 /** Connects one resolved array node to React Hook Form array operations. */
@@ -367,13 +448,9 @@ function GeneratedArray({
 	slots,
 	node,
 }: {
-	/** Private runtime form data. */
-	readonly form: RuntimeForm
-	/** Controls available to nested field nodes. */
+	readonly form: FormRuntime
 	readonly controls: ControlDefinitionRegistry
-	/** Structural components used by the array. */
 	readonly slots: RuntimeSlots
-	/** The resolved array node. */
 	readonly node: ResolvedArrayNode
 }) {
 	const path = node.path
@@ -381,6 +458,7 @@ function GeneratedArray({
 	const arrayId = createDomId(useFormId(), path)
 	const Slot = slots.Array as ComponentType<ArraySlotProps<unknown>>
 	const Item = slots.ArrayItem
+	const { errorDisplay } = useSnapshot(form.settings)
 	const { append, fields, move, remove } = useFieldArray({
 		control: form.api.control,
 		name: path,
@@ -400,9 +478,11 @@ function GeneratedArray({
 			next.every((id, index) => id === previous[index])
 				? previous
 				: next
-		previousFieldIds.current = result
 		return result
 	}, [fields])
+	useLayoutEffect(() => {
+		previousFieldIds.current = fieldIds
+	}, [fieldIds])
 	const formState = useFormState({ control: form.api.control, name: path })
 	const fieldState = form.api.getFieldState(path, formState)
 	const dirty = fieldState.isDirty
@@ -415,7 +495,7 @@ function GeneratedArray({
 		path,
 		arrayId,
 		showErrors,
-		node.errorDisplay ?? form.errorDisplay,
+		node.errorDisplay ?? errorDisplay,
 	)
 	const canAdd = !node.disabled && !node.readOnly
 	return useMemo(
@@ -543,12 +623,12 @@ function useGeneratedIssues(
 
 /** Renders issues that cannot be focused through a generated enabled input. */
 export function ErrorSummary({
+	form,
 	slots,
 }: {
-	/** Structural components used for issue messages. */
+	readonly form: FormRuntime
 	readonly slots: RuntimeSlots
 }) {
-	const form = useRuntimeForm()
 	const formId = useFormId()
 	// Read errors before the early return: the RHF proxy subscribes only to read keys.
 	const { errors, submitCount } = useFormState({ control: form.api.control })
@@ -599,7 +679,7 @@ function renderErrors(
 
 /** Runs a generated array proposal before preserving its native row operation. */
 function dispatchArrayAction(
-	form: RuntimeForm,
+	form: FormRuntime,
 	path: string,
 	action: ArrayAction,
 	commitArray: (transaction: ValueTransaction<FieldValues, unknown>) => void,

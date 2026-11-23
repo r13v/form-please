@@ -158,7 +158,7 @@ export class FormPleaseDevtoolsStore implements FormDiagnosticSink {
 	readonly #updates: MutableUpdate[] = []
 	#connectionCount = 0
 	#connected = false
-	#form: FormBinding
+	readonly #form: FormBinding
 	#lastFocus: DevtoolsStoreSnapshot["lastFocus"]
 	#lastValues: FieldValues
 	#nextUpdateId = 1
@@ -167,7 +167,7 @@ export class FormPleaseDevtoolsStore implements FormDiagnosticSink {
 	#releaseRHF: (() => void) | undefined
 	#releaseSink: (() => void) | undefined
 	#resolution: DevtoolsResolution | undefined
-	#runtime: FormDiagnosticsRuntime
+	readonly #runtime: FormDiagnosticsRuntime
 	#snapshot: DevtoolsStoreSnapshot = Object.freeze({
 		features: Object.freeze([]),
 		options: Object.freeze([]),
@@ -181,12 +181,6 @@ export class FormPleaseDevtoolsStore implements FormDiagnosticSink {
 		this.#runtime = runtime
 		this.#lastValues = cloneFormValue(form.api.getValues())
 		this.#setResolved(runtime.resolved)
-	}
-
-	/** Keeps the store across binding views from the same hook lifetime. */
-	updateHost(form: FormBinding, runtime: FormDiagnosticsRuntime): void {
-		this.#form = form
-		this.#runtime = runtime
 	}
 
 	/** Connects all observers after the devtools component mounts. */
@@ -218,7 +212,6 @@ export class FormPleaseDevtoolsStore implements FormDiagnosticSink {
 	}
 
 	#disconnectObservers(): void {
-		if (!this.#connected) return
 		this.#connected = false
 		this.#releaseSink?.()
 		this.#releaseSink = undefined

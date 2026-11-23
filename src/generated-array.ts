@@ -1,13 +1,19 @@
 import { get } from "react-hook-form"
 
 import { assertNever } from "./assert-never.js"
+import { errorMessage } from "./error-codes.js"
 import { cloneFormValue, isFormValueObject } from "./form-value.js"
 
 /** Creates one independent item from a generated array's configured default. */
 export function cloneItemDefault(value: unknown): unknown {
 	const candidate = typeof value === "function" ? value() : value
 	if (!isFormValueObject(candidate)) {
-		throw new TypeError("Generated array item defaults must be plain objects")
+		throw new TypeError(
+			errorMessage(
+				"FP302",
+				"Generated array item defaults must be plain objects",
+			),
+		)
 	}
 	return cloneFormValue(candidate)
 }
@@ -16,7 +22,12 @@ export function cloneItemDefault(value: unknown): unknown {
 export function getMutableArrayValue(values: unknown, path: string): unknown[] {
 	const value = get(values, path)
 	if (!Array.isArray(value)) {
-		throw new TypeError(`Generated array path "${path}" must contain an array`)
+		throw new TypeError(
+			errorMessage(
+				"FP303",
+				`Generated array path "${path}" must contain an array`,
+			),
+		)
 	}
 	return value
 }
@@ -90,9 +101,12 @@ function assertArrayIndex(
 ): void {
 	if (Number.isSafeInteger(index) && index >= 0 && index < length) return
 	throw new RangeError(
-		`Generated array ${name} for "${path}" must be between 0 and ${Math.max(
-			length - 1,
-			0,
-		)}`,
+		errorMessage(
+			"FP304",
+			`Generated array ${name} for "${path}" must be between 0 and ${Math.max(
+				length - 1,
+				0,
+			)}`,
+		),
 	)
 }

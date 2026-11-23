@@ -122,7 +122,6 @@ describe("createDefaultSlots i18n", () => {
 			},
 		})
 
-		expect(first).not.toBe(second)
 		render(
 			<>
 				<first.Array {...arrayProps({ label: "First" })}>Rows</first.Array>

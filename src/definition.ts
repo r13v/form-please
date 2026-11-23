@@ -1,6 +1,7 @@
 import type { FieldValues } from "react-hook-form"
 
 import { assertNever } from "./assert-never.js"
+import { errorMessage } from "./error-codes.js"
 import { areFormValuesEqual } from "./form-value.js"
 import type {
 	ControlDefinitionRegistry,
@@ -95,6 +96,8 @@ type NormalizeOptions = {
 	readonly idPrefix: string
 	/** Local resolver scope inherited by ordinary fragment nodes. */
 	readonly resolverScope?: ResolverScope
+	/** Whether no ancestor of the nodes has a resolver function. */
+	readonly staticScope: boolean
 }
 /** Shared state for one form or fragment normalization pass. */
 type NormalizeState = {
@@ -111,6 +114,26 @@ type NormalizeState = {
 }
 /** Fragment-local resolver scopes without observable normalized-node metadata. */
 const resolverScopes = new WeakMap<RuntimeNode, ResolverScope>()
+/**
+ * Nodes whose resolved subtree depends only on the definition, the context and
+ * the form flags: no resolver function on the node, its ancestors or its
+ * descendants, and no array in the subtree.
+ */
+const staticNodes = new WeakSet<RuntimeNode>()
+/** Node properties that can hold a function that resolution does not call. */
+const unresolvedFunctionKeys = new Set([
+	"component",
+	"itemDefault",
+	"whenHidden",
+])
+/** The inputs that produced one resolved definition, besides its values. */
+type ResolveInputs = {
+	readonly definition: FormDefinition
+	readonly context: unknown
+	readonly disabled: boolean
+	readonly readOnly: boolean
+}
+const resolveInputs = new WeakMap<ResolvedDefinition, ResolveInputs>()
 /** Properties shared by every normalized UI node after resolution. */
 type ResolvedNodeBase<Kind extends NodeKind> = {
 	/** Preserves non-renderer properties from the normalized definition. */
@@ -197,6 +220,8 @@ export type ResolvedArrayNode = ResolvedNodeBase<"array"> & {
 type ResolvedRenderNode = ResolvedNodeBase<"render"> & {
 	/** The React component inserted into the generated form tree. */
 	readonly component: RenderNodeComponent
+	/** The absolute array-item path that contains the node, or `""` at the form root. */
+	readonly itemPath: string
 }
 
 /** A normalized UI node with all dynamic properties resolved. */
@@ -205,10 +230,6 @@ export type ResolvedNode =
 	| ResolvedFieldNode
 	| ResolvedRenderNode
 	| ResolvedSectionNode
-
-function isNodeKind(value: unknown): value is NodeKind {
-	return typeof value === "string" && Object.hasOwn(nodeKindTraits, value)
-}
 
 /** Lists the child node lists of a resolved node: one per array item. */
 export function resolvedChildLists(
@@ -227,6 +248,43 @@ export function resolvedChildLists(
 	}
 }
 
+/**
+ * Selects one resolved node by its ID. A node in an array row has the row path
+ * as its ID prefix, such as `rows.2.field:name`.
+ */
+export function findResolvedNode(
+	resolved: ResolvedDefinition,
+	id: string,
+): ResolvedNode {
+	const node = resolved.nodes.find((candidate) => candidate.id === id)
+	if (node === undefined) {
+		throw new TypeError(errorMessage("FP101", `Unknown UI node id "${id}"`))
+	}
+
+	return node
+}
+
+/** Lists the paths of the visible fields under one node, or of the whole UI tree, in render order. */
+export function visibleFieldPaths(
+	resolved: ResolvedDefinition,
+	id?: string,
+): string[] {
+	const paths: string[] = []
+	const visit = (node: ResolvedNode): void => {
+		if (!node.visible) return
+		if (node.kind === "field") {
+			paths.push(node.path)
+			return
+		}
+		for (const children of resolvedChildLists(node)) children.forEach(visit)
+	}
+	const roots =
+		id === undefined ? resolved.ui : [findResolvedNode(resolved, id)]
+	roots.forEach(visit)
+
+	return paths
+}
+
 /** The root UI tree and flat index produced by definition resolution. */
 export type ResolvedDefinition = {
 	/** Resolved root nodes in render order. */
@@ -240,21 +298,35 @@ const defaultGrid = Object.freeze([1, 2, 3, 4])
 /** Path segments rejected to prevent prototype traversal. */
 const reservedSegments = new Set(["__proto__", "constructor", "prototype"])
 
+/**
+ * The nodes that builder helpers created. Normalization accepts only these
+ * nodes and fragment placements, so untyped code cannot pass a hand-written
+ * node object through a builder.
+ */
+const builtNodes = new WeakSet<object>()
+
+/** Records one helper-created node. */
+function builtNode(node: Record<string, unknown>): object {
+	builtNodes.add(node)
+
+	return node
+}
+
 /** Stateless node helpers shared by every schema-bound definition builder. */
 const uiBuilder: RuntimeUiBuilder = Object.freeze({
 	field(path: unknown, options: unknown): object {
-		return {
+		return builtNode({
 			...readBuilderOptions("Field", options),
 			kind: "field",
 			path,
-		}
+		})
 	},
 	section(id: unknown, options: unknown): object {
-		return {
+		return builtNode({
 			...readBuilderOptions("Section", options),
 			id,
 			kind: "section",
-		}
+		})
 	},
 	array(path: unknown, options: unknown): object {
 		const { children: buildChildren, ...nodeOptions } = readBuilderOptions(
@@ -262,25 +334,29 @@ const uiBuilder: RuntimeUiBuilder = Object.freeze({
 			options,
 		)
 		if (typeof buildChildren !== "function") {
-			throw new TypeError("Array builder children must be a function")
+			throw new TypeError(
+				errorMessage("FP102", "Array builder children must be a function"),
+			)
 		}
 		const children = buildChildren(uiBuilder) as unknown
 		if (!Array.isArray(children)) {
-			throw new TypeError("Array builder children must return a ui array")
+			throw new TypeError(
+				errorMessage("FP103", "Array builder children must return a ui array"),
+			)
 		}
-		return {
+		return builtNode({
 			...nodeOptions,
 			children,
 			kind: "array",
 			path,
-		}
+		})
 	},
 	render(id: unknown, options: unknown): object {
-		return {
+		return builtNode({
 			...readBuilderOptions("Render", options),
 			id,
 			kind: "render",
-		}
+		})
 	},
 })
 
@@ -293,39 +369,56 @@ export function normalizeGrid(
 		return defaultGrid
 	}
 	if (!Array.isArray(grid) || grid.length === 0) {
-		throw new TypeError(`${owner} grid must be a non-empty array`)
+		throw new TypeError(
+			errorMessage("FP104", `${owner} grid must be a non-empty array`),
+		)
 	}
 
 	const unique = new Set<number>()
 	for (const value of grid) {
 		if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
-			throw new TypeError(`${owner} grid values must be positive integers`)
+			throw new TypeError(
+				errorMessage("FP105", `${owner} grid values must be positive integers`),
+			)
 		}
 		if (unique.has(value)) {
-			throw new TypeError(`${owner} grid cannot contain duplicate ${value}`)
+			throw new TypeError(
+				errorMessage(
+					"FP106",
+					`${owner} grid cannot contain duplicate ${value}`,
+				),
+			)
 		}
 		unique.add(value)
 	}
 	if (!unique.has(1)) {
-		throw new TypeError(`${owner} grid must include 1`)
+		throw new TypeError(errorMessage("FP107", `${owner} grid must include 1`))
 	}
 
 	return Object.freeze([...unique].sort((left, right) => left - right))
 }
 
-/** Resolves object or schema-bound builder authoring into one source object. */
-function materializeDefinitionSource(
-	source: unknown,
-	owner: "Form" | "Fragment",
-): unknown {
-	if (typeof source !== "function") {
-		return source
+/** Runs the schema-bound builder of one definition or fragment. */
+function buildUi(build: unknown, owner: "Form" | "Fragment"): unknown[] {
+	if (typeof build !== "function") {
+		throw new TypeError(
+			errorMessage(
+				"FP141",
+				`${owner} definition requires a builder function, such as (ui) => [ui.field(...)]`,
+			),
+		)
 	}
-	const ui = (source as (builder: RuntimeUiBuilder) => unknown)(uiBuilder)
+	const ui = (build as (builder: RuntimeUiBuilder) => unknown)(uiBuilder)
 	if (!Array.isArray(ui)) {
-		throw new TypeError(`${owner} definition builder must return a ui array`)
+		throw new TypeError(
+			errorMessage(
+				"FP108",
+				`${owner} definition builder must return a ui array`,
+			),
+		)
 	}
-	return { ui }
+
+	return ui
 }
 
 /** Validates the configuration object supplied to one node helper. */
@@ -334,7 +427,9 @@ function readBuilderOptions(
 	options: unknown,
 ): Record<string, unknown> {
 	if (!isRecord(options)) {
-		throw new TypeError(`${owner} builder options must be an object`)
+		throw new TypeError(
+			errorMessage("FP109", `${owner} builder options must be an object`),
+		)
 	}
 	return options
 }
@@ -342,18 +437,13 @@ function readBuilderOptions(
 /** Validates and freezes one reusable schema-owned UI fragment. */
 export function createFormFragment(
 	schema: StandardSchema,
-	source: unknown,
+	build: unknown,
 	controls: ControlDefinitionRegistry,
 	grid: readonly number[],
 	ownsFragment: OwnsFragment,
 ): object {
 	assertStandardSchema(schema, "Fragment")
-	const materializedSource = materializeDefinitionSource(source, "Fragment")
-	if (!isRecord(materializedSource) || !Array.isArray(materializedSource.ui)) {
-		throw new TypeError("Fragment definition must contain a ui array")
-	}
-
-	const ui = snapshotSourceNodes(materializedSource.ui)
+	const ui = snapshotSourceNodes(buildUi(build, "Fragment"))
 	normalizeNodes(
 		ui,
 		{
@@ -369,6 +459,7 @@ export function createFormFragment(
 			idPrefix: "",
 			pathPrefix: "",
 			resolverScope: { appendPath: "", trimSegments: 0 },
+			staticScope: true,
 		},
 	)
 
@@ -392,17 +483,14 @@ export function createFormFragment(
 /** Validates and freezes a user-authored form definition. */
 export function normalizeDefinition<Schema extends StandardSchema>(
 	schema: Schema,
-	source: unknown,
+	build: unknown,
 	controls: ControlDefinitionRegistry,
 	grid: readonly number[],
 	ownsFragment: OwnsFragment,
 	updates?: unknown,
 ): FormDefinition<Schema> {
 	assertStandardSchema(schema, "Form")
-	const materializedSource = materializeDefinitionSource(source, "Form")
-	if (!isRecord(materializedSource) || !Array.isArray(materializedSource.ui)) {
-		throw new TypeError("Form definition must contain a ui array")
-	}
+	const source = buildUi(build, "Form")
 	const normalizedUpdates = normalizeDefinitionUpdates(updates)
 
 	const state = {
@@ -412,9 +500,10 @@ export function normalizeDefinition<Schema extends StandardSchema>(
 		ownsFragment,
 		nodes: [] as RuntimeNode[],
 	}
-	const ui = normalizeNodes(materializedSource.ui, state, "", undefined, {
+	const ui = normalizeNodes(source, state, "", undefined, {
 		idPrefix: "",
 		pathPrefix: "",
+		staticScope: true,
 	})
 
 	return Object.freeze({
@@ -433,22 +522,35 @@ function normalizeDefinitionUpdates(updates: unknown): Readonly<{
 	middleware: readonly unknown[]
 }> {
 	if (updates !== undefined && !isRecord(updates)) {
-		throw new TypeError("Form definition update options must be an object")
+		throw new TypeError(
+			errorMessage("FP112", "Form definition update options must be an object"),
+		)
 	}
 	const beforeUpdate = updates?.beforeUpdate
 	if (beforeUpdate !== undefined && typeof beforeUpdate !== "function") {
-		throw new TypeError("Form definition beforeUpdate must be a function")
+		throw new TypeError(
+			errorMessage("FP113", "Form definition beforeUpdate must be a function"),
+		)
 	}
 	const afterUpdate = updates?.afterUpdate
 	if (afterUpdate !== undefined && typeof afterUpdate !== "function") {
-		throw new TypeError("Form definition afterUpdate must be a function")
+		throw new TypeError(
+			errorMessage("FP114", "Form definition afterUpdate must be a function"),
+		)
 	}
 	const middleware = updates?.middleware
 	if (middleware !== undefined && !Array.isArray(middleware)) {
-		throw new TypeError("Form definition middleware must be an array")
+		throw new TypeError(
+			errorMessage("FP115", "Form definition middleware must be an array"),
+		)
 	}
 	if (middleware?.some((candidate) => typeof candidate !== "function")) {
-		throw new TypeError("Form definition middleware must contain functions")
+		throw new TypeError(
+			errorMessage(
+				"FP116",
+				"Form definition middleware must contain functions",
+			),
+		)
 	}
 
 	return Object.freeze({
@@ -469,14 +571,17 @@ function normalizeNodes(
 	const normalized: RuntimeNode[] = []
 	for (const candidate of source) {
 		if (!isRecord(candidate)) {
-			throw new TypeError("UI nodes must be objects")
+			throw new TypeError(errorMessage("FP117", "UI nodes must be objects"))
 		}
 
 		const placement = readFragmentPlacement(candidate)
 		if (placement !== undefined) {
 			if (!state.ownsFragment(placement.fragment)) {
 				throw new TypeError(
-					"Fragment placement must come from this exact form kit",
+					errorMessage(
+						"FP118",
+						"Fragment placement must come from this exact form kit",
+					),
 				)
 			}
 			const at = placement.at ?? ""
@@ -495,16 +600,22 @@ function normalizeNodes(
 						idPrefix,
 						pathPrefix,
 						resolverScope: { appendPath: pathPrefix, trimSegments: 0 },
+						staticScope: options.staticScope,
 					},
 				),
 			)
 			continue
 		}
 
-		if (!isNodeKind(candidate.kind)) {
-			throw new TypeError(`Unknown UI node kind "${String(candidate.kind)}"`)
+		if (!builtNodes.has(candidate)) {
+			throw new TypeError(
+				errorMessage(
+					"FP119",
+					"UI nodes must come from a builder helper, such as ui.field, or from fragment.fields",
+				),
+			)
 		}
-		const kind = candidate.kind
+		const kind = candidate.kind as NodeKind
 		const traits = nodeKindTraits[kind]
 
 		const path = traits.pathBound
@@ -515,17 +626,21 @@ function normalizeNodes(
 				typeof candidate.control !== "string" ||
 				!Object.hasOwn(state.controls, candidate.control)
 			) {
-				throw new TypeError(`Unknown control "${String(candidate.control)}"`)
+				throw new TypeError(
+					errorMessage(
+						"FP120",
+						`Unknown control "${String(candidate.control)}"`,
+					),
+				)
 			}
-			if (
-				candidate.whenHidden !== undefined &&
-				typeof candidate.whenHidden !== "function"
-			) {
+			if (typeof candidate.whenHidden !== "function") {
 				readWhenHidden(candidate.whenHidden, String(path))
 			}
 		}
 		if (kind === "array" && !("itemDefault" in candidate)) {
-			throw new TypeError(`Array "${path}" requires itemDefault`)
+			throw new TypeError(
+				errorMessage("FP121", `Array "${path}" requires itemDefault`),
+			)
 		}
 		if (traits.pathBound && typeof candidate.errorDisplay !== "function") {
 			readErrorDisplay(candidate.errorDisplay, `${traits.label} "${path}"`)
@@ -538,15 +653,23 @@ function normalizeNodes(
 		const id = hasExplicitId ? joinId(options.idPrefix, localId) : localId
 		const scopedId = scopePath.length === 0 ? id : `${scopePath}:${id}`
 		if (state.ids.has(scopedId)) {
-			throw new TypeError(`Duplicate UI node id "${id}"`)
+			throw new TypeError(errorMessage("FP122", `Duplicate UI node id "${id}"`))
 		}
 		state.ids.add(scopedId)
 
 		const rawChildren = candidate.children
 		if (traits.container && !Array.isArray(rawChildren)) {
-			throw new TypeError(`${kind} node "${id}" requires children`)
+			throw new TypeError(
+				errorMessage("FP123", `${kind} node "${id}" requires children`),
+			)
 		}
 		validateStaticLayout(candidate, kind, state.grid)
+		const staticScope =
+			options.staticScope &&
+			!Object.entries(candidate).some(
+				([key, value]) =>
+					typeof value === "function" && !unresolvedFunctionKeys.has(key),
+			)
 		const childScope =
 			kind === "array" && path !== undefined
 				? joinPath(scopePath, path)
@@ -556,6 +679,7 @@ function normalizeNodes(
 				? {
 						idPrefix: options.idPrefix,
 						pathPrefix: "",
+						staticScope,
 						...(options.resolverScope === undefined
 							? {}
 							: {
@@ -568,7 +692,7 @@ function normalizeNodes(
 									},
 								}),
 					}
-				: options
+				: { ...options, staticScope }
 		const children = Array.isArray(rawChildren)
 			? normalizeNodes(rawChildren, state, childScope, id, childOptions)
 			: undefined
@@ -584,6 +708,13 @@ function normalizeNodes(
 		if (options.resolverScope !== undefined) {
 			resolverScopes.set(node, options.resolverScope)
 		}
+		if (
+			staticScope &&
+			kind !== "array" &&
+			(children ?? []).every((child) => staticNodes.has(child))
+		) {
+			staticNodes.add(node)
+		}
 		state.nodes.push(node)
 		normalized.push(node)
 	}
@@ -594,18 +725,18 @@ function normalizeNodes(
 function snapshotSourceNodes(source: readonly unknown[]): readonly unknown[] {
 	return Object.freeze(
 		source.map((candidate) => {
-			if (
-				!isRecord(candidate) ||
-				readFragmentPlacement(candidate) !== undefined
-			) {
+			if (!isRecord(candidate) || !builtNodes.has(candidate)) {
 				return candidate
 			}
-			return Object.freeze({
+			const snapshot = Object.freeze({
 				...candidate,
 				...(Array.isArray(candidate.children)
 					? { children: snapshotSourceNodes(candidate.children) }
 					: {}),
 			})
+			builtNodes.add(snapshot)
+
+			return snapshot
 		}),
 	)
 }
@@ -631,7 +762,12 @@ function normalizeFragmentPlacementOptions(
 		return undefined
 	}
 	if (!isRecord(options) || !("at" in options)) {
-		throw new TypeError("Fragment placement options must contain an at path")
+		throw new TypeError(
+			errorMessage(
+				"FP124",
+				"Fragment placement options must contain an at path",
+			),
+		)
 	}
 	return normalizePath(options.at)
 }
@@ -649,7 +785,29 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 	},
 	previous?: ResolvedDefinition,
 ): ResolvedDefinition {
+	const inputs: ResolveInputs = {
+		definition,
+		context,
+		disabled: options.disabled === true,
+		readOnly: options.readOnly === true,
+	}
+	const previousInputs =
+		previous === undefined ? undefined : resolveInputs.get(previous)
+	// A static node resolves to the same result while these inputs stay equal.
+	const reuseStatic =
+		previousInputs !== undefined &&
+		previousInputs.definition === definition &&
+		Object.is(previousInputs.context, context) &&
+		previousInputs.disabled === inputs.disabled &&
+		previousInputs.readOnly === inputs.readOnly
 	const resolvedNodes: ResolvedNode[] = []
+	/** Adds a reused subtree to the flat list in the order of a visit. */
+	const pushResolvedSubtree = (node: ResolvedNode): void => {
+		for (const children of resolvedChildLists(node)) {
+			for (const child of children) pushResolvedSubtree(child)
+		}
+		resolvedNodes.push(node)
+	}
 	const resolveNodes = (
 		nodes: readonly RuntimeNode[],
 		pathPrefix: string,
@@ -664,14 +822,18 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 		previousNodes?: readonly ResolvedNode[],
 	): readonly ResolvedNode[] => {
 		const nextNodes = nodes.map((node, index) => {
-			const { children: _templateChildren, ...nodeShell } = node
-			const resolverValues = getResolverValues(node, values, pathPrefix)
 			const id = idPrefix.length === 0 ? node.id : `${idPrefix}.${node.id}`
 			const previousCandidate = previousNodes?.[index]
 			const previousNode =
 				previousCandidate?.id === id && previousCandidate.kind === node.kind
 					? previousCandidate
 					: undefined
+			if (reuseStatic && previousNode !== undefined && staticNodes.has(node)) {
+				pushResolvedSubtree(previousNode)
+				return previousNode
+			}
+			const { children: _templateChildren, ...nodeShell } = node
+			const resolverValues = getResolverValues(node, values, pathPrefix)
 			const visible =
 				parent.visible &&
 				resolveValue(node.visible, true, resolverValues, context)
@@ -786,7 +948,8 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 									resolveNodes(
 										node.children ?? [],
 										`${path}.${index}`,
-										`${idPrefix}${idPrefix.length === 0 ? "" : "."}${path}.${index}`,
+										// The absolute row path already contains the outer row prefix.
+										`${path}.${index}`,
 										{ visible, disabled, readOnly },
 										previousArray?.itemChildren[index],
 									),
@@ -826,6 +989,7 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 						...common,
 						kind: "render",
 						component: node.component as RenderNodeComponent,
+						itemPath: pathPrefix,
 					})
 					break
 			}
@@ -847,17 +1011,18 @@ export function resolveDefinition<Schema extends StandardSchema, Context>(
 		"",
 		{
 			visible: true,
-			disabled: options.disabled === true,
-			readOnly: options.readOnly === true,
+			disabled: inputs.disabled,
+			readOnly: inputs.readOnly,
 		},
 		previous?.ui,
 	)
 	const nodes = reuseResolvedItems(previous?.nodes, resolvedNodes)
-	return previous !== undefined &&
-		ui === previous.ui &&
-		nodes === previous.nodes
-		? previous
-		: Object.freeze({ ui, nodes })
+	const resolved =
+		previous !== undefined && ui === previous.ui && nodes === previous.nodes
+			? previous
+			: Object.freeze({ ui, nodes })
+	resolveInputs.set(resolved, inputs)
+	return resolved
 }
 
 /** A field with a `whenHidden` action and its visibility for one value set. */
@@ -926,7 +1091,10 @@ export function resolveHiddenFieldWrites<Input extends FieldValues, Context>(
 		const initial = readPatchTarget(initialValues, path.split("."))
 		if (!initial.exists && field.pathPrefix.length > 0) {
 			throw new TypeError(
-				`Field "${path}" has no initial value for whenHidden "reset". Use whenHidden { value } instead.`,
+				errorMessage(
+					"FP125",
+					`Field "${path}" has no initial value for whenHidden "reset". Use whenHidden { value } instead.`,
+				),
 			)
 		}
 		writes.push({ path, value: initial.value })
@@ -1035,7 +1203,10 @@ function readWhenHidden(
 		return value as { readonly value: unknown }
 	}
 	throw new TypeError(
-		`Field "${path}" whenHidden must be "keep", "reset", or an object with a value property`,
+		errorMessage(
+			"FP126",
+			`Field "${path}" whenHidden must be "keep", "reset", or an object with a value property`,
+		),
 	)
 }
 
@@ -1047,7 +1218,9 @@ export function readErrorDisplay(
 	if (value === undefined || value === "all" || value === "first") {
 		return value
 	}
-	throw new TypeError(`${owner} errorDisplay must be "all" or "first"`)
+	throw new TypeError(
+		errorMessage("FP127", `${owner} errorDisplay must be "all" or "first"`),
+	)
 }
 
 /** Reuses a frozen resolved list when each item retains its reference. */
@@ -1118,7 +1291,9 @@ function getResolverValues(
 	}
 	const prefixSegments = pathPrefix.length === 0 ? [] : pathPrefix.split(".")
 	if (scope.trimSegments > prefixSegments.length) {
-		throw new TypeError("Fragment resolver scope is invalid")
+		throw new TypeError(
+			errorMessage("FP128", "Fragment resolver scope is invalid"),
+		)
 	}
 	const basePath = prefixSegments
 		.slice(0, prefixSegments.length - scope.trimSegments)
@@ -1157,7 +1332,9 @@ function resolveOptional<Value = unknown, Context = unknown>(
 		) => unknown
 	)(values, { context })
 	if (isPromiseLike(result)) {
-		throw new TypeError("UI resolvers must be synchronous")
+		throw new TypeError(
+			errorMessage("FP129", "UI resolvers must be synchronous"),
+		)
 	}
 	return result as Value
 }
@@ -1171,18 +1348,29 @@ function getPathValue(value: unknown, path: string): unknown {
 /** Validates a relative field or array path. */
 function normalizePath(value: unknown): string {
 	if (typeof value !== "string" || value.length === 0) {
-		throw new TypeError("Field and array paths must be non-empty strings")
+		throw new TypeError(
+			errorMessage("FP130", "Field and array paths must be non-empty strings"),
+		)
 	}
 	if (!/^[^.[\]]+(?:\.[^.[\]]+)*$/.test(value)) {
-		throw new TypeError(`Path "${value}" uses invalid React Hook Form syntax`)
+		throw new TypeError(
+			errorMessage(
+				"FP131",
+				`Path "${value}" uses invalid React Hook Form syntax`,
+			),
+		)
 	}
 	const segments = value.split(".")
 	for (const [index, segment] of segments.entries()) {
 		if (segment.length === 0 || reservedSegments.has(segment)) {
-			throw new TypeError(`Path "${value}" contains an invalid segment`)
+			throw new TypeError(
+				errorMessage("FP132", `Path "${value}" contains an invalid segment`),
+			)
 		}
 		if (index === 0 && /^\d+$/.test(segment)) {
-			throw new TypeError(`Path "${value}" starts with an array index`)
+			throw new TypeError(
+				errorMessage("FP133", `Path "${value}" starts with an array index`),
+			)
 		}
 	}
 	return value
@@ -1191,7 +1379,9 @@ function normalizePath(value: unknown): string {
 /** Validates a non-empty UI node ID. */
 function normalizeId(value: unknown): string {
 	if (typeof value !== "string" || value.length === 0) {
-		throw new TypeError("UI node ids must be non-empty strings")
+		throw new TypeError(
+			errorMessage("FP134", "UI node ids must be non-empty strings"),
+		)
 	}
 	return value
 }
@@ -1238,7 +1428,9 @@ function joinId(prefix: string, id: string): string {
 /** Validates a section column count against the kit grid. */
 function validateColumns(value: unknown, grid: readonly number[]): number {
 	if (typeof value !== "number" || !grid.includes(value)) {
-		throw new TypeError(`Section layout columns must use the kit grid`)
+		throw new TypeError(
+			errorMessage("FP135", `Section layout columns must use the kit grid`),
+		)
 	}
 	return value
 }
@@ -1257,7 +1449,9 @@ function validateSpan(
 		!grid.includes(value) ||
 		(parentColumns !== undefined && value > parentColumns)
 	) {
-		throw new TypeError("Layout span must use the kit grid")
+		throw new TypeError(
+			errorMessage("FP136", "Layout span must use the kit grid"),
+		)
 	}
 	return value
 }
@@ -1273,7 +1467,10 @@ function assertStandardSchema(
 		typeof value["~standard"].validate !== "function"
 	) {
 		throw new TypeError(
-			`${owner} schema must implement Standard Schema validate`,
+			errorMessage(
+				"FP137",
+				`${owner} schema must implement Standard Schema validate`,
+			),
 		)
 	}
 }

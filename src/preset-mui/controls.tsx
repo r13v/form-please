@@ -228,9 +228,7 @@ function MuiStringTextField({
 	multiline = false,
 	emptyIsUndefined = false,
 }: ControlProps<string | undefined, MuiTextFieldProps> & {
-	/** The semantic HTML input type. */
 	readonly type: TextInputType | DateInputType
-	/** Whether the TextField renders a textarea. */
 	readonly multiline?: boolean
 	/** Whether an empty HTML value maps to `undefined`. */
 	readonly emptyIsUndefined?: boolean
@@ -816,11 +814,8 @@ function renderAutocompleteInput({
 	readonly input: ControlProps<unknown>["input"]
 	/** Whether the control currently displays a validation error. */
 	readonly invalid: boolean
-	/** Whether user interaction is disabled. */
 	readonly disabled: boolean
-	/** Whether value changes are read-only. */
 	readonly readOnly: boolean
-	/** Whether the definition marks the field as required. */
 	readonly required: boolean
 }): ReactElement {
 	const { slotProps, ...muiTextFieldProps } = (textFieldProps ??
@@ -1066,14 +1061,10 @@ function MuiFileButton<Value extends File | undefined | readonly File[]>({
 	readonly i18n: Pick<MuiFormKitI18n, "chooseFile">
 	/** Whether the native input still owns the current field files. */
 	readonly hasNativeValue: boolean
-	/** Mutable reference to the hidden native file input. */
 	readonly inputElement: {
-		/** The mounted hidden input, or `null` before mount. */
 		current: HTMLInputElement | null
 	}
-	/** Text shown inside the file-selection button. */
 	readonly label: string
-	/** Whether the native input accepts more than one file. */
 	readonly multiple?: boolean
 	/** Updates the field from the native file selection. */
 	onFiles(files: FileList | null): void
@@ -1184,7 +1175,6 @@ function mergeRefs<Value>(
 	first:
 		| ((value: Value | null) => void)
 		| {
-				/** The current value held by a mutable React ref. */
 				current: Value | null
 		  }
 		| null

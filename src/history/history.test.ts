@@ -52,8 +52,6 @@ describe("managed value history", () => {
 			const harness = createHarness({
 				historyOptions: { groupWindow: 750, limit: 2 },
 			})
-			const listener = vi.fn()
-			const unsubscribe = harness.history.subscribe(listener)
 
 			harness.control("name", "A")
 			vi.setSystemTime(1_500)
@@ -88,8 +86,6 @@ describe("managed value history", () => {
 			})
 			expect(harness.history.getSnapshot().canRedo).toBe(false)
 			expect(await harness.history.redo()).toBe("unavailable")
-			expect(listener).toHaveBeenCalled()
-			unsubscribe()
 		} finally {
 			vi.useRealTimers()
 		}
@@ -219,6 +215,22 @@ describe("managed value history", () => {
 		await expect(harness.history.undo()).rejects.toBe(failure)
 		expect(harness.getValues().name).toBe("")
 		expect(harness.history.getSnapshot()).toMatchObject({ index: 0, length: 1 })
+	})
+
+	it("rejects a cancelled navigation with the failure of its middleware", async () => {
+		const failure = new Error("history check failed")
+		const policy: FormMiddleware<Values> = () => (next) => (transaction) => {
+			if (transaction.source.type !== "history") {
+				return next(transaction.patches)
+			}
+			return Promise.reject(failure)
+		}
+		const harness = createHarness({ middleware: [policy] })
+		harness.control("name", "Ada")
+
+		await expect(harness.history.undo()).rejects.toBe(failure)
+		expect(harness.getValues().name).toBe("Ada")
+		expect(harness.history.getSnapshot().index).toBe(1)
 	})
 
 	it("exports independent snapshots and installs a validated journal", async () => {

@@ -13,6 +13,7 @@ import {
 	type ManagedDiagnosticEvent,
 	publishFormDiagnosticEvent,
 } from "./diagnostics.js"
+import { errorMessage } from "./error-codes.js"
 import type { ArrayFieldPath, DeepReadonly, FieldPath } from "./types.js"
 
 enableMapSet()
@@ -123,12 +124,26 @@ export type AfterUpdate<Input extends FieldValues, Context = unknown> = (
 	transaction: ValueTransaction<Input, Context>,
 ) => void
 
+/**
+ * The outcome of one managed update. `transaction` is the final committed
+ * value transaction; `result` is the value that the middleware chain returned,
+ * which can be a Promise, or `undefined` when the chain did not run or
+ * returned nothing.
+ */
+export type FormUpdateResult<Input extends FieldValues, Context = unknown> =
+	| {
+			readonly committed: true
+			readonly transaction: ValueTransaction<Input, Context>
+			readonly result: unknown
+	  }
+	| { readonly committed: false; readonly result: unknown }
+
 /** Operations available while configuring middleware for one form. */
-export type FormMiddlewareApi<Input extends FieldValues> = {
+export type FormMiddlewareApi<Input extends FieldValues, Context = unknown> = {
 	/** Reads the current RHF values as a synchronous readonly view. */
 	getValues(): DeepReadonly<Input>
 	/** Starts a managed update when no transaction is currently active. */
-	update(recipe: FormUpdateRecipe<Input>): unknown
+	update(recipe: FormUpdateRecipe<Input>): FormUpdateResult<Input, Context>
 }
 
 /** Forwards authoritative patches to the next middleware or terminal. */
@@ -136,7 +151,7 @@ export type FormMiddlewareNext = (patches: readonly ValuePatch[]) => unknown
 
 /** One synchronous Redux-shaped value middleware. */
 export type FormMiddleware<Input extends FieldValues, Context = unknown> = (
-	api: FormMiddlewareApi<Input>,
+	api: FormMiddlewareApi<Input, Context>,
 ) => (
 	next: FormMiddlewareNext,
 ) => (transaction: ValueTransaction<Input, Context>) => unknown
@@ -157,7 +172,7 @@ export type RestorePolicy = {
 }
 
 /** Commits a feature restore with the policy that the feature chose. */
-export type ValueRestoreCommit<Input extends FieldValues, Context> = (
+type ValueRestoreCommit<Input extends FieldValues, Context> = (
 	transaction: ValueTransaction<Input, Context>,
 	policy: RestorePolicy,
 ) => void
@@ -206,13 +221,13 @@ type ManagedDispatchOptions<Input extends FieldValues, Context> = {
 /** Internal managed-update coordinator used by one form binding. */
 export type ValueCoordinator<Input extends FieldValues, Context> = {
 	/** Starts an imperative update with an `update` source. */
-	update(recipe: FormUpdateRecipe<Input>): unknown
+	update(recipe: FormUpdateRecipe<Input>): FormUpdateResult<Input, Context>
 	/** Starts a generated control or array update. */
 	dispatch(
 		recipe: FormUpdateRecipe<Input>,
 		source: ValueTransactionSource<Input>,
 		options?: ManagedDispatchOptions<Input, Context>,
-	): unknown
+	): FormUpdateResult<Input, Context>
 }
 
 /** Package-private operations shared with optional managed-value features. */
@@ -231,7 +246,7 @@ export type ValueCoordinatorCapability<Input extends FieldValues, Context> = {
 			{ type: "history" | "persistence" }
 		>,
 		policy: RestorePolicy,
-	): unknown
+	): FormUpdateResult<Input, Context>
 }
 
 const valueCoordinatorCapabilityKey = Symbol.for(
@@ -250,7 +265,10 @@ export function getValueCoordinatorCapability<
 			: (target as Record<PropertyKey, unknown>)[valueCoordinatorCapabilityKey]
 	if (capability === undefined) {
 		throw new TypeError(
-			"Managed value feature requires a current Form Please form binding",
+			errorMessage(
+				"FP313",
+				"Managed value feature requires a current Form Please form binding",
+			),
 		)
 	}
 	return capability as ValueCoordinatorCapability<Input, Context>
@@ -272,10 +290,12 @@ export function claimFeature(
 	capability: object,
 	key: symbol,
 	feature: object,
-	message: string,
+	name: string,
 ): void {
 	if (readFeatureClaim(capability, key) !== undefined) {
-		throw new TypeError(message)
+		throw new TypeError(
+			errorMessage("FP314", `A form can configure only one ${name} feature`),
+		)
 	}
 	Object.defineProperty(capability, key, { value: feature })
 }
@@ -302,6 +322,12 @@ type ActiveDispatch<Input extends FieldValues, Context> = {
 	}
 }
 
+/** The result of an update that committed nothing. */
+const notCommitted = Object.freeze({
+	committed: false as const,
+	result: undefined,
+})
+
 /** Creates one fixed middleware chain around an RHF terminal. */
 export function createValueCoordinator<
 	Input extends FieldValues,
@@ -313,7 +339,7 @@ export function createValueCoordinator<
 	let pipelineReady = false
 	let pipeline: TransactionDispatch<Input, Context>
 
-	const api: FormMiddlewareApi<Input> = {
+	const api: FormMiddlewareApi<Input, Context> = {
 		getValues: () => options.getValues() as DeepReadonly<Input>,
 		update: (recipe) => dispatch(recipe, { type: "update" }),
 	}
@@ -324,7 +350,12 @@ export function createValueCoordinator<
 		restore: (recipe, source, policy) => {
 			const commitRestore = options.restore
 			if (commitRestore === undefined) {
-				throw new TypeError("This form binding does not support value restore")
+				throw new TypeError(
+					errorMessage(
+						"FP315",
+						"This form binding does not support value restore",
+					),
+				)
 			}
 			return dispatch(recipe, source, {
 				allowTopLevelRemoval: true,
@@ -339,7 +370,12 @@ export function createValueCoordinator<
 
 	const terminal: TransactionDispatch<Input, Context> = (transaction) => {
 		if (activeDispatch === undefined) {
-			throw new TypeError("Value middleware next called outside a transaction")
+			throw new TypeError(
+				errorMessage(
+					"FP316",
+					"Value middleware next called outside a transaction",
+				),
+			)
 		}
 		const { trace } = activeDispatch
 		trace?.publish({ outcome: "start", phase: "commit", transaction })
@@ -361,20 +397,25 @@ export function createValueCoordinator<
 			| {
 					called: boolean
 					forwardedPatches?: readonly ValuePatch[]
-					open: boolean
 					readonly transaction: ValueTransaction<Input, Context>
 			  }
 			| undefined
 		const configured = middleware(api)
 		const handle = configured((patches) => {
-			if (frame === undefined || !frame.open) {
+			if (frame === undefined) {
 				throw new TypeError(
-					`Value middleware ${index} must call next synchronously`,
+					errorMessage(
+						"FP317",
+						`Value middleware ${index} must call next synchronously`,
+					),
 				)
 			}
 			if (frame.called) {
 				throw new TypeError(
-					`Value middleware ${index} cannot call next more than once`,
+					errorMessage(
+						"FP318",
+						`Value middleware ${index} cannot call next more than once`,
+					),
 				)
 			}
 			frame.called = true
@@ -391,7 +432,7 @@ export function createValueCoordinator<
 		})
 		const name = middleware.name.length === 0 ? {} : { name: middleware.name }
 		return (transaction) => {
-			frame = { called: false, open: true, transaction }
+			frame = { called: false, transaction }
 			const trace = activeDispatch?.trace
 			trace?.publish({ index, ...name, phase: "middleware-enter", transaction })
 			try {
@@ -416,7 +457,6 @@ export function createValueCoordinator<
 				})
 				throw error
 			} finally {
-				frame.open = false
 				frame = undefined
 			}
 		}
@@ -427,15 +467,21 @@ export function createValueCoordinator<
 		recipe: FormUpdateRecipe<Input>,
 		source: ValueTransactionSource<Input>,
 		dispatchOptions: ManagedDispatchOptions<Input, Context> = {},
-	): unknown {
+	): FormUpdateResult<Input, Context> {
 		if (!pipelineReady) {
 			throw new TypeError(
-				"Form middleware cannot update values while the pipeline initializes",
+				errorMessage(
+					"FP319",
+					"Form middleware cannot update values while the pipeline initializes",
+				),
 			)
 		}
 		if (activeDispatch !== undefined) {
 			throw new TypeError(
-				"Form middleware cannot start a nested value transaction",
+				errorMessage(
+					"FP320",
+					"Form middleware cannot start a nested value transaction",
+				),
 			)
 		}
 		const previousValues = options.getValues()
@@ -446,12 +492,14 @@ export function createValueCoordinator<
 				if (isPromiseLike(result)) {
 					// The synchronous error reports the cause; later draft writes fail on a revoked proxy.
 					result.then(undefined, () => {})
-					throw new TypeError("Managed update recipes must be synchronous")
+					throw new TypeError(
+						errorMessage("FP321", "Managed update recipes must be synchronous"),
+					)
 				}
 				return result as Draft<Input> | undefined
 			},
 		)
-		if (producedPatches.length === 0) return undefined
+		if (producedPatches.length === 0) return notCommitted
 
 		const patches = producedPatches as readonly ValuePatch[]
 		const transaction = createTransaction(
@@ -502,7 +550,7 @@ export function createValueCoordinator<
 			if (effectiveTransaction === undefined) {
 				trace?.publish({ outcome: "cancelled", phase: "before-update" })
 				trace?.end("cancelled")
-				return undefined
+				return notCommitted
 			}
 			trace?.publish({
 				outcome:
@@ -555,12 +603,16 @@ export function createValueCoordinator<
 				trace?.end("failed", { error })
 				throw error
 			}
-			if (!afterFailed) {
+			// afterUpdate runs only after a commit, so a failure implies one.
+			if (committed === undefined || !afterFailed) {
 				trace?.end(committed === undefined ? "cancelled" : "committed", {
 					result,
 				})
 				trace?.settle(result)
-				return result
+
+				return committed === undefined
+					? { committed: false, result }
+					: { committed: true, transaction: committed, result }
 			}
 			if (!isPromiseLike(result)) {
 				trace?.end("failed", { error: afterError })
@@ -576,7 +628,7 @@ export function createValueCoordinator<
 			)
 			trace?.end("failed", { error: afterError, result: combined })
 			trace?.settle(combined)
-			return combined
+			return { committed: true, transaction: committed, result: combined }
 		} catch (error) {
 			trace?.end("failed", { error })
 			throw error
@@ -885,7 +937,7 @@ function assertSynchronousHookResult(
 ): void {
 	if (!isPromiseLike(result)) return
 	void Promise.resolve(result).catch(() => undefined)
-	throw new TypeError(`${hook} must be synchronous`)
+	throw new TypeError(errorMessage("FP322", `${hook} must be synchronous`))
 }
 
 /** Detects Promise-like results without constraining their concrete class. */
@@ -905,7 +957,7 @@ function updateAggregateError(
 ): AggregateError {
 	return new AggregateError(
 		[primary, after],
-		"Managed update failed after commit",
+		errorMessage("FP323", "Managed update failed after commit"),
 	)
 }
 
@@ -947,7 +999,10 @@ function assertNoTopLevelRemoval(
 	)
 	if (removesTopLevel || omitsPreviousKey) {
 		throw new TypeError(
-			"Managed updates cannot remove a top-level form value; assign undefined instead",
+			errorMessage(
+				"FP324",
+				"Managed updates cannot remove a top-level form value; assign undefined instead",
+			),
 		)
 	}
 }
@@ -965,7 +1020,10 @@ function assertActiveArrayStructure<Input extends FieldValues, Context>(
 		actual.some((patch, index) => !samePatch(patch, expected[index]))
 	) {
 		throw new TypeError(
-			"Array middleware cannot change length or order beyond the source action, or replace the active array or its parent",
+			errorMessage(
+				"FP325",
+				"Array middleware cannot change length or order beyond the source action, or replace the active array or its parent",
+			),
 		)
 	}
 }

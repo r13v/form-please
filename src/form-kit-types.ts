@@ -1,36 +1,29 @@
-import type {
-	ComponentPropsWithoutRef,
-	ReactElement,
-	ReactNode,
-	RefObject,
-} from "react"
+import type { ComponentPropsWithoutRef, ReactElement, ReactNode } from "react"
 import type { FieldValues, Mode, UseFormReturn } from "react-hook-form"
 import type { FormArray } from "./array-reconcile.js"
-import type { ResolvedDefinition } from "./definition.js"
-import type { FormIssueStore } from "./form-issues.js"
 import type {
 	ArrayFieldPath,
-	ControlDefinitionRegistry,
 	ErrorDisplay,
 	FieldPath,
 	FormDefinition,
 	FormDefinitionBuilder,
-	FormDefinitionSource,
 	FormDefinitionUpdatePolicy,
 	FormFragment,
 	FormInput,
+	FormIssue,
 	FormKitSlots,
+	FormKitTypes,
 	FormOutput,
 	FormPleaseStyle,
 	PathValue,
 	StandardSchema,
-	SubmitSlotProps,
+	SubmitRenderProps,
+	UseFieldResult,
 } from "./types.js"
 import type {
 	FormMiddleware,
 	FormUpdateRecipe,
-	ValueCoordinator,
-	ValueTransactionCommit,
+	FormUpdateResult,
 } from "./value-middleware.js"
 
 /** Narrows schema input to the object shape required by React Hook Form. */
@@ -144,6 +137,52 @@ export type FormSubmissionSnapshot<Name extends string = string> = {
 	readonly error: { readonly value: unknown } | null
 }
 
+/**
+ * The result of one submission. An accepted submission passed schema and
+ * action validation, and its `onSubmit` resolved.
+ */
+export type FormSubmitResult<Name extends string = string> =
+	| {
+			readonly accepted: true
+			/** The name of the action that ran. */
+			readonly action: Name
+	  }
+	| {
+			readonly accepted: false
+			/** The name of the requested action. */
+			readonly action: Name
+			/** The schema or action validation failed. */
+			readonly reason: "invalid"
+			/** The schema issues or the action issues that rejected the submission. */
+			readonly issues: readonly FormIssue[]
+	  }
+	| {
+			readonly accepted: false
+			/** The name of the requested action. */
+			readonly action: Name
+			/** Another submission was running, or the form option `disabled` is set. */
+			readonly reason: "disabled" | "pending"
+	  }
+	| {
+			readonly accepted: false
+			/** The name of the requested action. */
+			readonly action: Name
+			/** The action `onSubmit` rejected. */
+			readonly reason: "failed"
+			/** The rejection of the action `onSubmit`. */
+			readonly error: unknown
+	  }
+
+/** The action argument of `form.submit`: optional only for the `onSubmit` shorthand. */
+type SubmitArguments<
+	Schema extends StandardSchema,
+	Context,
+	Actions extends string,
+	Name extends Actions,
+> = [Actions] extends ["submit"]
+	? [action?: FormAction<Schema, Context, Name>]
+	: [action: FormAction<Schema, Context, Name>]
+
 /** An external store with the live submission state of one form. */
 export type FormSubmission<Name extends string = string> = {
 	/** Returns the current immutable submission snapshot. */
@@ -223,20 +262,40 @@ export type FormBinding<
 	/** The normalized definition fixed for this binding. */
 	readonly definition: FormDefinition<
 		Schema,
-		ControlDefinitionRegistry,
-		Context
+		KitWithContext<FormKitTypes, Context>
 	> &
 		FormDefinitionUpdatePolicy<Schema, Context>
-	/** Application data available to resolvers and controls. */
+	/**
+	 * The context of the latest committed render, which generated UI uses. In
+	 * the render that passes a new `context` option, this still returns the
+	 * previous context; read your own variable there. A new object with the
+	 * same top-level values keeps the first object.
+	 */
 	readonly context: Context
 	/** Atomically applies one managed value recipe through middleware. */
-	update(recipe: FormUpdateRecipe<FormValues<Schema>>): unknown
+	update(
+		recipe: FormUpdateRecipe<FormValues<Schema>>,
+	): FormUpdateResult<FormValues<Schema>, Context>
 	/** Submit actions with stable identity for `kit.Submit`. */
 	readonly actions: {
 		readonly [Name in Actions]: FormAction<Schema, Context, Name>
 	}
 	/** The live submission state, readable with `useSnapshot`. */
 	readonly submission: FormSubmission<Actions>
+	/**
+	 * Runs one submit action through the same path as a native submit and
+	 * resolves with its result. The form element does not have to be mounted.
+	 */
+	submit<Name extends Actions = Actions>(
+		...action: SubmitArguments<Schema, Context, Actions, Name>
+	): Promise<FormSubmitResult<Name>>
+	/**
+	 * Lists the paths of the visible fields under one node ID, or of the whole
+	 * form, for the current values and the committed `context`, `disabled` and
+	 * `readOnly` that generated UI uses. The node does not have to be mounted.
+	 * An unknown ID throws.
+	 */
+	fieldPaths(nodeId?: string): FieldPath<FormValues<Schema>>[]
 	/** Replaces the external issues and optionally moves focus. */
 	setIssues(
 		issues: readonly FormIssueInput<Schema>[],
@@ -251,7 +310,9 @@ export type FormBinding<
 			Extract<Path, FieldPath<FormValues<Schema>>>
 		> extends readonly (infer Item)[]
 			? Item
-			: never
+			: never,
+		FormValues<Schema>,
+		Context
 	>
 }
 
@@ -281,52 +342,6 @@ export type AutoFormProps<
 	Context = unknown,
 > = FormProps<Schema, Context>
 
-/** Private form data used by generated runtime components. */
-export type RuntimeForm = {
-	/** The React Hook Form API with erased public type parameters. */
-	readonly api: UseFormReturn<FieldValues, unknown, unknown>
-	/** Application data supplied to controls and resolvers. */
-	readonly context: unknown
-	/** The normalized definition fixed for this form. */
-	readonly definition: FormDefinition
-	/** Canonical coordinator capability used by optional diagnostics. */
-	readonly diagnosticTarget: object
-	/** Dispatches a generated managed update through middleware. */
-	readonly dispatch: ValueCoordinator<FieldValues, unknown>["dispatch"]
-	/** Commits one terminal transaction to React Hook Form. */
-	readonly commit: ValueTransactionCommit<FieldValues, unknown>
-	/** Whether all generated controls are disabled. */
-	readonly disabled: boolean
-	/** Whether all generated controls are read-only. */
-	readonly readOnly: boolean
-	/** The error display used by nodes without their own value. */
-	readonly errorDisplay: ErrorDisplay
-	/** Focusable generated inputs indexed by absolute path. */
-	readonly inputRefs: Map<string, HTMLElement>
-	/** The first summary issue used as a focus fallback. */
-	readonly errorSummaryRef: RefObject<HTMLElement | null>
-	/** The mounted native form element, when one exists. */
-	formElement: HTMLFormElement | null
-	/** Action and external issues stored beside schema errors. */
-	readonly issues: FormIssueStore
-	/** The live submission state. */
-	readonly submission: FormSubmission
-	/** Forgets stored issues and the last submission error after a native reset. */
-	readonly resetSubmission: () => void
-	/** The action that `kit.Submit` without an action runs, when one exists. */
-	readonly defaultAction: string | undefined
-	/** The action that Enter in a single-line field runs, when one exists. */
-	readonly implicitAction: string | undefined
-	/** Runs one action unless another submission is pending. */
-	readonly submitAction: (
-		name: string,
-		submitter: FormSubmitDetails<AnyFormSchema>["submitter"],
-		formElement: HTMLFormElement,
-	) => Promise<void>
-	/** The latest resolved UI already retained by the generated fields. */
-	resolved?: ResolvedDefinition
-}
-
 /** Validation policy used after one managed value commit. */
 export type ManagedValidationOptions = {
 	/** Reads the live RHF submitted flag, which a render-time read can leave stale. */
@@ -337,273 +352,182 @@ export type ManagedValidationOptions = {
 /** Slot options after their concrete form-kit type is erased. */
 export type RuntimeSlotOptions = Readonly<unknown> | undefined
 /** Form kit slots with erased application option types. */
-export type RuntimeSlots = FormKitSlots<
-	Record<string, unknown>,
-	Record<string, unknown>,
-	Record<string, unknown>
->
+export type RuntimeSlots = FormKitSlots<{
+	readonly fieldOptions: Record<string, unknown>
+	readonly sectionOptions: Record<string, unknown>
+	readonly arrayOptions: Record<string, unknown>
+}>
 
-/** Object or schema-bound builder authoring accepted by definition methods. */
-type DefinitionAuthoringSource<
-	Schema extends StandardSchema,
-	Controls extends ControlDefinitionRegistry,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Context,
-	Grid extends number,
-> =
-	| FormDefinitionSource<
-			Schema,
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid
-	  >
-	| FormDefinitionBuilder<
-			Schema,
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid
-	  >
+/** Replaces the context of a kit type bag and keeps its other contracts. */
+type KitWithContext<Kit extends FormKitTypes, Context> = {
+	readonly controls: Kit["controls"]
+	readonly context: Context
+	readonly fieldOptions: Kit["fieldOptions"]
+	readonly sectionOptions: Kit["sectionOptions"]
+	readonly arrayOptions: Kit["arrayOptions"]
+	readonly grid: Kit["grid"]
+}
 
 /** The typed `defineFragment` method exposed by a form kit. */
-export type DefineFragment<
-	Controls extends ControlDefinitionRegistry,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Context,
-	Grid extends number,
-> = <Schema extends StandardSchema>(
+export type DefineFragment<Kit extends FormKitTypes> = <
+	Schema extends StandardSchema,
+>(
 	schema: FormInput<Schema> extends FieldValues ? Schema : never,
-	source: DefinitionAuthoringSource<
-		Schema,
-		Controls,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Context,
-		Grid
-	>,
-) => FormFragment<
-	Schema,
-	Controls,
-	Context,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Grid
->
+	build: FormDefinitionBuilder<Schema, Kit>,
+) => FormFragment<Schema, Kit>
 
 /** The typed `defineForm` method exposed by a form kit. */
-export type DefineForm<
-	Controls extends ControlDefinitionRegistry,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Context,
-	Grid extends number,
-> = <Schema extends StandardSchema>(
+export type DefineForm<Kit extends FormKitTypes> = <
+	Schema extends StandardSchema,
+>(
 	schema: FormInput<Schema> extends FieldValues ? Schema : never,
-	source: DefinitionAuthoringSource<
-		Schema,
-		Controls,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Context,
-		Grid
-	>,
-	options?: DefineFormOptions<Schema, Context>,
+	build: FormDefinitionBuilder<Schema, Kit>,
+	options?: DefineFormOptions<Schema, Kit["context"]>,
 ) => FormDefinition<
 	Schema,
-	Controls,
-	Context,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Grid,
-	FormDefinitionUpdatePolicy<Schema, Context>
+	Kit,
+	FormDefinitionUpdatePolicy<Schema, Kit["context"]>
 >
 
 /** The typed `useForm` hook exposed by a form kit. */
-export type UseForm<
-	Controls extends ControlDefinitionRegistry,
-	FieldOptions,
-	SectionOptions,
-	ArrayOptions,
-	Context,
-	Grid extends number,
-> = {
+export type UseForm<Kit extends FormKitTypes> = {
 	<Schema extends StandardSchema>(
 		definition: FormDefinition<
 			Schema,
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid,
-			FormDefinitionUpdatePolicy<Schema, Context>
+			Kit,
+			FormDefinitionUpdatePolicy<Schema, Kit["context"]>
 		>,
-		options: UseFormOptions<Schema, Context> & { readonly actions?: undefined },
-	): FormBinding<Schema, Context, "submit">
+		options: UseFormOptions<Schema, Kit["context"]> & {
+			readonly actions?: undefined
+		},
+	): FormBinding<Schema, Kit["context"], "submit">
 	<
 		Schema extends StandardSchema,
-		const Actions extends FormActionsConfig<Schema, Context>,
+		const Actions extends FormActionsConfig<Schema, Kit["context"]>,
 	>(
 		definition: FormDefinition<
 			Schema,
-			Controls,
-			Context,
-			FieldOptions,
-			SectionOptions,
-			ArrayOptions,
-			Grid,
-			FormDefinitionUpdatePolicy<Schema, Context>
+			Kit,
+			FormDefinitionUpdatePolicy<Schema, Kit["context"]>
 		>,
-		options: UseFormOptions<Schema, Context, Actions> & {
+		options: UseFormOptions<Schema, Kit["context"], Actions> & {
 			readonly actions: Actions
 		},
-	): FormBinding<Schema, Context, Extract<keyof Actions, string>>
+	): FormBinding<Schema, Kit["context"], Extract<keyof Actions, string>>
 }
 
-/** A fixed registry, renderer, and React Hook Form integration. */
-export interface FormKit<
-	Controls extends ControlDefinitionRegistry,
-	FieldOptions = never,
-	SectionOptions = never,
-	ArrayOptions = never,
-	Context = unknown,
-	Grid extends number = 1 | 2 | 3 | 4,
-> {
+/** A private key that carries the type bag of a form kit without runtime data. */
+declare const formKitTypes: unique symbol
+
+/** Reads the type bag of a form kit, for example `FormKitTypesOf<typeof kit>`. */
+export type FormKitTypesOf<
+	Kit extends { readonly [formKitTypes]?: FormKitTypes },
+> = Kit extends { readonly [formKitTypes]?: infer Types extends FormKitTypes }
+	? Types
+	: never
+
+/** A fixed registry, renderer, and React Hook Form integration, typed by a kit type bag. */
+export interface FormKit<Kit extends FormKitTypes> {
+	/** Phantom type data that `FormKitTypesOf` reads. */
+	readonly [formKitTypes]?: Kit
 	/** The immutable named control registry. */
-	readonly controls: Controls
+	readonly controls: Kit["controls"]
 	/** The immutable structural slot registry. */
-	readonly slots: FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
+	readonly slots: FormKitSlots<Kit>
 	/** The allowed grid column counts and node spans. */
-	readonly grid: readonly Grid[]
+	readonly grid: readonly Kit["grid"][]
 	/** Validates and binds one reusable schema-owned UI fragment to this kit. */
-	readonly defineFragment: DefineFragment<
-		Controls,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Context,
-		Grid
-	>
+	readonly defineFragment: DefineFragment<Kit>
 	/** Validates and binds a typed definition to this kit. */
-	readonly defineForm: DefineForm<
-		Controls,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Context,
-		Grid
-	>
+	readonly defineForm: DefineForm<Kit>
 	/** Creates a React Hook Form binding for a definition from this kit. */
-	readonly useForm: UseForm<
-		Controls,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		Context,
-		Grid
-	>
+	readonly useForm: UseForm<Kit>
 	/** Provides form contexts and owns native submit and reset events. */
 	readonly Form: <
 		Schema extends StandardSchema,
-		BindingContext extends Context = Context,
+		BindingContext extends Kit["context"] = Kit["context"],
 	>(
 		props: FormProps<Schema, BindingContext>,
 	) => ReactElement
 	/** Renders resolved definition nodes followed by optional application content. */
 	readonly Fields: (props: {
+		/** The ID of one definition node; only that node and its children render. */
+		readonly node?: string
 		/** Content rendered after the generated fields. */
 		readonly children?: ReactNode
 	}) => ReactElement
+	/** Renders the issues of the surrounding `Form` that no enabled generated input shows. */
+	readonly ErrorSummary: () => ReactNode
+	/** Connects one custom field to the binding of the surrounding `Form`. */
+	readonly useField: <
+		Schema extends StandardSchema,
+		Path extends FieldPath<FormValues<Schema>>,
+	>(
+		form: FormBinding<Schema, Kit["context"], string>,
+		path: Path,
+	) => UseFieldResult<PathValue<FormValues<Schema>, Path>>
+	/** Returns the binding of the surrounding `Form`; throws outside one. */
+	readonly useFormContext: <
+		Schema extends StandardSchema = AnyFormSchema,
+	>() => FormBinding<Schema, Kit["context"]>
 	/** Renders the configured submit slot with current form state. */
 	readonly Submit: {
 		/** Renders static content for an action or the `submit` shorthand action. */
-		<Schema extends StandardSchema, BindingContext extends Context = Context>(
+		<
+			Schema extends StandardSchema,
+			BindingContext extends Kit["context"] = Kit["context"],
+		>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type"> & {
 				/**
-				 * The action that this button runs. Outside `Form`, the action
-				 * selects the form. Set the native `form` attribute to the Form `id`.
+				 * The action that this button runs. Inside `Form`, it must belong to
+				 * the surrounding form. Outside `Form`, it selects the form; set the
+				 * native `form` attribute to the Form `id`.
 				 */
 				readonly action?: FormAction<Schema, BindingContext>
-				/**
-				 * The form binding. Outside `Form`, the binding selects the form.
-				 * Set the native `form` attribute to the Form `id`.
-				 */
-				readonly binding?: FormBinding<Schema, BindingContext>
 			},
 		): ReactElement
 		/** Renders custom content with live state typed by the action form. */
-		<Schema extends StandardSchema, BindingContext extends Context = Context>(
+		<
+			Schema extends StandardSchema,
+			BindingContext extends Kit["context"] = Kit["context"],
+		>(
 			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
 				/**
-				 * The action that this button runs. Outside `Form`, the action
-				 * selects the form. Set the native `form` attribute to the Form `id`.
+				 * The action that this button runs. It types `values`. Inside `Form`,
+				 * it must belong to the surrounding form. Outside `Form`, it selects
+				 * the form; set the native `form` attribute to the Form `id`.
 				 */
 				readonly action: FormAction<Schema, BindingContext>
-				/** The form binding. It must own the action. */
-				readonly binding?: FormBinding<Schema, BindingContext>
 				/** Renders custom content from live typed submit state. */
-				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
-			},
-		): ReactElement
-		/** Renders custom content with live state typed by the matching binding. */
-		<Schema extends StandardSchema, BindingContext extends Context = Context>(
-			props: Omit<ComponentPropsWithoutRef<"button">, "type" | "children"> & {
-				/**
-				 * The binding of the surrounding `Form`. Outside `Form`, the binding
-				 * selects the form. Set the native `form` attribute to the Form `id`.
-				 */
-				readonly binding: FormBinding<Schema, BindingContext>
-				/** Renders custom content from live typed submit state. */
-				readonly children: (props: SubmitSlotProps<Schema>) => ReactNode
+				readonly children: (props: SubmitRenderProps<Schema>) => ReactNode
 			},
 		): ReactElement
 	}
 	/** Composes `Form`, the error summary, and generated fields. */
 	readonly AutoForm: <
 		Schema extends StandardSchema,
-		BindingContext extends Context = Context,
+		BindingContext extends Kit["context"] = Kit["context"],
 	>(
 		props: AutoFormProps<Schema, BindingContext>,
 	) => ReactElement
 	/** Returns a type-only view of this kit for a narrower context contract. */
-	readonly forContext: <NextContext extends Context>() => FormKit<
-		Controls,
-		FieldOptions,
-		SectionOptions,
-		ArrayOptions,
-		NextContext,
-		Grid
+	readonly forContext: <NextContext extends Kit["context"]>() => FormKit<
+		KitWithContext<Kit, NextContext>
 	>
 }
 
-/** Registries and optional grid used to create an immutable form kit. */
-export type CreateFormKitOptions<
-	Controls extends ControlDefinitionRegistry,
-	FieldOptions = never,
-	SectionOptions = never,
-	ArrayOptions = never,
-	Grid extends number = 1 | 2 | 3 | 4,
-> = {
+/** Registries and optional grid used to create an immutable form kit, typed by a kit type bag without context. */
+export type CreateFormKitOptions<Kit extends Omit<FormKitTypes, "context">> = {
 	/** The complete named control registry. */
-	readonly controls: Controls
+	readonly controls: Kit["controls"]
 	/** The complete structural slot registry. */
-	readonly slots: FormKitSlots<FieldOptions, SectionOptions, ArrayOptions>
+	readonly slots: FormKitSlots<{
+		readonly fieldOptions: Kit["fieldOptions"]
+		readonly sectionOptions: Kit["sectionOptions"]
+		readonly arrayOptions: Kit["arrayOptions"]
+	}>
 	/** Allowed grid column counts and spans. Defaults to `1` through `4`. */
-	readonly grid?: readonly Grid[]
+	readonly grid?: readonly Kit["grid"][]
 	/** How many validation messages each field and array shows. Defaults to `"all"`. */
 	readonly errorDisplay?: ErrorDisplay
 }

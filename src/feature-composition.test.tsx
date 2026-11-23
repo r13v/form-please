@@ -36,7 +36,7 @@ describe("history with persistence", () => {
 		})
 		const definition = kit.defineForm(
 			schema,
-			{ ui: [{ control: "text", kind: "field", label: "Name", path: "name" }] },
+			(ui) => [ui.field("name", { control: "text", label: "Name" })],
 			{ middleware: [history, persistence] },
 		)
 		let form!: FormBinding<typeof schema>

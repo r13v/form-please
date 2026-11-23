@@ -14,7 +14,7 @@ These rules apply to the whole checkout. Work from the repository root. Form, Pl
 
 ## Commands and checks
 
-Use the Node.js version from `package.json#engines` and local dependencies (`npm ci`, and `npm ci --prefix docs-site` for the site).
+Use the Node.js version from `.nvmrc` (`package.json#devEngines` checks it) and local dependencies (`npm ci`, and `npm ci --prefix docs-site` for the site).
 
 - During work: run only the checks that the change needs, and only on the changed files: `npx biome check <files>`, `npx vitest run <test files>`, and `npx tsc -p tsconfig.json` when types or exports change. Run `npm run site:test` when a page, a public export or an `i18n` key changes. A documentation-only edit in `docs/` needs no code checks.
 - At the end of the task, once: `npm run verify` — Biome, all unit tests, the build, the type budget, browser tests, package tests, the shadcn registry, smoke fixtures, publint and attw, Knip. When the docs site changes, also run `npm run site:verify:preview`. Read the exit code: do not pipe a check into `tail` without `set -o pipefail`.

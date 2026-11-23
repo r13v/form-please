@@ -33,7 +33,9 @@ const javaScriptEntrypoints = {
 describe("package metadata", () => {
 	it("publishes only the supported package surface", () => {
 		expect(packageJson).toMatchObject({
-			engines: { node: ">=24" },
+			devEngines: {
+				runtime: { name: "node", onFail: "error", version: ">=24" },
+			},
 			files: ["dist", "skills"],
 			license: "MIT",
 			name: "form-please",
@@ -50,12 +52,22 @@ describe("package metadata", () => {
 		expect(packageLock.packages[""].version).toBe(packageJson.version)
 	})
 
-	it("keeps React Hook Form required and Material UI peers optional", () => {
+	it("keeps React Hook Form required and the preset and devtools peers optional", () => {
 		expect(packageJson.peerDependenciesMeta).toEqual({
 			"@emotion/react": { optional: true },
 			"@emotion/styled": { optional: true },
+			"@hookform/devtools": { optional: true },
 			"@mui/material": { optional: true },
+			"@uiw/react-json-view": { optional: true },
 		})
+	})
+
+	it("does not restrict the Node.js version of consumers", () => {
+		expect(packageJson).not.toHaveProperty("engines")
+		expect(Object.keys(packageJson.dependencies).sort()).toEqual([
+			"@standard-schema/spec",
+			"immer",
+		])
 	})
 
 	it("lets release automation own the package version", () => {

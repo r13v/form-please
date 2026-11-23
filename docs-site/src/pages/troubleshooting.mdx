@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Find the cause of a common problem, such as a submit that does not run, a rejected path, a missing transformed value, or a skipped change.
+description: Find the cause of a common problem, such as a submit that does not run, a rejected path, or a skipped change, and the cause and fix of each error code.
 showAskAi: false
 searchPriority: 2
 ---
@@ -8,7 +8,8 @@ searchPriority: 2
 # Troubleshooting
 
 Find your symptom on this page. Each entry gives the cause and a link to the
-section that explains the rule.
+section that explains the rule. If the library throws an error, find its code
+in [Find an error by its code](#find-an-error-by-its-code).
 
 ## `onSubmit` is not called
 
@@ -55,20 +56,573 @@ validation](/middleware#form-state-and-validation).
 Load the data first, and then mount the form component. See [Load an edit-form
 baseline](/recipes#load-an-edit-form-baseline) and [`useForm`](/api#useform).
 
-## `kit.useForm` requires a definition from this exact form kit
+## Find an error by its code
 
-`kit.useForm` accepts only a definition that the same kit instance created.
-The hook keeps its first definition for the complete mount. See [Definition
-lifetime](/definitions#definition-lifetime).
+Each error that Form, Please throws starts its message with a code in brackets, for example `[FP101] Unknown UI node id "email"`. The error class does not depend on the code. A code keeps its meaning in all versions: Form, Please does not renumber or reuse a code. The anchor of each entry is the code in lowercase, for example `/troubleshooting#fp101`.
 
-If this error appears after a hot reload, the cause can be the development
-server. A hot reload can create a new kit instance and keep the hook state of a
-mounted component. The mounted component then holds a definition from the
-previous kit. Reload the page, or give the component that calls `kit.useForm` a
-new `key` to remount it. A remount discards the unsaved values of that form.
+To handle an error in code, match the code at the start of the message, not the text after it. The text after the code can change in a minor version.
 
-If the error appears without a hot reload, import the definition and the kit
-from the same module. Two calls to `createFormKit` create two different kits.
+## Form kits, forms, and components
+
+### FP001
+
+`createFormKit requires a <name> slot`. The `slots` option of `createFormKit` does not contain a required slot. Add a component for each slot that `FormKitSlots` requires. Read [Form kits](/form-kits).
+
+### FP002
+
+`kit.useForm requires a definition from this exact form kit`. `kit.useForm` accepts only a definition that the same kit instance created. The hook keeps its first definition for the complete mount. Read [Definition lifetime](/definitions#definition-lifetime).
+
+If this error appears after a hot reload, the cause can be the development server. A hot reload can create a new kit instance and keep the hook state of a mounted component. The mounted component then holds a definition from the previous kit. Reload the page, or give the component that calls `kit.useForm` a new `key` to remount it. A remount discards the unsaved values of that form.
+
+If the error appears without a hot reload, import the definition and the kit from the same module. Two calls to `createFormKit` create two different kits.
+
+### FP003
+
+`Form defaultValues must be an object`. The `defaultValues` option of `kit.useForm` is not a plain object. Give an object that matches the schema input. Read [`useForm`](/api#useform).
+
+### FP004
+
+`Form binding is not mounted by this form kit`. The `form` prop of `kit.Form` or `kit.AutoForm` comes from a different kit, or it is not a binding that `kit.useForm` returned. Pass the binding from `kit.useForm` of the same kit.
+
+### FP005
+
+`<owner> must be called inside a Form of this form kit`. A hook such as `kit.useField` or `kit.useFormContext`, or a component such as `kit.Fields` or `kit.ErrorSummary`, runs outside `kit.Form`, or inside a `kit.Form` of a different kit. A `kit.Submit` inside a `kit.Form` of a different kit also throws this error. Render the component inside `kit.Form` of the same kit.
+
+### FP006
+
+`kit.useField binding must match the surrounding Form`. The binding that you pass to `kit.useField` is not the binding of the surrounding `kit.Form`. Pass the same binding, or read it with `kit.useFormContext`.
+
+### FP007
+
+`Submit action must belong to the surrounding Form`. Inside `kit.Form`, the `action` prop of `kit.Submit` comes from a different form. Use an action from `form.actions` of the surrounding form. Read [`Form`, `Fields`, `Submit`, and `AutoForm`](/api#form-fields-submit-and-autoform).
+
+### FP008
+
+`Submit outside Form requires an action`. A `kit.Submit` outside `kit.Form` has no `action`, so it cannot find its form. Set `action` to an action from `form.actions`, for example `form.actions.submit`, and set the native `form` attribute to the Form `id`. Read [Submit from a dialog footer](/recipes#submit-from-a-dialog-footer).
+
+### FP009
+
+`Submit action is not mounted by this form kit`. The `action` prop of a `kit.Submit` outside `kit.Form` comes from a form of a different kit. Render `Submit` of the kit that created the form.
+
+### FP010
+
+`Submit requires an action when useForm configures actions`. `kit.useForm` has named `actions` and no `onSubmit`, so a `kit.Submit` without `action` has no default action. Set `action` to one of `form.actions`. Read [Submit actions](/workflows).
+
+### FP012
+
+`React Hook Form id context is missing`. A control or slot that reads the field ID renders outside the generated form tree. Render it through a generated field or inside `kit.Form`.
+
+### FP013
+
+`createNativeControls().select cannot combine props.emptyOption with an option whose value is ""`. The native select uses the empty string for its empty option. Remove the option with the value `""`, or remove `emptyOption`.
+
+### FP014
+
+`createNativeControls().select requires props.emptyOption to represent undefined`. The field value can be `undefined`, but the native select has no empty option to show it. Set `emptyOption`, or give the field a default value that is one of the options.
+
+### FP015
+
+`Unsupported <kind>`. A value outside a closed union reaches the library at run time, for example an unknown node kind or an unknown array action. TypeScript rejects these values. Find the code that bypasses the types, for example a cast or a value from JSON, and give a supported value.
+
+## Definitions, fragments, and resolvers
+
+### FP101
+
+`Unknown UI node id "<id>"`. An API that accepts a node ID, such as `kit.Fields node` or `form.fieldPaths`, receives an ID that the definition does not contain. Use an ID from the definition. Read [IDs and paths](/definitions#ids-and-paths).
+
+### FP102
+
+`Array builder children must be a function`. The children of `ui.array` are not a builder function. Pass a function that receives the row builder and returns a node array. Read [Arrays](/definitions#arrays).
+
+### FP103
+
+`Array builder children must return a ui array`. The children function of `ui.array` does not return an array. Return an array of nodes that the row builder creates.
+
+### FP104
+
+`<owner> grid must be a non-empty array`. The `grid` option of `createFormKit` is empty or not an array. Give at least one column count. Read [Form kits](/form-kits).
+
+### FP105
+
+`<owner> grid values must be positive integers`. A value of the `grid` option is not a positive integer. Use whole column counts such as `1`, `2`, and `3`.
+
+### FP106
+
+`<owner> grid cannot contain duplicate <value>`. The `grid` option repeats a column count. Remove the duplicate.
+
+### FP107
+
+`<owner> grid must include 1`. The `grid` option does not contain `1`. A single column is the default layout, so add `1`.
+
+### FP108
+
+`<owner> definition builder must return a ui array`. The builder function of `kit.defineForm` or `kit.defineFragment` does not return an array. Return the array of nodes.
+
+### FP109
+
+`<owner> builder options must be an object`. The options argument of a builder helper, such as `ui.field` or `ui.section`, is not an object. Pass an object.
+
+### FP112
+
+`Form definition update options must be an object`. The `update` option of the definition is not an object. Pass an object with `beforeUpdate`, `afterUpdate`, or `middleware`. Read [Middleware](/middleware).
+
+### FP113
+
+`Form definition beforeUpdate must be a function`. Set `update.beforeUpdate` to a function, or remove it.
+
+### FP114
+
+`Form definition afterUpdate must be a function`. Set `update.afterUpdate` to a function, or remove it.
+
+### FP115
+
+`Form definition middleware must be an array`. Set `update.middleware` to an array of middleware functions.
+
+### FP116
+
+`Form definition middleware must contain functions`. An item of `update.middleware` is not a function. Remove the item or replace it with a middleware function.
+
+### FP117
+
+`UI nodes must be objects`. The node array contains a value that is not a node, for example `undefined` from a conditional expression. Filter out empty values before you return the array.
+
+### FP118
+
+`Fragment placement must come from this exact form kit`. The definition places a fragment that a different kit created. Create the fragment with `defineFragment` of the same kit.
+
+### FP119
+
+`UI nodes must come from a builder helper, such as ui.field, or from fragment.fields`. The node array contains an object that a builder helper did not create, for example a hand-written `{ kind: "field" }` object or a copy of a helper node. Create each node with a helper of the builder, such as `ui.field` or `ui.section`, or place a fragment with `fragment.fields`.
+
+### FP120
+
+`Unknown control "<control>"`. A field uses a control name that the kit does not register. Use a name from the `controls` option of `createFormKit`, or add the control to the kit.
+
+### FP121
+
+`Array "<path>" requires itemDefault`. A generated array has no `itemDefault`, so its add action cannot create a row. Set `itemDefault`. Read [Choose an item default](/arrays#choose-an-item-default).
+
+### FP122
+
+`Duplicate UI node id "<id>"`. Two nodes in the definition have the same ID. Give one of the nodes a unique `id`. Read [IDs and paths](/definitions#ids-and-paths).
+
+### FP123
+
+`<kind> node "<id>" requires children`. A section or an array has no children. Add at least one child node, or remove the container.
+
+### FP124
+
+`Fragment placement options must contain an at path`. A fragment placement has no `at` option. Set `at` to the object path where the fragment fields go.
+
+### FP125
+
+`Field "<path>" has no initial value for whenHidden "reset"`. A field in an array row uses `whenHidden: "reset"`, but the initial values have no value at its path, for example in a row that an add action created. Use `whenHidden: { value }` with an explicit value. Read [Conditional fields](/conditional-fields).
+
+### FP126
+
+`Field "<path>" whenHidden must be "keep", "reset", or an object with a value property`. Use one of the supported forms of `whenHidden`.
+
+### FP127
+
+`<owner> errorDisplay must be "all" or "first"`. The `errorDisplay` option has an unsupported value. Use `"all"` or `"first"`.
+
+### FP128
+
+`Fragment resolver scope is invalid`. A resolver of a fragment runs at a path that is shorter than the path of its placement. This is an internal consistency check. Report the definition that causes it as a bug.
+
+### FP129
+
+`UI resolvers must be synchronous`. A resolver, such as `visible` or `disabled`, returns a Promise. Resolvers run during render and must return a value. Load async data outside the definition and pass it through `context`, or use async field options. Read [Resolver values](/definitions#resolver-values).
+
+### FP130
+
+`Field and array paths must be non-empty strings`. A field or an array has an empty path. Give a schema path.
+
+### FP131
+
+`Path "<path>" uses invalid React Hook Form syntax`. A path contains brackets or other syntax that RHF does not support. Use dot paths, for example `rows.0.title`.
+
+### FP132
+
+`Path "<path>" contains an invalid segment`. A path has an empty segment, for example `a..b`, or a reserved segment. Fix the path.
+
+### FP133
+
+`Path "<path>" starts with an array index`. The form values are an object, so the first path segment must be a property name. Fix the path.
+
+### FP134
+
+`UI node ids must be non-empty strings`. A node has an empty `id`. Give a non-empty ID.
+
+### FP135
+
+`Section layout columns must use the kit grid`. The `columns` of a section is not a value of the kit `grid`. Use a column count from the `grid` option of `createFormKit`.
+
+### FP136
+
+`Layout span must use the kit grid`. The `span` of a node is larger than the columns of its section, or it is not a value of the kit `grid`. Use a span that fits the section.
+
+### FP137
+
+`<owner> schema must implement Standard Schema validate`. The schema argument does not implement Standard Schema. Use a schema library that supports Standard Schema, such as Zod, Valibot, or ArkType.
+
+### FP138
+
+`Field options source must be a resolver`. The `options` of a field is not an array and not a function. Pass a static array or a resolver function. Read [Async options](/definitions#async-options).
+
+### FP139
+
+`Field options resolvers must return an array`. An options resolver returns a value that is not an array. The error class is `FieldOptionsContractError`. Return an array, or a resource with an array.
+
+### FP140
+
+`Unsupported resource status "<status>"`. A resource object has a `status` other than `"pending"`, `"success"`, or `"error"`. Create resources with the resource helpers. Read [Resources](/resources).
+
+### FP141
+
+`<owner> definition requires a builder function, such as (ui) => [ui.field(...)]`. `kit.defineForm` or `kit.defineFragment` receives a value that is not a builder function, for example a `{ ui: [...] }` object. Pass a function that receives the builder and returns the node array. Read [Upgrade to 3.0](/upgrade-to-v3#author-definitions-with-a-builder-function).
+
+## Submission and issues
+
+### FP201
+
+`useForm accepts onSubmit or actions, not both`. Use `onSubmit` for a form with one submit action. Use `actions` for a form with named actions. Read [Workflows](/workflows).
+
+### FP202
+
+`useForm accepts at most one implicit action`. More than one action in `actions` has `implicit: true`. Set `implicit: true` on one action only.
+
+### FP203
+
+`Form action "<name>" is no longer configured`. A submit starts an action that the latest `actions` option does not contain. Keep the action in `actions` while a button or a pending submit uses it.
+
+### FP204
+
+`form.submit requires an action when useForm configures actions`. `form.submit()` has no argument, but the form has named actions. Pass an action from `form.actions`.
+
+### FP205
+
+`form.submit requires an action of this form`. The action argument of `form.submit` comes from a different form. Pass an action from `form.actions` of the same binding.
+
+### FP206
+
+`Action and external issues cannot use the reserved React Hook Form root path`. An issue uses the path `root` or a path below it. RHF reserves this path. Give the issue an empty path to show it as a form issue, or use a field path. Read [Validation](/validation).
+
+## Managed updates, arrays, and features
+
+### FP301
+
+`Form values must be acyclic`. The form values contain an object that refers to itself. Form values must be a tree. Remove the cycle.
+
+### FP302
+
+`Generated array item defaults must be plain objects`. The `itemDefault` of an array of objects is not a plain object. Give a plain object, or a function that returns one. Read [Choose an item default](/arrays#choose-an-item-default).
+
+### FP303
+
+`Generated array path "<path>" must contain an array`. The value at the path of a generated array is not an array. Give the array an array value in `defaultValues`.
+
+### FP304
+
+`Generated array <action> for "<path>" must be between 0 and <max>`. An array action receives a row index outside the rows. Pass an index of an existing row.
+
+### FP305
+
+`Reconcile requires a mounted generated array at "<path>"`. `form.array(path).reconcile` runs for a path where no generated array is rendered. Render the array first, or change the values with `form.update`. Read [Reconcile](/reconcile).
+
+### FP306
+
+`Reconcile selected keys must be unique`. The selected keys of `reconcile` contain a duplicate. Remove the duplicate.
+
+### FP307
+
+`Reconcile keys must be strings or numbers`. The key function of `reconcile` returns another type. Return a string or a number.
+
+### FP308
+
+`Reconcile current keys must be unique`. Two current rows have the same key. Use a key that identifies each row.
+
+### FP309
+
+`Reconcile create must return an object with the requested key`. The `create` function of `reconcile` returns a row without the key that it received. Return a row with that key.
+
+### FP310
+
+`Reconcile middleware cannot change the selected array keys or order`. Middleware changes the rows that `reconcile` selected. Change other values in middleware, and let `reconcile` own the rows.
+
+### FP311
+
+`A managed update cannot change the number of rows of the mounted generated array "<path>"`. A `form.update` recipe or middleware adds or removes rows of a visible generated array. Use the array actions or `form.array(path).reconcile`. Read [Generated arrays](/middleware#generated-arrays).
+
+### FP312
+
+`Reconcile middleware cannot change nested array values`. Middleware changes a nested array inside the rows that `reconcile` writes. Change the nested array in a separate update.
+
+### FP313
+
+`Managed value feature requires a current Form Please form binding`. A feature, such as history or persistence, receives a value that is not a binding from `kit.useForm`. Pass the binding.
+
+### FP314
+
+`A form can configure only one <name> feature`. The definition contains two history middleware or two persistence middleware. Remove one.
+
+### FP315
+
+`This form binding does not support value restore`. A feature tries to restore values into a form that cannot restore them. Use the binding from `kit.useForm`.
+
+### FP316
+
+`Value middleware next called outside a transaction`. Middleware keeps `next` and calls it later. Call `next` only during the middleware call. Read [Forward patches once](/middleware#forward-patches-once).
+
+### FP317
+
+`Value middleware <index> must call next synchronously`. Middleware calls `next` after an `await`. Call `next` synchronously, and run async work after it.
+
+### FP318
+
+`Value middleware <index> cannot call next more than once`. Middleware calls `next` two times. Call it one time with the final patches.
+
+### FP319
+
+`Form middleware cannot update values while the pipeline initializes`. Middleware calls `api.update` in its setup function. Call `api.update` only from code that runs after setup.
+
+### FP320
+
+`Form middleware cannot start a nested value transaction`. `form.update` or `api.update` runs while another managed update is active, for example from middleware or `beforeUpdate`. Change the values in the patches of the active update, or start the update after the active one completes. Read [Invalid pipeline operations](/middleware#invalid-pipeline-operations).
+
+### FP321
+
+`Managed update recipes must be synchronous`. A `form.update` recipe returns a Promise. Load the data first, and then call `form.update` with a synchronous recipe.
+
+### FP322
+
+`<hook> must be synchronous`. `beforeUpdate` or `afterUpdate` returns a Promise. Make the hook synchronous. Start async work from `afterUpdate` without `await`.
+
+### FP323
+
+`Managed update failed after commit`. The error class is `AggregateError`. Middleware throws after `next` committed the values, and `afterUpdate` also throws. The values stay committed. Read `errors` for both failures. Read [Hook order and errors](/middleware#hook-order-and-errors).
+
+### FP324
+
+`Managed updates cannot remove a top-level form value; assign undefined instead`. A recipe deletes a property of the root values. Assign `undefined` to it.
+
+### FP325
+
+`Array middleware cannot change length or order beyond the source action`. Middleware of a generated array action adds, removes, or moves more rows than the action, or replaces the array. Change values inside the rows only.
+
+### FP326
+
+`This <name> feature is not configured for the supplied form`. `useHistory` or `usePersistence` receives a form whose definition does not contain the feature middleware. Add the middleware to the definition of that form.
+
+### FP327
+
+`<name> listener must be a function`. A feature `subscribe` call receives a value that is not a function. Pass a function.
+
+## History
+
+### FP401
+
+`History seek index must be an integer`. Pass an integer index to `seek`. Read [History](/history).
+
+### FP402
+
+`History journal must be an object`. The journal that you import is not an object. Import a journal that `export` created.
+
+### FP403
+
+`Unsupported history journal version <version>`. The journal has a format version that this package version does not read. Export and import the journal with the same package version.
+
+### FP404
+
+`History journal must contain at least one entry`. The imported journal has no entries. Import a journal that `export` created.
+
+### FP405
+
+`History journal exceeds the configured limit`. The imported journal has more entries than `limit` allows. Increase `limit`, or import a shorter journal.
+
+### FP406
+
+`History journal index is outside its entries`. The position of the imported journal does not point to an entry. Import an unchanged journal.
+
+### FP407
+
+`History journal entries must be form value objects`. An entry of the imported journal is not an object of form values. Import an unchanged journal.
+
+### FP408
+
+`History limit must be a non-negative integer or Infinity`. Fix the `limit` option of `createHistoryMiddleware`.
+
+### FP409
+
+`History groupWindow must be a finite non-negative number`. Fix the `groupWindow` option of `createHistoryMiddleware`.
+
+## Persistence
+
+### FP501
+
+`Persisted form data version <stored> requires a migration to version <current>`. The stored draft has an older `version`, and the options have no `migrate` function. Add `migrate`, or let the restore discard the draft. Read [Version and encode drafts](/persistence#version-and-encode-drafts).
+
+### FP502
+
+`Persistence codecs must be an array`. Set `codecs` to an array.
+
+### FP503
+
+`Persistence codec at index <index> must be an object`. An item of `codecs` is not an object. Use a codec such as `createDateCodec()`.
+
+### FP504
+
+`Persistence codec tags must be non-empty strings`. A codec has an empty `tag`. Give each codec a unique non-empty tag.
+
+### FP505
+
+`Duplicate persistence codec tag "<tag>"`. Two codecs use the same tag. Give each codec a unique tag.
+
+### FP506
+
+`Persistence codec "<tag>" must define canEncode, encode, and decode`. Add the missing functions to the codec.
+
+### FP507
+
+`Unsupported persistence protocol identifier`. The stored data was not written by Form, Please persistence. Use a storage key that only this form writes.
+
+### FP508
+
+`Unsupported persistence protocol version <version>`. A newer package version wrote the stored data. Use the same package version for the save and the restore.
+
+### FP509
+
+`Persistence application version must be a non-negative integer`. The stored envelope has an invalid `version`. Remove the stored data.
+
+### FP510
+
+`Persistence envelope is missing its payload`. The stored data is incomplete. Remove the stored data.
+
+### FP511
+
+`Unknown persistence codec tag "<tag>" at <path>`. The stored data uses a codec that the options do not contain. Add the codec to `codecs`.
+
+### FP512
+
+`<label> must be JSON`. A value is not JSON data, for example a class instance or a function. Add a codec for the value type, or keep the value out of the form values.
+
+### FP513
+
+`<label> must be acyclic JSON`. A value refers to itself. Remove the cycle.
+
+### FP514
+
+`<label> must be an object`. The stored data or the encoded values are not an object. Remove the stored data, or fix the adapter `load`.
+
+### FP515
+
+`Unsupported persistence value at <path>: <kind>`. A form value has a type that JSON cannot keep, such as a `Date` or a `Map`, and no codec encodes it. Add a codec, for example `createDateCodec()`.
+
+### FP516
+
+`Persistence codec "<tag>" <action>`. A codec function throws. Read `cause` for the error of the codec, and fix the codec.
+
+### FP517
+
+`Malformed encoded persistence value at <path>`. An encoded value in the stored data does not have the shape that the codecs write. Remove the stored data.
+
+### FP518
+
+`Date persistence payload must be a string`. The stored date is not a string. Remove the stored data.
+
+### FP519
+
+`Date persistence payload must be a valid ISO date`. The stored date string is not an ISO date. Remove the stored data.
+
+### FP520
+
+`Date persistence value must be valid`. A form value is an invalid `Date`. Keep only valid dates in the form values.
+
+### FP521
+
+`localStorage adapter requires a storage getter`. Pass a function that returns the storage to `createLocalStorageAdapter`.
+
+### FP522
+
+`usePersistence requires a package persistence handle`. The feature argument of `usePersistence` did not come from `createPersistenceMiddleware`. Pass the feature that `createPersistenceMiddleware` returned. Read [Persistence](/persistence).
+
+### FP523
+
+`Persistence operations require a current Form Please form handle`. A persistence operation runs before the feature is connected to a form. Get the handle with `usePersistence`.
+
+### FP524
+
+`Persistence restore cannot run after start`. `restore` runs after `start`. Restore first, and then start saves.
+
+### FP525
+
+`Persisted form input must be an object`. The restored values are not an object. Return an object from `migrate`, or remove the stored data.
+
+### FP526
+
+`Persistence cannot start while restore is running`. Wait for `restore` to complete, and then call `start`.
+
+### FP527
+
+`Persistence flush requires active persistence`. `flush` runs before `start` or after `stop`. Call `flush` only while persistence is active.
+
+### FP528
+
+`Persistence clear cannot run while restore is running`. Wait for `restore` to complete, and then call `clear`.
+
+### FP529
+
+`Persistence options must be an object`. Pass an options object to `createPersistenceMiddleware`.
+
+### FP530
+
+`Persistence adapter must define load, save, and remove`. Add the missing functions to the adapter. Read [Own the adapter](/persistence#own-the-adapter).
+
+### FP531
+
+`Persistence key must be a non-empty string`. Set `key` to a non-empty string.
+
+### FP532
+
+`Persistence version must be a non-negative integer`. Set `version` to a whole number, such as `1`.
+
+### FP533
+
+`Persistence saveDelay must be a finite non-negative number`. Set `saveDelay` to a number of milliseconds.
+
+### FP534
+
+`Persistence migrate must be a function`. Set `migrate` to a function, or remove it.
+
+### FP535
+
+`Persistence onError must be a function`. Set `onError` to a function, or remove it.
+
+## Devtools and testing
+
+### FP601
+
+`Devtools require a current Form Please form binding`. The `form` prop of `FormPleaseDevtools` is not a binding from `kit.useForm`. Pass the binding. Read [Devtools](/devtools).
+
+### FP602
+
+`Definition tester values must be an object`. Pass an object of form values to the definition tester. Read [Testing](/testing).
+
+### FP603
+
+`No resolved node with id "<id>"`. The tester did not find a visible node with this ID. The message lists the available IDs. Use one of them.
+
+### FP604
+
+`Resolved field "<path>" does not define options`. The tester reads options of a field without `options`. Select a field that has options.
+
+### FP605
+
+`Multiple resolved <kind> nodes use path "<path>"`. More than one node uses the path, for example the same field in two sections. Select the node by ID. The message lists the IDs.
+
+### FP606
+
+`No resolved <kind> at path "<path>"`. The tester did not find a visible node at this path. The message lists the available paths. Check the path and the visibility resolvers.
 
 ## Next steps
 

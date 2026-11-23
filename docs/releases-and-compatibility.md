@@ -8,7 +8,13 @@ This document owns the version policy, the supported React Hook Form (RHF) range
 - release-please owns the package version and `CHANGELOG.md` (`.github/workflows/publish.yml`). Do not set the version by hand and do not edit `CHANGELOG.md`. `tests/package/package-metadata.test.ts` makes sure that `package.json` has no `version` script.
 - Mark a breaking change with `!` after the commit type and a `BREAKING CHANGE:` footer. release-please reads them to select the next major version.
 - Squash-merge a PR with a conventional PR title. GitHub uses the title as the subject of the squash commit, and release-please parses only that subject and its footers, not the messages of the branch commits. `.github/workflows/pr-title.yml` rejects a title that is not a conventional commit header. When a merged PR needs other release notes or several entries, add a `BEGIN_COMMIT_OVERRIDE` … `END_COMMIT_OVERRIDE` block to its description and rerun the latest Publish run on `main`; release-please reads the block in place of the subject.
-- A breaking change also adds an entry to `docs-site/src/pages/upgrade-to-v2.mdx` while the 2.x line is current. The owner of this rule is `documentation-rules.md` § Docs site coupling.
+- A breaking change also adds an entry to the upgrade page of the next major line, `docs-site/src/pages/upgrade-to-v3.mdx`. The owner of this rule is `documentation-rules.md` § Docs site coupling.
+
+## Package manifest
+
+- The manifest declares no `engines`. The library runs in browsers, and Yarn 1 refuses to install a dependency whose `engines.node` does not match. The repository Node.js version is in `.nvmrc`, which the workflows in `.github/workflows` read, and `package.json#devEngines` makes npm stop an install or a script on an older Node.js. Consumers do not inherit `devEngines`. `docs/adr/0033-make-devtools-packages-optional-peers.md` gives the reasons.
+- `dependencies` holds only what the root entry imports. A package that only one optional entry imports is an optional peer and a dev dependency. `tests/package/package-metadata.test.ts` pins both rules.
+- Immer has a caret range, so an application with its own Immer 11 shares one copy with Form, Please.
 
 ## React Hook Form range
 

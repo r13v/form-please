@@ -4,16 +4,16 @@ import {
 	hasFormDiagnosticSink,
 	publishFormDiagnosticEvent,
 } from "./diagnostics.js"
-import type { RuntimeForm } from "./form-kit-types.js"
+import type { FormRuntime } from "./form-runtime.js"
 import { hasFieldError } from "./standard-schema-resolver.js"
 
 /** Focuses the summary when React Hook Form did not focus an invalid input. */
 export function focusErrorSummaryFallback(
 	errors: FieldErrors<FieldValues>,
-	formElement: HTMLFormElement,
-	form: RuntimeForm,
+	form: FormRuntime,
 ): void {
-	const activeElement = formElement.ownerDocument.activeElement
+	const document = form.formElement?.ownerDocument ?? globalThis.document
+	const activeElement = document.activeElement
 	if (activeElement instanceof HTMLElement) {
 		for (const [path, input] of form.inputRefs) {
 			if (
@@ -45,7 +45,7 @@ export function focusErrorSummaryFallback(
 
 /** Publishes the observed invalid-submit focus destination when requested. */
 function publishFocusDiagnostic(
-	form: RuntimeForm,
+	form: FormRuntime,
 	target: "field" | "summary" | "unavailable",
 	path?: string,
 ): void {
@@ -59,7 +59,7 @@ function publishFocusDiagnostic(
 }
 
 /** Focuses an issue field after render, or the error summary when it is unavailable. */
-export function focusIssue(form: RuntimeForm, target: string | true): void {
+export function focusIssue(form: FormRuntime, target: string | true): void {
 	setTimeout(() => {
 		const errors = form.api.formState.errors
 		const paths =
@@ -76,7 +76,7 @@ export function focusIssue(form: RuntimeForm, target: string | true): void {
 }
 
 /** Focuses one registered field when it is enabled and visible. */
-function focusField(form: RuntimeForm, path: string): boolean {
+function focusField(form: FormRuntime, path: string): boolean {
 	const input = form.inputRefs.get(path)
 	if (input?.matches(":disabled")) return false
 	const document = form.formElement?.ownerDocument ?? globalThis.document

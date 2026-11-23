@@ -206,7 +206,7 @@ describe("useFieldOptions", () => {
 				</TestErrorBoundary>,
 			)
 			expect((await screen.findByTestId("contract-error")).textContent).toBe(
-				"Field options resolvers must return an array",
+				"[FP139] Field options resolvers must return an array",
 			)
 			view.unmount()
 		}

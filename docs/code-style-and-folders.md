@@ -23,7 +23,8 @@ Priorities: readability, simplicity, maintainability. Biome (`biome.json`) check
 11. **Name non-obvious literals.** A limit, a window and a key get a constant near their use.
 12. **End a branch over a closed union with an exhaustive check.** Use `assertNever` from `src/assert-never.ts`, or a `satisfies Record<Union, …>` table such as `sourcePolicies` in `src/value-middleware.ts`, so that a new member fails the type check at each place that must handle it.
 13. **Give the extension of a relative import.** Write `.js` for a TypeScript source file, because the package is ESM and `tsdown` keeps the specifiers.
-14. **Update dependencies deliberately.** Choose current stable versions, check compatibility and update the lockfile. A change of the React Hook Form (RHF) peer range follows `releases-and-compatibility.md`.
+14. **Give each thrown error a stable code.** Build each thrown message with `errorMessage` and a code from `errorCodes` in `src/error-codes.ts`, the only registry. A new error takes the next free number of its group. Do not renumber a code, and do not give the number of a removed error to a new error. Each code needs an entry on `docs-site/src/pages/troubleshooting.mdx` in the same change. `src/error-codes.test.ts` and `docs-site/tests/content.test.mjs` check the registry against the source and the page. `docs/adr/0030-prefix-thrown-errors-with-stable-codes.md` gives the reason.
+15. **Update dependencies deliberately.** Choose current stable versions, check compatibility and update the lockfile. A change of the React Hook Form (RHF) peer range follows `releases-and-compatibility.md`.
 
 ## Code structure
 

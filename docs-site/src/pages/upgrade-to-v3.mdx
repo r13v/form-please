@@ -1,0 +1,270 @@
+---
+title: Upgrade to 3.0
+description: Change submit slots that read values, effects that depend on the form binding, nested-array node IDs, kit.Submit binding props, form.update results, error message checks, hand-written kit types, object definition sources, and devtools packages for version 3.0.
+showAskAi: false
+searchPriority: 2
+---
+
+# Upgrade to 3.0
+
+Version 3.0 changes some contracts of version 2. Find each change on this page
+and apply its fix.
+
+## Read the values in a submit render function
+
+The `Submit` slot of a form kit does not receive `values`, and
+`SubmitSlotProps` has no type parameter. A `kit.Submit` with static children
+therefore does not render again when a value changes.
+
+A slot that shows values must move that content to the render function of
+`kit.Submit`. The render function receives `values` and is typed with
+`SubmitRenderProps<Schema>`.
+
+```tsx
+// Version 2
+function SaveSlot({ buttonProps, values }: SubmitSlotProps) {
+	return <button {...buttonProps}>Save {String(values.name)}</button>
+}
+
+// Version 3
+<kit.Submit>
+	{({ buttonProps, values }) => (
+		<button {...buttonProps}>Save {values.name}</button>
+	)}
+</kit.Submit>
+```
+
+Remove the type argument from each `SubmitSlotProps<Schema>`, or use
+`SubmitRenderProps<Schema>` for a render function. Read
+[Slot types](/types#slot-and-structure-types).
+
+## Depend on the option, not on the binding
+
+The binding that `kit.useForm` returns keeps one object identity for the life
+of the hook. In version 2, a change of `context`, `disabled`, `readOnly`, or
+`errorDisplay` created a new binding object. An effect or a memo that lists
+`form` as a dependency does not run again for these changes now.
+
+```tsx
+// Version 2
+useEffect(() => {
+	loadRates(form.context.currency)
+}, [form])
+
+// Version 3
+useEffect(() => {
+	loadRates(context.currency)
+}, [context.currency])
+```
+
+`form.context` and `form.fieldPaths()` read the context of the latest
+committed render, which generated UI uses. In the render that passes a new
+`context`, they still use the previous context, so read your own variable in
+that render. A new context object with the same top-level values does not
+change the context, and `form.context` keeps the first object. Read
+[`FormBinding`](/api#formbinding).
+
+## Update the IDs of nodes in nested arrays
+
+The ID of a node in an array row starts with the absolute row path and a dot.
+In version 2, a node in a nested array row repeated the outer row path. The
+ID shows in the node snapshots of `form-please/testing`, in the devtools, and
+in `kit.Fields node` and `form.fieldPaths`.
+
+```ts
+// Version 2
+"rows.0.rows.0.items.1.field:title"
+
+// Version 3
+"rows.0.items.1.field:title"
+```
+
+Nodes at the form root and in a row of a top-level array keep their IDs.
+Update a test that compares the ID of a node in a nested array. Read
+[Node IDs](/api#node-ids).
+
+## Select the form of `kit.Submit` with an action
+
+`kit.Submit` has no `binding` prop. The `action` prop selects the form and
+types the `values` of a render function. A form with `onSubmit` has one
+action, `form.actions.submit`.
+
+```tsx
+// Version 2
+<kit.Submit binding={form}>
+	{({ buttonProps, values }) => (
+		<button {...buttonProps}>Save {values.name}</button>
+	)}
+</kit.Submit>
+
+// Version 3
+<kit.Submit action={form.actions.submit}>
+	{({ buttonProps, values }) => (
+		<button {...buttonProps}>Save {values.name}</button>
+	)}
+</kit.Submit>
+```
+
+Replace `binding={form}` with `action={form.actions.submit}`, or with the
+named action of the form. Keep the native `form` attribute on a `kit.Submit`
+outside `kit.Form`. Read [`Form`, `Fields`, `Submit`, and
+`AutoForm`](/api#form-fields-submit-and-autoform).
+
+## Read the result of a managed update
+
+`form.update`, the middleware `api.update`, and
+`form.array(path).reconcile` return a `FormUpdateResult`. In version 2, they
+returned the value of the middleware chain, typed as `unknown`.
+
+```ts
+// Version 2
+await form.update(recipe)
+
+// Version 3
+const outcome = form.update(recipe)
+await outcome.result
+```
+
+The call returns an object, not the value of the middleware chain. In version
+2, `await form.update(recipe)` waited for the Promise that an asynchronous
+middleware returned, and threw its rejection. In version 3, `await` on the
+object returns at once and does not throw. Await `outcome.result` to wait for
+the asynchronous middleware and to receive its rejection. After an asynchronous
+middleware, that rejection also carries an `afterUpdate` failure.
+
+`committed` is `false` when the recipe changes nothing or when middleware
+cancels the update. `transaction` is the final committed transaction when
+`committed` is `true`. `result` is the value of the middleware chain in both
+cases, or `undefined` when the chain does not run. Code that neither reads nor
+awaits the return value needs no change. Read [Managed value
+middleware](/api#managed-value-middleware).
+
+## Match errors by their code
+
+Each error that Form, Please throws starts its message with a code, for
+example `[FP101]`. The error classes do not change.
+
+```ts
+// Version 2
+if (error.message.startsWith("Unknown UI node id")) showHelp()
+
+// Version 3
+if (error.message.startsWith("[FP101]")) showHelp()
+```
+
+Update a test or a handler that compares the complete message or the start of
+the message. A code keeps its meaning in later versions. Read [Find an error
+by its code](/troubleshooting#find-an-error-by-its-code).
+
+## Name kit types with one type bag
+
+Each type that depends on a form kit takes one kit type bag instead of
+positional type parameters. This applies to `FormKit`, `FormDefinition`,
+`FormFragment`, `CreateFormKitOptions`, and `FormKitSlots`. The bag names
+each contract: `controls`, `context`, `fieldOptions`, `sectionOptions`,
+`arrayOptions`, and `grid`. Read the bag of a kit with `FormKitTypesOf`.
+
+```ts
+// Version 2
+type AppKit = FormKit<
+	typeof controls,
+	FieldOptions,
+	never,
+	never,
+	AppContext,
+	1 | 2 | 3 | 4
+>
+type ProfileDefinition = FormDefinition<
+	typeof profileSchema,
+	typeof controls,
+	AppContext
+>
+
+// Version 3
+type AppKitTypes = FormKitTypesOf<typeof appKit>
+type AppKit = FormKit<AppKitTypes>
+type ProfileDefinition = FormDefinition<typeof profileSchema, AppKitTypes>
+```
+
+`FormKitSlots` takes a bag with `fieldOptions`, `sectionOptions`, and
+`arrayOptions`, for example
+`FormKitSlots<{ fieldOptions: CardOptions; sectionOptions: never; arrayOptions: never }>`.
+Code that lets TypeScript infer these types needs no change. Read [Kit type
+bag](/types#kit-type-bag).
+
+## Author definitions with a builder function
+
+`kit.defineForm` and `kit.defineFragment` accept only a builder function. The
+`{ ui: [...] }` object source and the node types `UiNode`, `FieldNode`,
+`SectionNode`, `ArrayNode`, and `RenderNode` are removed. An object source
+throws [`FP141`](/troubleshooting#fp141). A hand-written node object in a
+builder list is a type error and throws [`FP119`](/troubleshooting#fp119).
+
+```ts
+// Version 2
+const definition = kit.defineForm(schema, {
+	ui: [
+		{ kind: "field", path: "name", control: "text", label: "Name" },
+		{
+			kind: "array",
+			path: "guests",
+			itemDefault: { name: "" },
+			children: [{ kind: "field", path: "name", control: "text" }],
+		},
+	],
+})
+
+// Version 3
+const definition = kit.defineForm(schema, (ui) => [
+	ui.field("name", { control: "text", label: "Name" }),
+	ui.array("guests", {
+		itemDefault: { name: "" },
+		children: (guest) => [guest.field("name", { control: "text" })],
+	}),
+])
+```
+
+Move `path` or the section and render `id` to the first helper argument, and
+remove `kind`. The `children` of an array become a function that receives the
+row builder. To build nodes from data, call the helpers in a loop. Share UI
+with `defineFragment` instead of a node list. Read
+[Definitions](/definitions).
+
+## Install the devtools packages
+
+`@hookform/devtools` and `@uiw/react-json-view` are optional peer dependencies.
+The package manager does not install them with Form, Please. An application
+that imports `form-please/devtools` must install them:
+
+```sh
+npm install --save-dev @hookform/devtools @uiw/react-json-view
+```
+
+Yarn 1 does not install the `@babel/runtime` peer dependency of
+`@uiw/react-json-view` on its own. A Yarn 1 application that imports
+`form-please/devtools` also installs it:
+
+```sh
+yarn add --dev @hookform/devtools @uiw/react-json-view @babel/runtime
+```
+
+An application that does not import `form-please/devtools` does not need them.
+Read [Devtools](/devtools#mount-one-component).
+
+## Reference
+
+| Change | Version 2 | Version 3 |
+| --- | --- | --- |
+| `values` in the `Submit` slot props | Received | Not received; use a `kit.Submit` render function |
+| `SubmitSlotProps` type parameter | `SubmitSlotProps<Schema>` | `SubmitSlotProps`; render functions use `SubmitRenderProps<Schema>` |
+| `kit.Submit` with static children on a value change | Renders again | Does not render again |
+| Binding identity after a change of `context`, `disabled`, `readOnly`, or `errorDisplay` | New object | Same object |
+| ID of a node in a nested array row | Repeats the outer row path | Starts with the absolute row path once |
+| `binding` prop of `kit.Submit` | Selects the form | Removed; use `action`, for example `form.actions.submit` |
+| Result of `form.update`, `api.update`, and `reconcile` | Middleware chain value, typed `unknown` | `FormUpdateResult` with `committed`, `transaction`, and `result`; await `result` |
+| Error message | Text only | Starts with a code such as `[FP101]` |
+| Kit type parameters of `FormKit`, `FormDefinition`, `FormFragment`, `CreateFormKitOptions`, and `FormKitSlots` | Positional, for example `FormKit<Controls, FieldOptions, ...>` | One kit type bag, for example `FormKit<Kit>`; read it with `FormKitTypesOf<typeof kit>` |
+| Second argument of `defineForm` and `defineFragment` | `{ ui: [...] }` object or builder function | Builder function only; another value throws `FP141` |
+| `UiNode`, `FieldNode`, `SectionNode`, `ArrayNode`, and `RenderNode` | Exported | Removed |
+| Hand-written node object in a builder list | Type error; accepted at runtime | Type error; throws `FP119` |
+| `@hookform/devtools` and `@uiw/react-json-view` | Installed with Form, Please | Optional peers; install them to use `form-please/devtools` |

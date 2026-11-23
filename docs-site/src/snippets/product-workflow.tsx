@@ -1,36 +1,20 @@
 // @jsx: react-jsx
 "use client"
 
-import type {
-	DeepReadonly,
-	FieldPath,
-	FormBinding,
-	FormInput,
-	StandardSchema,
-} from "form-please"
+import type { FormBinding, StandardSchema } from "form-please"
 import { nativeFormKit } from "form-please/preset-native"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { type FieldValues, useWatch } from "react-hook-form"
+import { useEffect, useRef, useState } from "react"
+import { useWatch } from "react-hook-form"
 import { z } from "zod"
 
-export type WorkflowStep<
-	Input extends FieldValues,
-	Screen extends string,
-> = Readonly<{
+export type WorkflowStep<Screen extends string> = Readonly<{
 	/** Stable application screen identifier. */
 	screen: Screen
 	/** User-facing progress label. */
 	label: string
-	/** Schema input paths validated before this screen can be left. */
-	paths: readonly FieldPath<Input>[]
-	/** Includes the screen only while the current input satisfies this condition. */
-	when?: (input: DeepReadonly<Input>) => boolean
+	/** The definition node that the screen renders; review screens have none. */
+	node?: string
 }>
-
-type WorkflowInput<Schema extends StandardSchema> = Extract<
-	FormInput<Schema>,
-	FieldValues
->
 
 type UseFormWorkflowOptions<
 	Schema extends StandardSchema,
@@ -40,12 +24,13 @@ type UseFormWorkflowOptions<
 	form: FormBinding<Schema, Context>
 	screen: Screen
 	setScreen(screen: NoInfer<Screen>): void
-	steps: readonly WorkflowStep<WorkflowInput<Schema>, Screen>[]
+	steps: readonly WorkflowStep<Screen>[]
 }>
 
 /**
  * Application-owned workflow navigation over one Form, Please binding.
- * The Standard Schema remains the only validation contract.
+ * The definition owns the paths and the visibility of each screen, and the
+ * Standard Schema remains the only validation contract.
  */
 export function useFormWorkflow<
 	Schema extends StandardSchema,
@@ -57,16 +42,21 @@ export function useFormWorkflow<
 	setScreen,
 	steps,
 }: UseFormWorkflowOptions<Schema, Context, Screen>) {
-	type Input = WorkflowInput<Schema>
-	type Path = FieldPath<Input>
+	type Path = ReturnType<typeof form.fieldPaths>[number]
 
-	const input = useWatch({ control: form.api.control }) as Input
+	// Render again after each value change, so the visible steps stay current.
+	useWatch({ control: form.api.control })
 	const pendingFocus = useRef<Readonly<{
 		path: Path
 		screen: Screen
 	}> | null>(null)
+	function stepPaths(step: WorkflowStep<Screen>): Path[] {
+		if (step.node === undefined) return []
+		return form.fieldPaths(step.node)
+	}
+	// A step with a node is visible while its node shows at least one field.
 	const visibleSteps = steps.filter(
-		(step) => step.when?.(input as DeepReadonly<Input>) ?? true,
+		(step) => step.node === undefined || stepPaths(step).length > 0,
 	)
 	const currentIndex = visibleSteps.findIndex((step) => step.screen === screen)
 	const currentStep = visibleSteps[currentIndex]
@@ -78,7 +68,7 @@ export function useFormWorkflow<
 		form.api.setFocus(pending.path)
 	}, [form, screen])
 
-	function focusInvalid(step: WorkflowStep<Input, Screen>, path: Path) {
+	function focusInvalid(step: WorkflowStep<Screen>, path: Path) {
 		if (step.screen === screen) {
 			form.api.setFocus(path)
 			return
@@ -93,15 +83,14 @@ export function useFormWorkflow<
 		}
 	}
 
-	async function validateStep(
-		step: WorkflowStep<Input, Screen>,
-	): Promise<boolean> {
-		if (step.paths.length === 0) return true
-		touch(step.paths)
-		const valid = await form.api.trigger([...step.paths])
+	async function validateStep(step: WorkflowStep<Screen>): Promise<boolean> {
+		const paths = stepPaths(step)
+		if (paths.length === 0) return true
+		touch(paths)
+		const valid = await form.api.trigger(paths)
 		if (valid) return true
 
-		const firstInvalid = step.paths.find(
+		const firstInvalid = paths.find(
 			(path) => form.api.getFieldState(path).invalid,
 		)
 		if (firstInvalid !== undefined) focusInvalid(step, firstInvalid)
@@ -131,14 +120,14 @@ export function useFormWorkflow<
 	}
 
 	async function validateAllAndFocusFirstInvalid(): Promise<boolean> {
-		const paths = [...new Set(visibleSteps.flatMap((step) => step.paths))]
+		const paths = visibleSteps.flatMap(stepPaths)
 		if (paths.length === 0) return true
 		touch(paths)
 		const valid = await form.api.trigger(paths)
 		if (valid) return true
 
 		for (const step of visibleSteps) {
-			const firstInvalid = step.paths.find(
+			const firstInvalid = stepPaths(step).find(
 				(path) => form.api.getFieldState(path).invalid,
 			)
 			if (firstInvalid !== undefined) {
@@ -188,69 +177,45 @@ const onboardingSchema = z.discriminatedUnion("organization", [
 	}),
 ])
 
-type OnboardingInput = FormInput<typeof onboardingSchema>
 type OnboardingScreen = "identity" | "organization" | "details" | "review"
-type OnboardingContext = { readonly screen: OnboardingScreen }
-
-const identityPaths = [
-	"name",
-	"email",
-	"organization",
-] as const satisfies readonly FieldPath<OnboardingInput>[]
-const organizationPaths = [
-	"organizationName",
-] as const satisfies readonly FieldPath<OnboardingInput>[]
-const detailPaths = [
-	"department",
-] as const satisfies readonly FieldPath<OnboardingInput>[]
 
 const onboardingSteps = [
-	{ screen: "identity", label: "Identity", paths: identityPaths },
-	{
-		screen: "organization",
-		label: "Organization",
-		paths: organizationPaths,
-		when: (input) => input.organization,
-	},
-	{ screen: "details", label: "Details", paths: detailPaths },
-	{ screen: "review", label: "Review", paths: [] },
-] satisfies readonly WorkflowStep<OnboardingInput, OnboardingScreen>[]
+	{ screen: "identity", label: "Identity", node: "identity" },
+	{ screen: "organization", label: "Organization", node: "organization" },
+	{ screen: "details", label: "Details", node: "details" },
+	{ screen: "review", label: "Review" },
+] satisfies readonly WorkflowStep<OnboardingScreen>[]
 
-const onboardingKit = nativeFormKit.forContext<OnboardingContext>()
-const onboardingDefinition = onboardingKit.defineForm(
+const onboardingDefinition = nativeFormKit.defineForm(
 	onboardingSchema,
 	(ui) => [
-		ui.field("name", {
-			control: "text",
-			label: "Name",
-			visible: (_input, { context }) =>
-				context.screen === "identity" || context.screen === "review",
+		ui.section("identity", {
+			children: [
+				ui.field("name", { control: "text", label: "Name" }),
+				ui.field("email", {
+					control: "text",
+					label: "Email",
+					props: { type: "email" },
+				}),
+				ui.field("organization", {
+					control: "checkbox",
+					label: "I represent an organization",
+				}),
+			],
 		}),
-		ui.field("email", {
-			control: "text",
-			label: "Email",
-			props: { type: "email" },
-			visible: (_input, { context }) =>
-				context.screen === "identity" || context.screen === "review",
+		ui.section("organization", {
+			visible: (input) => input.organization,
+			children: [
+				ui.field("organizationName", {
+					control: "text",
+					label: "Organization name",
+				}),
+			],
 		}),
-		ui.field("organization", {
-			control: "checkbox",
-			label: "I represent an organization",
-			visible: (_input, { context }) =>
-				context.screen === "identity" || context.screen === "review",
-		}),
-		ui.field("organizationName", {
-			control: "text",
-			label: "Organization name",
-			visible: (input, { context }) =>
-				input.organization &&
-				(context.screen === "organization" || context.screen === "review"),
-		}),
-		ui.field("department", {
-			control: "text",
-			label: "Department",
-			visible: (_input, { context }) =>
-				context.screen === "details" || context.screen === "review",
+		ui.section("details", {
+			children: [
+				ui.field("department", { control: "text", label: "Department" }),
+			],
 		}),
 	],
 )
@@ -258,9 +223,7 @@ const onboardingDefinition = onboardingKit.defineForm(
 export function ProductWorkflowRecipe() {
 	const [screen, setScreen] = useState<OnboardingScreen>("identity")
 	const [status, setStatus] = useState("Complete the current screen.")
-	const context = useMemo(() => ({ screen }), [screen])
-	const form = onboardingKit.useForm(onboardingDefinition, {
-		context,
+	const form = nativeFormKit.useForm(onboardingDefinition, {
 		defaultValues: {
 			name: "",
 			email: "",
@@ -306,11 +269,24 @@ export function ProductWorkflowRecipe() {
 	}
 	if (screen === "review") {
 		actions = (
-			<onboardingKit.Submit name="intent" value="publish">
+			<button
+				type="button"
+				onClick={async () => {
+					const result = await form.submit()
+					if (!result.accepted && result.reason === "invalid") {
+						await workflow.validateAllAndFocusFirstInvalid()
+					}
+				}}
+			>
 				Publish
-			</onboardingKit.Submit>
+			</button>
 		)
 	}
+
+	// A review screen renders every field; other screens render their node.
+	const node = workflow.currentStep?.node
+	let fields = <nativeFormKit.Fields />
+	if (node !== undefined) fields = <nativeFormKit.Fields node={node} />
 
 	return (
 		<section
@@ -327,7 +303,9 @@ export function ProductWorkflowRecipe() {
 				max={100}
 				value={workflow.progress.percent}
 			/>
-			<onboardingKit.AutoForm form={form}>
+			<nativeFormKit.Form form={form}>
+				<nativeFormKit.ErrorSummary />
+				{fields}
 				<div className="form-please-complex__actions">
 					<button
 						disabled={workflow.progress.current <= 1}
@@ -338,7 +316,7 @@ export function ProductWorkflowRecipe() {
 					</button>
 					{actions}
 				</div>
-			</onboardingKit.AutoForm>
+			</nativeFormKit.Form>
 			<output aria-live="polite">{status}</output>
 		</section>
 	)

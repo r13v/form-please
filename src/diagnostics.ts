@@ -1,5 +1,6 @@
 import type { ResolvedDefinition } from "./definition.js"
-import type { RuntimeForm } from "./form-kit-types.js"
+import { errorMessage } from "./error-codes.js"
+import type { FormRuntime } from "./form-runtime.js"
 
 /** One opaque managed-update identity shared across diagnostic stages. */
 type ManagedDiagnosticToken = object
@@ -198,7 +199,7 @@ export function formDiagnosticNow(): number {
 
 /** Package-private runtime data consumed by the optional devtools entry. */
 export type FormDiagnosticsRuntime = Readonly<
-	Pick<RuntimeForm, "diagnosticTarget" | "disabled" | "inputRefs" | "readOnly">
+	Pick<FormRuntime, "diagnosticTarget" | "inputRefs" | "settings">
 > & {
 	readonly formElement: HTMLFormElement | null
 	readonly resolved?: ResolvedDefinition
@@ -208,7 +209,7 @@ const formDiagnosticsRuntimeKey = Symbol.for(
 	"form-please.form-diagnostics-runtime",
 )
 
-/** Reads private runtime data from an exact current Form Please binding. */
+/** Reads private runtime data from an exact Form Please binding. */
 export function getFormDiagnosticsRuntime(
 	target: object,
 ): FormDiagnosticsRuntime {
@@ -216,7 +217,12 @@ export function getFormDiagnosticsRuntime(
 		formDiagnosticsRuntimeKey
 	]
 	if (runtime === undefined) {
-		throw new TypeError("Devtools require a current Form Please form binding")
+		throw new TypeError(
+			errorMessage(
+				"FP601",
+				"Devtools require a current Form Please form binding",
+			),
+		)
 	}
 	return runtime as FormDiagnosticsRuntime
 }
@@ -224,7 +230,7 @@ export function getFormDiagnosticsRuntime(
 /** Attaches private runtime data without extending the public form binding type. */
 export function attachFormDiagnosticsRuntime(
 	target: object,
-	runtime: RuntimeForm,
+	runtime: FormRuntime,
 ): void {
 	Object.defineProperty(target, formDiagnosticsRuntimeKey, { value: runtime })
 }

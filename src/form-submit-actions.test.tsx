@@ -5,6 +5,7 @@ import {
 	cleanup,
 	fireEvent,
 	render,
+	renderHook,
 	screen,
 	waitFor,
 } from "@testing-library/react"
@@ -20,12 +21,10 @@ import type { StandardSchema } from "./types.js"
 
 describe("submit actions and external issues", () => {
 	const reviewSchema = z.object({ name: z.string(), reason: z.string() })
-	const reviewDefinition = kit.defineForm(reviewSchema, {
-		ui: [
-			{ kind: "field", path: "name", control: "text", label: "Name" },
-			{ kind: "field", path: "reason", control: "text", label: "Reason" },
-		],
-	})
+	const reviewDefinition = kit.defineForm(reviewSchema, (ui) => [
+		ui.field("name", { control: "text", label: "Name" }),
+		ui.field("reason", { control: "text", label: "Reason" }),
+	])
 
 	function ReviewForm({
 		approve,
@@ -237,12 +236,10 @@ describe("submit actions and external issues", () => {
 			name: z.string().min(2, "Enter at least two characters"),
 			address: z.object({ zip: z.string().min(1, "Enter a zip code.") }),
 		})
-		const addressDefinition = kit.defineForm(addressSchema, {
-			ui: [
-				{ kind: "field", path: "name", control: "text", label: "Name" },
-				{ kind: "field", path: "address.zip", control: "text", label: "Zip" },
-			],
-		})
+		const addressDefinition = kit.defineForm(addressSchema, (ui) => [
+			ui.field("name", { control: "text", label: "Name" }),
+			ui.field("address.zip", { control: "text", label: "Zip" }),
+		])
 		let form: FormBinding<typeof addressSchema, unknown, "submit"> | undefined
 		function View() {
 			form = kit.useForm(addressDefinition, {
@@ -286,9 +283,9 @@ describe("submit actions and external issues", () => {
 	})
 
 	it("focuses the summary when the issue field is not registered", async () => {
-		const nameOnly = kit.defineForm(reviewSchema, {
-			ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
-		})
+		const nameOnly = kit.defineForm(reviewSchema, (ui) => [
+			ui.field("name", { control: "text", label: "Name" }),
+		])
 		let form: FormBinding<typeof reviewSchema, unknown, "submit"> | undefined
 		function View() {
 			form = kit.useForm(nameOnly, {
@@ -485,9 +482,9 @@ describe("submit actions and external issues", () => {
 		}
 
 		const strictSchema = z.object({ name: z.string().min(5, "Too short.") })
-		const strictDefinition = kit.defineForm(strictSchema, {
-			ui: [{ kind: "field", path: "name", control: "text", label: "Name" }],
-		})
+		const strictDefinition = kit.defineForm(strictSchema, (ui) => [
+			ui.field("name", { control: "text", label: "Name" }),
+		])
 		const onSubmit = vi.fn()
 		let form: FormBinding<typeof strictSchema, unknown, "submit"> | undefined
 		function Strict() {
@@ -510,7 +507,7 @@ describe("submit actions and external issues", () => {
 		})
 	})
 
-	it("submits from a Submit outside Form with a binding and the form attribute", async () => {
+	it("submits from a Submit outside Form with an action and the form attribute", async () => {
 		let release = () => {}
 		const onSubmit = vi.fn(
 			() =>
@@ -527,7 +524,7 @@ describe("submit actions and external issues", () => {
 				<>
 					<kit.AutoForm form={form} id="invite-form" />
 					<footer>
-						<kit.Submit binding={form} form="invite-form">
+						<kit.Submit action={form.actions.submit} form="invite-form">
 							{({ buttonProps, isPending }) => (
 								<button {...buttonProps}>
 									{isPending ? "Sending" : "Send invite"}
@@ -560,16 +557,12 @@ describe("submit actions and external issues", () => {
 		type InviteContext = AppContext & { readonly teams: readonly string[] }
 		const appKit = kit.forContext<AppContext>()
 		const inviteKit = appKit.forContext<InviteContext>()
-		const inviteDefinition = inviteKit.defineForm(schema, {
-			ui: [
-				{
-					kind: "field",
-					path: "name",
-					control: "text",
-					label: (_values, { context }) => context.teams.join(", "),
-				},
-			],
-		})
+		const inviteDefinition = inviteKit.defineForm(schema, (ui) => [
+			ui.field("name", {
+				control: "text",
+				label: (_values, { context }) => context.teams.join(", "),
+			}),
+		])
 		const save = vi.fn()
 		const skip = vi.fn()
 
@@ -582,11 +575,7 @@ describe("submit actions and external issues", () => {
 		}) {
 			return (
 				<>
-					<appKit.Submit
-						action={binding.actions.save}
-						binding={binding}
-						form="invite-form"
-					>
+					<appKit.Submit action={binding.actions.save} form="invite-form">
 						{/* An implicit any parameter here fails the typecheck. */}
 						{({ buttonProps }) => <button {...buttonProps}>Save</button>}
 					</appKit.Submit>
@@ -640,7 +629,7 @@ describe("submit actions and external issues", () => {
 			return (
 				<>
 					{/* @ts-expect-error The binding context must extend the kit context. */}
-					<appKit.Submit binding={form}>Save</appKit.Submit>
+					<appKit.Submit action={form.actions.submit}>Save</appKit.Submit>
 					{/* @ts-expect-error The binding context must extend the kit context. */}
 					<appKit.AutoForm form={form} />
 					{/* @ts-expect-error The binding context must extend the kit context. */}
@@ -656,10 +645,10 @@ describe("submit actions and external issues", () => {
 			readonly form: FormBinding<typeof schema, InviteContext>
 		}) {
 			return (
-				<appKit.Submit binding={form}>
+				<appKit.Submit action={form.actions.submit}>
 					{({ values }) => {
 						expectTypeOf(values.name).toEqualTypeOf<string>()
-						// @ts-expect-error The values follow the binding schema.
+						// @ts-expect-error The values follow the action form schema.
 						void values.nonexistent
 						return "Save"
 					}}
@@ -676,33 +665,17 @@ describe("submit actions and external issues", () => {
 		await waitFor(() => expect(skip).toHaveBeenCalledWith({ name: "Ada" }))
 	})
 
-	it("rejects a Submit whose binding or action does not select its form", () => {
+	it("rejects a Submit whose action does not select its form", () => {
 		const errors = vi.spyOn(console, "error").mockImplementation(() => {})
 		const otherKit = createFormKit({ controls: kit.controls, slots: kit.slots })
-		function Bare() {
-			return <kit.Submit>Save</kit.Submit>
-		}
-		function Mismatch() {
-			const first = kit.useForm(definition, {
-				defaultValues: { name: "Ada" },
-				onSubmit: vi.fn(),
-			})
-			const second = kit.useForm(definition, {
-				defaultValues: { name: "Grace" },
-				onSubmit: vi.fn(),
-			})
-			return (
-				<kit.Submit action={second.actions.submit} binding={first}>
-					Save
-				</kit.Submit>
-			)
-		}
 		function Foreign() {
 			const form = kit.useForm(definition, {
 				defaultValues: { name: "Ada" },
 				onSubmit: vi.fn(),
 			})
-			return <otherKit.Submit binding={form}>Save</otherKit.Submit>
+			return (
+				<otherKit.Submit action={form.actions.submit}>Save</otherKit.Submit>
+			)
 		}
 		function InsideMismatch() {
 			const mounted = kit.useForm(definition, {
@@ -719,33 +692,9 @@ describe("submit actions and external issues", () => {
 				</kit.Form>
 			)
 		}
-		function InsideBindingMismatch() {
-			const mounted = kit.useForm(definition, {
-				defaultValues: { name: "Ada" },
-				onSubmit: vi.fn(),
-			})
-			const other = kit.useForm(definition, {
-				defaultValues: { name: "Grace" },
-				onSubmit: vi.fn(),
-			})
-			return (
-				<kit.Form form={mounted}>
-					<kit.Submit binding={other}>{() => null}</kit.Submit>
-				</kit.Form>
-			)
-		}
-		expect(() => render(<Bare />)).toThrow(
-			"Submit outside Form requires a binding or an action",
-		)
-		expect(() => render(<Mismatch />)).toThrow(
-			"Submit action must belong to the Submit binding",
-		)
 		expect(() => render(<Foreign />)).toThrow("not mounted by this form kit")
 		expect(() => render(<InsideMismatch />)).toThrow(
 			"Submit action must belong to the surrounding Form",
-		)
-		expect(() => render(<InsideBindingMismatch />)).toThrow(
-			"Submit binding must match the surrounding Form",
 		)
 		errors.mockRestore()
 	})
@@ -783,5 +732,159 @@ describe("submit actions and external issues", () => {
 		render(<View />)
 		fireEvent.click(screen.getByRole("button", { name: "Save" }))
 		await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+	})
+})
+
+describe("form.submit", () => {
+	const draftSchema = z.object({ title: z.string().min(1, "Enter a title") })
+	const draftDefinition = kit.defineForm(draftSchema, (ui) => [
+		ui.field("title", { control: "text", label: "Title" }),
+	])
+
+	function mountActions(
+		options: {
+			readonly title?: string
+			readonly disabled?: boolean
+			readonly publish?: () => unknown
+			readonly validate?: () => readonly { message: string; path?: "title" }[]
+		} = {},
+	) {
+		const { result } = renderHook(() =>
+			kit.useForm(draftDefinition, {
+				defaultValues: { title: options.title ?? "Draft" },
+				disabled: options.disabled === true,
+				actions: {
+					publish: {
+						validate: options.validate,
+						onSubmit: () => options.publish?.(),
+					},
+					archive: { onSubmit: () => undefined },
+				},
+			}),
+		)
+		return result.current
+	}
+
+	it("resolves accepted after onSubmit without a mounted form", async () => {
+		const publish = vi.fn()
+		const form = mountActions({ publish })
+
+		const result = await act(() => form.submit(form.actions.publish))
+
+		expect(result).toEqual({ accepted: true, action: "publish" })
+		expect(publish).toHaveBeenCalledOnce()
+	})
+
+	it("resolves invalid with the schema issues", async () => {
+		const form = mountActions({ title: "" })
+
+		const result = await act(() => form.submit(form.actions.publish))
+
+		expect(result).toEqual({
+			accepted: false,
+			action: "publish",
+			reason: "invalid",
+			issues: [{ message: "Enter a title", path: "title" }],
+		})
+	})
+
+	it("resolves invalid with the action issues", async () => {
+		const form = mountActions({
+			validate: () => [{ message: "Title is taken", path: "title" }],
+		})
+
+		const result = await act(() => form.submit(form.actions.publish))
+
+		expect(result).toEqual({
+			accepted: false,
+			action: "publish",
+			reason: "invalid",
+			issues: [{ message: "Title is taken", path: "title" }],
+		})
+	})
+
+	it("resolves pending for a second call while the first one runs", async () => {
+		let release: () => void = () => undefined
+		const form = mountActions({
+			publish: () =>
+				new Promise<void>((resolve) => {
+					release = resolve
+				}),
+		})
+
+		const first = form.submit(form.actions.publish)
+		const second = await form.submit(form.actions.archive)
+		await waitFor(() =>
+			expect(form.submission.getSnapshot().action).toBe("publish"),
+		)
+		release()
+
+		expect(second).toEqual({
+			accepted: false,
+			action: "archive",
+			reason: "pending",
+		})
+		expect(await act(() => first)).toEqual({
+			accepted: true,
+			action: "publish",
+		})
+	})
+
+	it("resolves disabled while the form option disabled is set", async () => {
+		const publish = vi.fn()
+		const form = mountActions({ disabled: true, publish })
+
+		const result = await act(() => form.submit(form.actions.publish))
+
+		expect(result).toEqual({
+			accepted: false,
+			action: "publish",
+			reason: "disabled",
+		})
+		expect(publish).not.toHaveBeenCalled()
+	})
+
+	it("resolves failed with the onSubmit rejection", async () => {
+		const rejection = new Error("Network down")
+		const form = mountActions({
+			publish: () => Promise.reject(rejection),
+		})
+
+		const result = await act(() => form.submit(form.actions.publish))
+
+		expect(result).toEqual({
+			accepted: false,
+			action: "publish",
+			reason: "failed",
+			error: rejection,
+		})
+		expect(form.submission.getSnapshot().error).toEqual({ value: rejection })
+	})
+
+	it("accepts no action for the onSubmit shorthand only", async () => {
+		const onSubmit = vi.fn()
+		const shorthand = renderHook(() =>
+			kit.useForm(draftDefinition, {
+				defaultValues: { title: "Draft" },
+				onSubmit,
+			}),
+		).result.current
+		const named = mountActions()
+
+		expect(await act(() => shorthand.submit())).toEqual({
+			accepted: true,
+			action: "submit",
+		})
+		expect(onSubmit).toHaveBeenCalledOnce()
+		await expect(
+			// @ts-expect-error Named actions require an action argument.
+			named.submit(),
+		).rejects.toThrow(
+			"form.submit requires an action when useForm configures actions",
+		)
+		await expect(
+			// @ts-expect-error The action of another form is a type error.
+			named.submit(shorthand.actions.submit),
+		).rejects.toThrow("form.submit requires an action of this form")
 	})
 })

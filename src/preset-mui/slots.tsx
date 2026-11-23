@@ -42,11 +42,11 @@ import { mergeSx } from "./utils.js"
  */
 export function createMuiSlots(
 	options?: CreateMuiFormKitOptions,
-): FormKitSlots<
-	MuiFieldSlotOptions,
-	MuiSectionSlotOptions,
-	MuiArraySlotOptions
-> {
+): FormKitSlots<{
+	readonly fieldOptions: MuiFieldSlotOptions
+	readonly sectionOptions: MuiSectionSlotOptions
+	readonly arrayOptions: MuiArraySlotOptions
+}> {
 	const i18n = withArrayActionDefaults(options?.i18n)
 
 	/** Renders a MUI array wrapper, item grid, and append action. */
@@ -323,7 +323,6 @@ function gridItemSx(rootProps: StructuralRootProps) {
 function structuralSpan(rootProps: StructuralRootProps): string | undefined {
 	return (
 		rootProps as StructuralRootProps & {
-			/** The resolved grid span serialized for structural slots. */
 			"data-fp-span"?: string
 		}
 	)["data-fp-span"]

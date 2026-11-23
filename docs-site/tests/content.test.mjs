@@ -379,7 +379,7 @@ test("documents middleware with copyable examples and live previews", async () =
 		"Call `next` before the first `await`",
 		"Supply consistent derived values in `defaultValues`",
 		"Call `api.getValues()` after synchronous `next`",
-		"`FormMiddlewareNext` and `form.update` return `unknown`",
+		"`form.update` and `api.update` return a `FormUpdateResult`",
 		"application-owned `useFieldArray` operations",
 		"do not promise one raw RHF publication",
 		"not frozen or cloned as archival",
@@ -659,6 +659,26 @@ test("prose writes React Hook Form (RHF) at the first mention", async () => {
 	}
 
 	assert.ok(checked > 0, "no page mentions React Hook Form")
+})
+
+test("gives each registered error code one troubleshooting entry", async () => {
+	const registry = await readFile(
+		new URL("src/error-codes.ts", repositoryRoot),
+		"utf8",
+	)
+	const page = await readFile(
+		new URL("src/pages/troubleshooting.mdx", siteRoot),
+		"utf8",
+	)
+	const registered = [...registry.matchAll(/^\t(FP\d{3}):/gm)].map(
+		(match) => match[1],
+	)
+	const documented = [...page.matchAll(/^### (FP\d{3})$/gm)].map(
+		(match) => match[1],
+	)
+
+	assert.ok(registered.length > 0, "no error codes were read")
+	assert.deepEqual(documented, registered)
 })
 
 /** The page text without code fences, inline code, import lines, and link targets. */

@@ -39,7 +39,16 @@ form binding.
 Use the optional `name` when a page has several forms or when a readable label
 helps. Without `name`, the component assigns `Form 1`, `Form 2`, and so on.
 
-The package includes `@hookform/devtools`. The RHF launcher appears at the
+`form-please/devtools` needs two optional peer dependencies:
+`@hookform/devtools` and `@uiw/react-json-view`. Install them in the
+application:
+
+```sh
+npm install --save-dev @hookform/devtools @uiw/react-json-view
+```
+
+Without them, the import of `form-please/devtools` fails. The other entries do
+not need them. The RHF launcher appears at the
 top-right. The **FP Devtools** launcher appears at the bottom-right. It opens
 the resizable `Form Please Devtools` drawer.
 

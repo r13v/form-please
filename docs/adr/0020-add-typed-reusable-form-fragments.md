@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-07
+- Amended by: [ADR 0032](0032-accept-only-builder-callbacks-in-definitions.md)
 
 ## Context
 
