@@ -805,8 +805,10 @@ you build at run time from `pathPrefix`, so type it as
 
 `kit.useFormContext<Schema>()` returns the binding of the surrounding
 `kit.Form`, so a nested component does not need the binding as a prop. A call
-outside a `kit.Form` of the kit throws an error. Use RHF hooks such as
-`useWatch` for value subscriptions.
+outside a `kit.Form` of the kit throws an error. The component renders again
+when the `context`, `disabled`, or `readOnly` of the form changes, so
+`form.context` is current in it. Use RHF hooks such as `useWatch` for value
+subscriptions.
 
 `Form` prevents native submission and connects the Form, Please submit wrapper
 to raw `form.api.handleSubmit`. A reset event calls `form.api.reset()`. It sets

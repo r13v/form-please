@@ -466,7 +466,11 @@ export interface FormKit<Kit extends FormKitTypes> {
 		form: FormBinding<Schema, Kit["context"], string>,
 		path: Path,
 	) => UseFieldResult<PathValue<FormValues<Schema>, Path>>
-	/** Returns the binding of the surrounding `Form`; throws outside one. */
+	/**
+	 * Returns the binding of the surrounding `Form`; throws outside one. The
+	 * caller renders again when the `context`, `disabled` or `readOnly` of the
+	 * form changes.
+	 */
 	readonly useFormContext: <
 		Schema extends StandardSchema = AnyFormSchema,
 	>() => FormBinding<Schema, Kit["context"]>
