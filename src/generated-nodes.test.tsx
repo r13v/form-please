@@ -1,7 +1,7 @@
 "use client"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { Suspense, startTransition, use } from "react"
+import { memo, Suspense, startTransition, use } from "react"
 import { useWatch } from "react-hook-form"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
@@ -106,6 +106,36 @@ describe("kit.useField", () => {
 
 		expect(fromContext).toBe(bound)
 		expect(screen.getByText("clean")).toBeTruthy()
+	})
+})
+
+describe("kit.useFormContext settings", () => {
+	it("renders a memoized caller again when the context changes", () => {
+		type Context = { readonly locale: string }
+		const localeKit = kit.forContext<Context>()
+		const definition = localeKit.defineForm(
+			z.object({ name: z.string() }),
+			(ui) => [ui.field("name", { control: "text", label: "Name" })],
+		)
+		const Locale = memo(function Locale() {
+			return <output>{localeKit.useFormContext().context.locale}</output>
+		})
+		function Editor({ locale }: Context) {
+			const form = localeKit.useForm(definition, {
+				context: { locale },
+				defaultValues: { name: "" },
+			})
+			return (
+				<localeKit.Form form={form}>
+					<Locale />
+				</localeKit.Form>
+			)
+		}
+		const { rerender } = render(<Editor locale="en" />)
+
+		rerender(<Editor locale="fr" />)
+
+		expect(screen.getByText("fr")).toBeTruthy()
 	})
 })
 

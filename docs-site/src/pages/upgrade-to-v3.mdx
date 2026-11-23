@@ -60,7 +60,8 @@ useEffect(() => {
 `form.context` and `form.fieldPaths()` read the context of the latest
 committed render, which generated UI uses. In the render that passes a new
 `context`, they still use the previous context, so read your own variable in
-that render. A new context object with the same top-level values does not
+that render. A component that reads the binding with `kit.useFormContext`
+renders again when the context changes. A new context object with the same top-level values does not
 change the context, and `form.context` keeps the first object. Read
 [`FormBinding`](/api#formbinding).
 

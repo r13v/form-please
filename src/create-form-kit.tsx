@@ -379,9 +379,16 @@ function assembleKit(
 		return runtime
 	}
 
-	/** Returns the binding of the surrounding `kit.Form`. */
+	/**
+	 * Returns the binding of the surrounding `kit.Form`. The binding keeps one
+	 * identity, so the settings subscription is what renders the caller again
+	 * when `context`, `disabled` or `readOnly` changes.
+	 */
 	function useFormContext() {
-		return useSurroundingRuntime("kit.useFormContext").binding
+		const runtime = useSurroundingRuntime("kit.useFormContext")
+		useSnapshot(runtime.settings)
+
+		return runtime.binding
 	}
 
 	/** Connects one custom field path to the surrounding form. */
