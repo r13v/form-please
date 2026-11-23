@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.0.0](https://github.com/r13v/form-please/compare/v2.1.0...v3.0.0) (2026-11-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* see docs-site/src/pages/upgrade-to-v3.mdx for each entry.
+    - defineForm and defineFragment accept only the builder callback; UiNode, FieldNode, SectionNode, ArrayNode and RenderNode are not exported.
+    - FormKit, FormDefinition, FormFragment, CreateFormKitOptions and FormKitSlots take one kit type bag (FormKitTypes) instead of positional parameters.
+    - kit.Submit has no binding prop; action selects the form.
+    - form.update, api.update and reconcile return FormUpdateResult instead of the middleware return value.
+    - The form binding does not change identity when options change; form.context gives the committed context.
+    - SubmitSlotProps has no values and no type parameter.
+    - Node IDs in nested arrays do not repeat the outer row prefix.
+    - @hookform/devtools and @uiw/react-json-view are optional peer dependencies.
+    - package.json declares no engines.
+
+### Features
+
+* managed custom fields, one form runtime, and a smaller public surface ([ac16d37](https://github.com/r13v/form-please/commit/ac16d37229d2e85de79bb7335989d523ca8726ec))
+
+
+### Bug Fixes
+
+* render kit.useFormContext callers again when form settings change ([b784b9a](https://github.com/r13v/form-please/commit/b784b9a4d520031cb1583406e5fa86f5d3716973))
+
 ## [2.1.0](https://github.com/r13v/form-please/compare/v2.0.0...v2.1.0) (2026-10-31)
 
 
