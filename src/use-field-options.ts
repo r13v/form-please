@@ -33,6 +33,17 @@ type FieldOptionsDiagnostics = Readonly<{
 	target: object
 }>
 
+/** Options together with the resolver inputs that produced them. */
+type ResolvedOptions = {
+	readonly dependencies: readonly FieldOptionsDependency[]
+	readonly options: readonly unknown[]
+}
+
+const emptyResolvedOptions: ResolvedOptions = {
+	dependencies: [],
+	options: emptyFieldOptions,
+}
+
 type ContractFailure = {
 	readonly active: ActiveRun
 	readonly error: unknown
@@ -48,7 +59,7 @@ export function useFieldOptions(
 ): readonly unknown[] {
 	const diagnosticPath = diagnostics?.path
 	const diagnosticTarget = diagnostics?.target
-	const [resolved, setResolved] = useState(emptyFieldOptions)
+	const [resolved, setResolved] = useState(emptyResolvedOptions)
 	const [revision, setRevision] = useState(0)
 	const [contractFailure, setContractFailure] = useState<
 		ContractFailure | undefined
@@ -73,7 +84,7 @@ export function useFieldOptions(
 		active.stale = true
 		finishOptionsDiagnostic(active, "stale")
 		active.controller.abort()
-		setResolved(emptyFieldOptions)
+		setResolved(emptyResolvedOptions)
 		setRevision((current) => current + 1)
 	}, [context, source, values])
 
@@ -85,7 +96,7 @@ export function useFieldOptions(
 			return
 		}
 
-		setResolved(emptyFieldOptions)
+		setResolved(emptyResolvedOptions)
 		setContractFailure(undefined)
 		const controller = new AbortController()
 		const run = createFieldOptionsResolution(
@@ -137,7 +148,7 @@ export function useFieldOptions(
 			active.stale = true
 			finishOptionsDiagnostic(active, "stale")
 			controller.abort()
-			setResolved(emptyFieldOptions)
+			setResolved(emptyResolvedOptions)
 			setRevision((current) => current + 1)
 			return true
 		}
@@ -147,14 +158,14 @@ export function useFieldOptions(
 				const options = await run.resolve()
 				if (active.stale) return
 				if (reloadIfInputsChanged()) return
-				setResolved(options)
+				setResolved({ dependencies: active.dependencies, options })
 				finishOptionsDiagnostic(active, "fulfilled", {
 					optionCount: options.length,
 				})
 			} catch (error) {
 				if (active.stale) return
 				if (reloadIfInputsChanged()) return
-				setResolved(emptyFieldOptions)
+				setResolved(emptyResolvedOptions)
 				if (error instanceof FieldOptionsContractError) {
 					setContractFailure({ active, error, source })
 				}
@@ -182,7 +193,12 @@ export function useFieldOptions(
 	) {
 		throw contractFailure.error
 	}
-	return Array.isArray(source) ? source : resolved
+	if (Array.isArray(source)) return source
+	// Options never render beside inputs other than the ones that produced
+	// them; the effects above then reload them.
+	return fieldOptionsInputsChanged(resolved.dependencies, values, context)
+		? emptyFieldOptions
+		: resolved.options
 }
 
 /** Completes one observable options request exactly once. */

@@ -264,6 +264,27 @@ describe("useFieldOptions", () => {
 		)
 	})
 
+	it("never returns options beside inputs that did not produce them", async () => {
+		const renders: string[] = []
+		const source: FieldOptionsResolver<
+			string,
+			unknown,
+			{ readonly options: readonly string[] }
+		> = ({ context }) => context.options
+		function Recorder({ options }: { readonly options: readonly string[] }) {
+			const resolved = useFieldOptions(source, {}, { options })
+			renders.push(`${JSON.stringify(options)} -> ${JSON.stringify(resolved)}`)
+			return null
+		}
+
+		const view = render(<Recorder options={["a"]} />)
+		await waitFor(() => expect(renders.at(-1)).toBe('["a"] -> ["a"]'))
+		view.rerender(<Recorder options={["a", "b"]} />)
+		await waitFor(() => expect(renders.at(-1)).toBe('["a","b"] -> ["a","b"]'))
+
+		expect(renders).not.toContain('["a","b"] -> ["a"]')
+	})
+
 	it("clears resolved options when the resolver changes", async () => {
 		const next = deferred<readonly string[]>()
 		const first: FieldOptionsResolver<string, unknown> = () => ["first"]
