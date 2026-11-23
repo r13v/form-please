@@ -1,7 +1,7 @@
 "use client"
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { Profiler } from "react"
+import { Profiler, useEffect } from "react"
 import {
 	Controller,
 	useFormContext,
@@ -1893,6 +1893,67 @@ describe("form kit", () => {
 			"Reset",
 		)
 	})
+	it("does not pair a new value with the options of the previous context", async () => {
+		type Context = { readonly options: readonly string[] }
+		const renders: string[] = []
+		const probeKit = createFormKit({
+			controls: {
+				probe: defineControl<string, Record<string, never>, Context, string>({
+					component: ({ value, setValue, options }) => {
+						renders.push(`${value}:${options.join("|")}`)
+						// A select that syncs with the DOM writes the empty option
+						// when the options do not contain the value.
+						useEffect(() => {
+							if (options.includes("") && !options.includes(value)) {
+								setValue("")
+							}
+						})
+						return null
+					},
+				}),
+			},
+			slots: kit.slots,
+		}).forContext<Context>()
+		const controlWrites = vi.fn()
+		const probeDefinition = probeKit.defineForm(
+			z.object({ value: z.string() }),
+			(ui) => [
+				ui.field("value", {
+					control: "probe",
+					label: "Value",
+					options: ({ context }) => context.options,
+				}),
+			],
+			{
+				afterUpdate: ({ source }) => {
+					if (source.type === "control") controlWrites()
+				},
+			},
+		)
+		let readValue = () => ""
+
+		function View({ value, options }: Context & { readonly value: string }) {
+			const form = probeKit.useForm(probeDefinition, {
+				context: { options },
+				defaultValues: { value },
+			})
+			readValue = () => form.api.getValues("value")
+			useEffect(() => {
+				if (form.api.getValues("value") !== value) form.api.reset({ value })
+			}, [value, form.api])
+			return <probeKit.AutoForm form={form} />
+		}
+
+		const view = render(<View options={["", "0"]} value="0" />)
+		await waitFor(() => expect(renders.at(-1)).toBe("0:|0"))
+		view.rerender(<View options={["", "1"]} value="1" />)
+		await waitFor(() => expect(renders.at(-1)).toBe("1:|1"))
+
+		expect(renders).not.toContain("1:|0")
+		expect(controlWrites).not.toHaveBeenCalled()
+		expect(readValue()).toBe("1")
+	})
+
 	it("keeps one binding while generated UI follows the changing useForm options", async () => {
 		type Context = { readonly label: string }
 		const probeKit = createFormKit({

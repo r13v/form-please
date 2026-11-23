@@ -63,6 +63,8 @@ Every ordinary resolver returns synchronously; `resolveValue` in `src/definition
 
 The `options` property of a selectable field is the only asynchronous resolver. `docs/adr/0022-load-selectable-options-asynchronously.md` gives the decision. `src/field-options.ts` holds the executor that the React runtime and `form-please/testing` share. It tracks dependencies through deep proxies of `values` and `context`, so a read after `await` is also a dependency.
 
+`useFieldOptions` in `src/use-field-options.ts` stores each result with the dependencies that produced it and compares them during render. A render whose values or context changed a dependency gets the empty list at once, not one commit later, so a control never shows a new value beside the options of the previous inputs.
+
 The boundary owns only per-field execution, dependency tracking, cancellation and the order of results. Do not add a loading or error state, a cache, retries, search or pagination: an application that needs them keeps its own resource state or writes a custom control. The user contract: `docs-site/src/pages/definitions.mdx`.
 
 ## Visibility and whenHidden
